@@ -391,6 +391,18 @@
             text-rendering: optimizeLegibility;
         }
 
+        /* Force crisp rendering for all SVG elements */
+        .ladder-svg * {
+            shape-rendering: crispEdges !important;
+            text-rendering: optimizeLegibility !important;
+        }
+
+        .ladder-svg text {
+            font-smooth: never !important;
+            -webkit-font-smoothing: none !important;
+            vector-effect: non-scaling-stroke !important;
+        }
+
         .power-rail {
             stroke: var(--ladder-rail);
             stroke-width: 3;
@@ -429,22 +441,23 @@
         }
 
         .coil {
-            stroke: var(--coil-color);
+            stroke: #ea580c !important;
             stroke-width: 2;
-            fill: var(--content-bg);
+            fill: #ffffff !important;
             transition: all 0.2s ease;
             shape-rendering: crispEdges;
+            vector-effect: non-scaling-stroke;
         }
 
         .coil:hover {
             stroke-width: 3;
-            fill: rgba(234, 88, 12, 0.1);
+            fill: rgba(234, 88, 12, 0.1) !important;
         }
 
         .coil.energized {
-            stroke: var(--power-flow-active);
+            stroke: #10b981 !important;
             stroke-width: 3;
-            fill: rgba(16, 185, 129, 0.2);
+            fill: rgba(16, 185, 129, 0.2) !important;
         }
 
         .function-block {
@@ -470,24 +483,26 @@
             font-family: 'Courier New', monospace;
             font-size: 11px;
             font-weight: 600;
-            fill: var(--text-color);
+            fill: #1f2937 !important;
             text-anchor: middle;
             dominant-baseline: central;
             pointer-events: none;
             text-rendering: optimizeLegibility;
             font-smooth: never;
             -webkit-font-smoothing: none;
+            vector-effect: non-scaling-stroke;
         }
 
         .element-tag {
             font-family: 'Courier New', monospace;
             font-size: 10px;
-            fill: var(--muted-text);
+            fill: #6b7280 !important;
             text-anchor: middle;
             pointer-events: none;
             text-rendering: optimizeLegibility;
             font-smooth: never;
             -webkit-font-smoothing: none;
+            vector-effect: non-scaling-stroke;
         }
 
         /* Branch connection styling */
@@ -1650,8 +1665,10 @@
             text.setAttribute('x', Math.round(x));
             text.setAttribute('y', Math.round(y));
             text.setAttribute('class', 'element-text');
+            text.setAttribute('fill', '#1f2937');
             text.setAttribute('text-rendering', 'optimizeLegibility');
             text.setAttribute('font-smooth', 'never');
+            text.setAttribute('vector-effect', 'non-scaling-stroke');
             text.textContent = symbol;
             group.appendChild(text);
 
@@ -1680,12 +1697,13 @@
             circle.setAttribute('cx', Math.round(x));
             circle.setAttribute('cy', Math.round(y));
             circle.setAttribute('r', radius);
-            circle.setAttribute('fill', 'none');
-            circle.setAttribute('stroke', 'currentColor');
+            circle.setAttribute('fill', '#ffffff');
+            circle.setAttribute('stroke', '#ea580c');
             circle.setAttribute('stroke-width', '2');
             circle.setAttribute('class', 'coil');
             circle.setAttribute('title', `${element.instruction}(${element.tag})`);
             circle.setAttribute('shape-rendering', 'crispEdges');
+            circle.setAttribute('vector-effect', 'non-scaling-stroke');
             group.appendChild(circle);
 
             // Draw coil symbol with crisp text
@@ -1697,8 +1715,10 @@
             text.setAttribute('x', Math.round(x));
             text.setAttribute('y', Math.round(y));
             text.setAttribute('class', 'element-text');
+            text.setAttribute('fill', '#1f2937');
             text.setAttribute('text-rendering', 'optimizeLegibility');
             text.setAttribute('font-smooth', 'never');
+            text.setAttribute('vector-effect', 'non-scaling-stroke');
             text.textContent = symbol;
             group.appendChild(text);
 
@@ -1739,8 +1759,10 @@
             text.setAttribute('x', Math.round(x));
             text.setAttribute('y', Math.round(y));
             text.setAttribute('class', 'element-text');
+            text.setAttribute('fill', '#1f2937');
             text.setAttribute('text-rendering', 'optimizeLegibility');
             text.setAttribute('font-smooth', 'never');
+            text.setAttribute('vector-effect', 'non-scaling-stroke');
             text.textContent = element.instruction;
             group.appendChild(text);
 
