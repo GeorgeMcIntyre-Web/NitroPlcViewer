@@ -387,6 +387,8 @@
             background: var(--content-bg);
             border: 1px solid var(--border-color);
             border-radius: 4px;
+            shape-rendering: crispEdges;
+            text-rendering: optimizeLegibility;
         }
 
         .power-rail {
@@ -412,6 +414,7 @@
             stroke-width: 2;
             fill: var(--content-bg);
             transition: all 0.2s ease;
+            shape-rendering: crispEdges;
         }
 
         .contact:hover {
@@ -430,6 +433,7 @@
             stroke-width: 2;
             fill: var(--content-bg);
             transition: all 0.2s ease;
+            shape-rendering: crispEdges;
         }
 
         .coil:hover {
@@ -448,6 +452,7 @@
             stroke-width: 2;
             fill: var(--content-bg);
             transition: all 0.2s ease;
+            shape-rendering: crispEdges;
         }
 
         .function-block:hover {
@@ -469,6 +474,9 @@
             text-anchor: middle;
             dominant-baseline: central;
             pointer-events: none;
+            text-rendering: optimizeLegibility;
+            font-smooth: never;
+            -webkit-font-smoothing: none;
         }
 
         .element-tag {
@@ -477,6 +485,9 @@
             fill: var(--muted-text);
             text-anchor: middle;
             pointer-events: none;
+            text-rendering: optimizeLegibility;
+            font-smooth: never;
+            -webkit-font-smoothing: none;
         }
 
         /* Branch connection styling */
@@ -1560,13 +1571,14 @@
             
             svg.setAttribute('viewBox', `0 0 ${finalWidth} ${finalHeight}`);
             
-            // Draw power rails
+            // Draw power rails with crisp rendering
             const leftRail = document.createElementNS('http://www.w3.org/2000/svg', 'line');
             leftRail.setAttribute('x1', '20');
             leftRail.setAttribute('y1', '20');
             leftRail.setAttribute('x2', '20');
             leftRail.setAttribute('y2', svgHeight - 20);
             leftRail.setAttribute('class', 'power-rail');
+            leftRail.setAttribute('shape-rendering', 'crispEdges');
             svg.appendChild(leftRail);
 
             const rightRail = document.createElementNS('http://www.w3.org/2000/svg', 'line');
@@ -1575,6 +1587,7 @@
             rightRail.setAttribute('x2', svgWidth - 20);
             rightRail.setAttribute('y2', svgHeight - 20);
             rightRail.setAttribute('class', 'power-rail');
+            rightRail.setAttribute('shape-rendering', 'crispEdges');
             svg.appendChild(rightRail);
 
             // Draw horizontal power lines for each branch level
@@ -1583,10 +1596,11 @@
                 const y = 40 + (level * 25);
                 const powerLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
                 powerLine.setAttribute('x1', '20');
-                powerLine.setAttribute('y1', y);
+                powerLine.setAttribute('y1', Math.round(y));
                 powerLine.setAttribute('x2', svgWidth - 20);
-                powerLine.setAttribute('y2', y);
+                powerLine.setAttribute('y2', Math.round(y));
                 powerLine.setAttribute('class', 'power-rail');
+                powerLine.setAttribute('shape-rendering', 'crispEdges');
                 svg.appendChild(powerLine);
             });
 
@@ -1616,10 +1630,10 @@
             const width = 35;
             const height = 25;
             
-            // Draw contact rectangle
+            // Draw contact rectangle with crisp rendering
             const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-            rect.setAttribute('x', x - width/2);
-            rect.setAttribute('y', y - height/2);
+            rect.setAttribute('x', Math.round(x - width/2));
+            rect.setAttribute('y', Math.round(y - height/2));
             rect.setAttribute('width', width);
             rect.setAttribute('height', height);
             rect.setAttribute('fill', 'none');
@@ -1627,23 +1641,28 @@
             rect.setAttribute('stroke-width', '2');
             rect.setAttribute('class', 'contact');
             rect.setAttribute('title', `${element.instruction}(${element.tag})`);
+            rect.setAttribute('shape-rendering', 'crispEdges');
             group.appendChild(rect);
 
-            // Draw contact symbol
+            // Draw contact symbol with crisp text
             const symbol = element.instruction === 'XIC' ? '| |' : '|/|';
             const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-            text.setAttribute('x', x);
-            text.setAttribute('y', y);
+            text.setAttribute('x', Math.round(x));
+            text.setAttribute('y', Math.round(y));
             text.setAttribute('class', 'element-text');
+            text.setAttribute('text-rendering', 'optimizeLegibility');
+            text.setAttribute('font-smooth', 'never');
             text.textContent = symbol;
             group.appendChild(text);
 
             // Add tag label with better positioning and truncation
             if (element.tag) {
                 const tagText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-                tagText.setAttribute('x', x);
-                tagText.setAttribute('y', y + 35);
+                tagText.setAttribute('x', Math.round(x));
+                tagText.setAttribute('y', Math.round(y + 35));
                 tagText.setAttribute('class', 'element-tag');
+                tagText.setAttribute('text-rendering', 'optimizeLegibility');
+                tagText.setAttribute('font-smooth', 'never');
                 // Truncate long tags to prevent overlap
                 const displayTag = element.tag.length > 12 ? element.tag.substring(0, 10) + '...' : element.tag;
                 tagText.textContent = displayTag;
@@ -1656,36 +1675,41 @@
             const y = element.y;
             const radius = 18;
             
-            // Draw coil circle
+            // Draw coil circle with crisp rendering
             const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-            circle.setAttribute('cx', x);
-            circle.setAttribute('cy', y);
+            circle.setAttribute('cx', Math.round(x));
+            circle.setAttribute('cy', Math.round(y));
             circle.setAttribute('r', radius);
             circle.setAttribute('fill', 'none');
             circle.setAttribute('stroke', 'currentColor');
             circle.setAttribute('stroke-width', '2');
             circle.setAttribute('class', 'coil');
             circle.setAttribute('title', `${element.instruction}(${element.tag})`);
+            circle.setAttribute('shape-rendering', 'crispEdges');
             group.appendChild(circle);
 
-            // Draw coil symbol
+            // Draw coil symbol with crisp text
             let symbol = '( )';
             if (element.instruction === 'OTL') symbol = '(L)';
             else if (element.instruction === 'OTU') symbol = '(U)';
             
             const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-            text.setAttribute('x', x);
-            text.setAttribute('y', y);
+            text.setAttribute('x', Math.round(x));
+            text.setAttribute('y', Math.round(y));
             text.setAttribute('class', 'element-text');
+            text.setAttribute('text-rendering', 'optimizeLegibility');
+            text.setAttribute('font-smooth', 'never');
             text.textContent = symbol;
             group.appendChild(text);
 
             // Add tag label with better positioning and truncation
             if (element.tag) {
                 const tagText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-                tagText.setAttribute('x', x);
-                tagText.setAttribute('y', y + 35);
+                tagText.setAttribute('x', Math.round(x));
+                tagText.setAttribute('y', Math.round(y + 35));
                 tagText.setAttribute('class', 'element-tag');
+                tagText.setAttribute('text-rendering', 'optimizeLegibility');
+                tagText.setAttribute('font-smooth', 'never');
                 // Truncate long tags to prevent overlap
                 const displayTag = element.tag.length > 12 ? element.tag.substring(0, 10) + '...' : element.tag;
                 tagText.textContent = displayTag;
@@ -1699,30 +1723,35 @@
             const width = element.width || 60;
             const height = 30;
             
-            // Draw function block rectangle
+            // Draw function block rectangle with crisp rendering
             const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-            rect.setAttribute('x', x - width/2);
-            rect.setAttribute('y', y - height/2);
+            rect.setAttribute('x', Math.round(x - width/2));
+            rect.setAttribute('y', Math.round(y - height/2));
             rect.setAttribute('width', width);
             rect.setAttribute('height', height);
             rect.setAttribute('class', 'function-block');
             rect.setAttribute('title', `${element.instruction}(${element.tag})`);
+            rect.setAttribute('shape-rendering', 'crispEdges');
             group.appendChild(rect);
 
-            // Draw instruction text
+            // Draw instruction text with crisp rendering
             const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-            text.setAttribute('x', x);
-            text.setAttribute('y', y);
+            text.setAttribute('x', Math.round(x));
+            text.setAttribute('y', Math.round(y));
             text.setAttribute('class', 'element-text');
+            text.setAttribute('text-rendering', 'optimizeLegibility');
+            text.setAttribute('font-smooth', 'never');
             text.textContent = element.instruction;
             group.appendChild(text);
 
             // Add tag label with better positioning and truncation
             if (element.tag) {
                 const tagText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-                tagText.setAttribute('x', x);
-                tagText.setAttribute('y', y + 35);
+                tagText.setAttribute('x', Math.round(x));
+                tagText.setAttribute('y', Math.round(y + 35));
                 tagText.setAttribute('class', 'element-tag');
+                tagText.setAttribute('text-rendering', 'optimizeLegibility');
+                tagText.setAttribute('font-smooth', 'never');
                 // Truncate long tags to prevent overlap
                 const displayTag = element.tag.length > 15 ? element.tag.substring(0, 13) + '...' : element.tag;
                 tagText.textContent = displayTag;
