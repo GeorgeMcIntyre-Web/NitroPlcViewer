@@ -1,0 +1,2514 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Studio 5000 Logix Designer Style PLC Viewer</title>
+    <style>
+        :root {
+            /* ISA-101 Compliant Color Scheme */
+            --primary-bg: #1e3a8a;
+            --secondary-bg: #f8fafc;
+            --content-bg: #ffffff;
+            --border-color: #e2e8f0;
+            --accent-color: #2563eb;
+            --text-color: #1f2937;
+            --light-text: #f1f5f9;
+            --muted-text: #6b7280;
+            --hover-bg: #f1f5f9;
+            --selected-bg: #dbeafe;
+            --error-color: #dc2626;
+            --warning-color: #f59e0b;
+            --success-color: #059669;
+            
+            /* Ladder Logic Colors */
+            --ladder-rail: #374151;
+            --contact-color: #2563eb;
+            --coil-color: #ea580c;
+            --function-color: #7c3aed;
+            --power-flow-active: #10b981;
+            --power-flow-inactive: #9ca3af;
+            
+            /* Zoom and scale */
+            --zoom-factor: 1;
+            --min-touch-target: 40px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: var(--secondary-bg);
+            color: var(--text-color);
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Header */
+        .header {
+            background: var(--primary-bg);
+            color: var(--light-text);
+            padding: 8px 16px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            z-index: 1000;
+        }
+
+        .header h1 {
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
+
+        /* Toolbar */
+        .toolbar {
+            background: var(--content-bg);
+            border-bottom: 1px solid var(--border-color);
+            padding: 8px 16px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            background: var(--accent-color);
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.875rem;
+            font-weight: 500;
+            transition: background-color 0.2s;
+            min-height: var(--min-touch-target);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn:hover {
+            background: #1d4ed8;
+        }
+
+        .btn:disabled {
+            background: var(--muted-text);
+            cursor: not-allowed;
+        }
+
+        .btn-secondary {
+            background: var(--content-bg);
+            color: var(--text-color);
+            border: 1px solid var(--border-color);
+        }
+
+        .btn-secondary:hover {
+            background: var(--hover-bg);
+        }
+
+        .search-container {
+            flex-grow: 1;
+            max-width: 400px;
+            position: relative;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 6px 12px 6px 32px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            background: var(--content-bg);
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--muted-text);
+        }
+
+        /* Status Bar */
+        .status-bar {
+            background: var(--secondary-bg);
+            border-bottom: 1px solid var(--border-color);
+            padding: 4px 16px;
+            font-size: 0.8rem;
+            color: var(--muted-text);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        /* Main Layout */
+        .main-container {
+            display: flex;
+            flex-grow: 1;
+            overflow: hidden;
+        }
+
+        /* Controller Organizer Tree */
+        .organizer-panel {
+            width: 320px;
+            min-width: 250px;
+            max-width: 500px;
+            background: var(--content-bg);
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            resize: horizontal;
+            overflow: hidden;
+        }
+
+        .organizer-header {
+            background: var(--secondary-bg);
+            padding: 8px 12px;
+            border-bottom: 1px solid var(--border-color);
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        .organizer-content {
+            flex-grow: 1;
+            overflow-y: auto;
+            padding: 8px 0;
+        }
+
+        .tree-node {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+        }
+
+        .tree-item {
+            display: flex;
+            align-items: center;
+            padding: 4px 8px;
+            cursor: pointer;
+            font-size: 0.875rem;
+            transition: background-color 0.15s;
+            border-radius: 3px;
+            margin: 1px 8px;
+            min-height: 28px;
+        }
+
+        .tree-item:hover {
+            background: var(--hover-bg);
+        }
+
+        .tree-item.selected {
+            background: var(--selected-bg);
+            color: var(--accent-color);
+            font-weight: 500;
+        }
+
+        .tree-toggle {
+            width: 16px;
+            height: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            color: var(--muted-text);
+            margin-right: 4px;
+            font-size: 0.75rem;
+        }
+
+        .tree-icon {
+            margin-right: 6px;
+            font-size: 0.875rem;
+        }
+
+        .tree-children {
+            margin-left: 20px;
+        }
+
+        .tree-children.collapsed {
+            display: none;
+        }
+
+        /* Content Area */
+        .content-panel {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .content-header {
+            background: var(--content-bg);
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .content-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .content-meta {
+            display: flex;
+            gap: 16px;
+            font-size: 0.85rem;
+            color: var(--muted-text);
+        }
+
+        .view-tabs {
+            background: var(--secondary-bg);
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            gap: 4px;
+            padding: 4px 16px;
+        }
+
+        .view-tab {
+            padding: 6px 12px;
+            background: transparent;
+            border: none;
+            border-radius: 4px 4px 0 0;
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: all 0.2s;
+        }
+
+        .view-tab.active {
+            background: var(--content-bg);
+            border-bottom: 2px solid var(--accent-color);
+        }
+
+        .content-body {
+            flex-grow: 1;
+            overflow: auto;
+            background: var(--content-bg);
+        }
+
+        /* Ladder Logic Styles */
+        .ladder-container {
+            padding: 16px;
+            min-height: 100%;
+        }
+
+        .rung {
+            border: 1px solid var(--border-color);
+            border-left: 4px solid transparent;
+            margin-bottom: 12px;
+            background: var(--content-bg);
+            border-radius: 4px;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+            transition: all 0.2s;
+            transform: scale(var(--zoom-factor));
+            transform-origin: top left;
+        }
+
+        .rung:hover {
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .rung.selected {
+            border-left-color: var(--accent-color);
+            background: #eff6ff;
+        }
+
+        .rung.error {
+            border-left-color: var(--error-color);
+            background: #fef2f2;
+        }
+
+        .rung-header {
+            background: var(--secondary-bg);
+            padding: 6px 12px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.8rem;
+        }
+
+        .rung-number {
+            font-weight: 600;
+            color: var(--accent-color);
+            cursor: pointer;
+        }
+
+        .rung-number:hover {
+            text-decoration: underline;
+        }
+
+        .rung-comment {
+            color: var(--success-color);
+            font-style: italic;
+            flex-grow: 1;
+            margin-left: 12px;
+        }
+
+        .rung-actions {
+            display: flex;
+            gap: 4px;
+        }
+
+        .rung-action {
+            background: none;
+            border: none;
+            color: var(--muted-text);
+            cursor: pointer;
+            padding: 2px 4px;
+            border-radius: 2px;
+            font-size: 0.75rem;
+        }
+
+        .rung-action:hover {
+            background: var(--hover-bg);
+            color: var(--text-color);
+        }
+
+        .rung-content {
+            padding: 16px;
+            display: flex;
+            align-items: center;
+            min-height: 80px;
+            overflow-x: auto;
+            background: var(--content-bg);
+        }
+
+        .rung-content:hover {
+            background: var(--hover-bg);
+        }
+
+        /* SVG Ladder Elements */
+        .ladder-svg {
+            width: 100%;
+            height: auto;
+            min-height: 60px;
+            background: var(--content-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+        }
+
+        .power-rail {
+            stroke: var(--ladder-rail);
+            stroke-width: 3;
+            fill: none;
+            stroke-linecap: round;
+        }
+
+        .power-rail.energized {
+            stroke: var(--power-flow-active);
+            stroke-width: 4;
+            animation: powerFlow 2s ease-in-out infinite;
+        }
+
+        @keyframes powerFlow {
+            0%, 100% { opacity: 0.7; }
+            50% { opacity: 1; }
+        }
+
+        .contact {
+            stroke: var(--contact-color);
+            stroke-width: 2;
+            fill: var(--content-bg);
+            transition: all 0.2s ease;
+        }
+
+        .contact:hover {
+            stroke-width: 3;
+            fill: rgba(37, 99, 235, 0.1);
+        }
+
+        .contact.energized {
+            stroke: var(--power-flow-active);
+            stroke-width: 3;
+            fill: rgba(16, 185, 129, 0.2);
+        }
+
+        .coil {
+            stroke: var(--coil-color);
+            stroke-width: 2;
+            fill: var(--content-bg);
+            transition: all 0.2s ease;
+        }
+
+        .coil:hover {
+            stroke-width: 3;
+            fill: rgba(234, 88, 12, 0.1);
+        }
+
+        .coil.energized {
+            stroke: var(--power-flow-active);
+            stroke-width: 3;
+            fill: rgba(16, 185, 129, 0.2);
+        }
+
+        .function-block {
+            stroke: var(--function-color);
+            stroke-width: 2;
+            fill: var(--content-bg);
+            transition: all 0.2s ease;
+        }
+
+        .function-block:hover {
+            stroke-width: 3;
+            fill: rgba(124, 58, 237, 0.1);
+        }
+
+        .function-block.energized {
+            stroke: var(--power-flow-active);
+            stroke-width: 3;
+            fill: rgba(16, 185, 129, 0.2);
+        }
+
+        .element-text {
+            font-family: 'Courier New', monospace;
+            font-size: 11px;
+            font-weight: 600;
+            fill: var(--text-color);
+            text-anchor: middle;
+            dominant-baseline: central;
+            pointer-events: none;
+        }
+
+        .element-tag {
+            font-family: 'Courier New', monospace;
+            font-size: 10px;
+            fill: var(--muted-text);
+            text-anchor: middle;
+            pointer-events: none;
+        }
+
+        /* Branch connection styling */
+        .branch-connection {
+            stroke: var(--ladder-rail);
+            stroke-width: 3;
+            fill: none;
+            stroke-dasharray: 3,3;
+        }
+
+        /* Text View Styles */
+        .text-container {
+            background: #1f2937;
+            color: #e5e7eb;
+            font-family: 'Courier New', monospace;
+            font-size: 0.875rem;
+            line-height: 1.4;
+        }
+
+        .text-rung {
+            border-bottom: 1px solid #374151;
+            margin: 0;
+        }
+
+        .text-rung-header {
+            background: #111827;
+            color: #9ca3af;
+            padding: 6px 12px;
+            font-size: 0.8rem;
+        }
+
+        .text-rung-content {
+            padding: 12px 16px;
+            white-space: pre-wrap;
+        }
+
+        .text-instruction {
+            color: #60a5fa;
+        }
+
+        .text-tag {
+            color: #34d399;
+        }
+
+        .text-comment {
+            color: #6b7280;
+            font-style: italic;
+        }
+
+        /* Zoom Controls */
+        .zoom-controls {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            background: var(--content-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            z-index: 100;
+        }
+
+        .zoom-btn {
+            background: var(--content-bg);
+            border: none;
+            padding: 8px 12px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            color: var(--text-color);
+            transition: background-color 0.2s;
+        }
+
+        .zoom-btn:hover {
+            background: var(--hover-bg);
+        }
+
+        .zoom-btn:first-child {
+            border-radius: 6px 6px 0 0;
+        }
+
+        .zoom-btn:last-child {
+            border-radius: 0 0 6px 6px;
+        }
+
+        .zoom-level {
+            padding: 4px 8px;
+            font-size: 0.8rem;
+            color: var(--muted-text);
+            text-align: center;
+            border-top: 1px solid var(--border-color);
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        /* Modal Dialogs */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+        }
+
+        .modal {
+            background: var(--content-bg);
+            border-radius: 8px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+            max-width: 90vw;
+            max-height: 90vh;
+            overflow: hidden;
+        }
+
+        .modal-header {
+            background: var(--secondary-bg);
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-title {
+            font-weight: 600;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 1.2rem;
+            cursor: pointer;
+            color: var(--muted-text);
+            padding: 4px;
+        }
+
+        .modal-body {
+            padding: 16px;
+        }
+
+        .modal-footer {
+            background: var(--secondary-bg);
+            padding: 12px 16px;
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            gap: 8px;
+            justify-content: flex-end;
+        }
+
+        /* Cross Reference Styles */
+        .cross-ref-list {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .cross-ref-item {
+            padding: 8px 12px;
+            border-bottom: 1px solid var(--border-color);
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .cross-ref-item:hover {
+            background: var(--hover-bg);
+        }
+
+        .cross-ref-location {
+            font-weight: 500;
+            color: var(--accent-color);
+        }
+
+        .cross-ref-context {
+            font-size: 0.8rem;
+            color: var(--muted-text);
+            margin-top: 2px;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            :root {
+                --min-touch-target: 44px;
+            }
+            
+            .organizer-panel {
+                width: 280px;
+                min-width: 250px;
+            }
+            
+            .toolbar {
+                flex-wrap: wrap;
+                gap: 8px;
+            }
+            
+            .btn {
+                padding: 8px 12px;
+            }
+        }
+
+        /* High Contrast Mode */
+        @media (prefers-contrast: high) {
+            :root {
+                --border-color: #000000;
+                --text-color: #000000;
+                --muted-text: #333333;
+            }
+        }
+
+        /* Accessibility */
+        .sr-only {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border: 0;
+        }
+
+        /* Focus styles for keyboard navigation */
+        .tree-item:focus,
+        .btn:focus,
+        .search-input:focus,
+        .rung:focus {
+            outline: 2px solid var(--accent-color);
+            outline-offset: 2px;
+        }
+
+        /* Animation */
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .loading {
+            animation: pulse 1.5s infinite;
+        }
+
+        /* Ladder logic enhancements */
+        .ladder-container {
+            padding: 16px;
+            min-height: 100%;
+        }
+
+        .ladder-container .rung {
+            margin-bottom: 16px;
+            transition: all 0.2s ease;
+        }
+
+        .ladder-container .rung:last-child {
+            margin-bottom: 0;
+        }
+
+        /* Tooltip for ladder elements */
+        .ladder-element-tooltip {
+            position: absolute;
+            background: var(--text-color);
+            color: var(--light-text);
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            pointer-events: none;
+            z-index: 1000;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+
+        .ladder-element-tooltip.show {
+            opacity: 1;
+        }
+
+        /* Responsive ladder logic */
+        @media (max-width: 768px) {
+            .ladder-svg {
+                min-height: 80px;
+            }
+            
+            .element-text {
+                font-size: 10px;
+            }
+            
+            .element-tag {
+                font-size: 8px;
+            }
+        }
+
+        /* Welcome Screen */
+        .welcome-screen {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            text-align: center;
+            color: var(--muted-text);
+        }
+
+        .welcome-icon {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+            color: var(--accent-color);
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <h1>Studio 5000 Logix Designer Style PLC Viewer</h1>
+    </header>
+
+    <!-- Toolbar -->
+    <div class="toolbar">
+        <input type="file" id="fileInput" accept=".l5x,.xml" style="display: none;" aria-label="Select L5X project file">
+        <button class="btn" onclick="openFile()" aria-label="Load L5X project file">
+            📁 Open Project
+        </button>
+        <div class="search-container">
+            <span class="search-icon" aria-hidden="true">🔍</span>
+            <input type="text" class="search-input" placeholder="Search project tree..." id="searchInput" aria-label="Search project tree">
+        </div>
+        <button class="btn btn-secondary" onclick="showGoToDialog()" aria-label="Go to specific location">
+            🎯 Go To (Ctrl+G)
+        </button>
+        <button class="btn btn-secondary" onclick="showCrossReference()" aria-label="Show cross references" disabled id="crossRefBtn">
+            🔗 Cross Reference (Ctrl+E)
+        </button>
+        <button class="btn btn-secondary" onclick="showRoutineOverview()" aria-label="Show routine overview" disabled id="overviewBtn">
+            🗺️ Overview (Ctrl+B)
+        </button>
+    </div>
+
+    <!-- Status Bar -->
+    <div class="status-bar">
+        <span id="statusText">Ready to load L5X project file</span>
+        <span id="statusInfo"></span>
+    </div>
+
+    <!-- Main Container -->
+    <main class="main-container">
+        <!-- Controller Organizer Panel -->
+        <aside class="organizer-panel" role="navigation" aria-label="Project organizer">
+            <div class="organizer-header">Controller Organizer</div>
+            <div class="organizer-content" id="organizerContent">
+                <div class="welcome-screen">
+                    <div class="welcome-icon">🏭</div>
+                    <h3>No Project Loaded</h3>
+                    <p>Open an L5X file to begin exploring</p>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Content Panel -->
+        <section class="content-panel" role="main">
+            <div class="content-header" id="contentHeader" style="display: none;">
+                <div class="content-title" id="contentTitle">Select an item to view</div>
+                <div class="content-meta" id="contentMeta"></div>
+            </div>
+
+            <div class="view-tabs" id="viewTabs" style="display: none;">
+                <button class="view-tab active" data-view="ladder" onclick="switchView('ladder')">
+                    📊 Ladder Diagram
+                </button>
+                <button class="view-tab" data-view="text" onclick="switchView('text')">
+                    📝 Neutral Text
+                </button>
+            </div>
+
+            <div class="content-body" id="contentBody">
+                <div class="welcome-screen">
+                    <div class="welcome-icon">⚙️</div>
+                    <h2>Professional PLC Viewer</h2>
+                    <p>Load an L5X project file to begin viewing ladder logic, structured text, and project organization.</p>
+                    <p style="margin-top: 1rem; font-size: 0.9rem;">
+                        Features: Cross-references • Go To navigation • Routine overview • Zoom controls • Search functionality
+                    </p>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Zoom Controls -->
+    <div class="zoom-controls" id="zoomControls" style="display: none;">
+        <button class="zoom-btn" onclick="zoomIn()" aria-label="Zoom in">+</button>
+        <div class="zoom-level" id="zoomLevel">100%</div>
+        <button class="zoom-btn" onclick="zoomOut()" aria-label="Zoom out">-</button>
+        <button class="zoom-btn" onclick="resetZoom()" aria-label="Reset zoom">↻</button>
+    </div>
+
+    <!-- Modal Template -->
+    <div class="modal-overlay" id="modalOverlay" style="display: none;" onclick="closeModal()">
+        <div class="modal" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <div class="modal-title" id="modalTitle">Dialog</div>
+                <button class="modal-close" onclick="closeModal()" aria-label="Close dialog">×</button>
+            </div>
+            <div class="modal-body" id="modalBody">
+                <!-- Modal content goes here -->
+            </div>
+            <div class="modal-footer" id="modalFooter">
+                <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+                <button class="btn" id="modalAction">OK</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Application State
+        let projectData = null;
+        let selectedItem = null;
+        let currentView = 'ladder';
+        let currentZoom = 1;
+        let searchTimeout = null;
+
+        // DOM References
+        const fileInput = document.getElementById('fileInput');
+        const searchInput = document.getElementById('searchInput');
+        const statusText = document.getElementById('statusText');
+        const statusInfo = document.getElementById('statusInfo');
+        const organizerContent = document.getElementById('organizerContent');
+        const contentHeader = document.getElementById('contentHeader');
+        const contentTitle = document.getElementById('contentTitle');
+        const contentMeta = document.getElementById('contentMeta');
+        const viewTabs = document.getElementById('viewTabs');
+        const contentBody = document.getElementById('contentBody');
+        const zoomControls = document.getElementById('zoomControls');
+        const zoomLevel = document.getElementById('zoomLevel');
+        const crossRefBtn = document.getElementById('crossRefBtn');
+        const overviewBtn = document.getElementById('overviewBtn');
+
+        // Event Listeners
+        fileInput.addEventListener('change', handleFileSelect);
+        searchInput.addEventListener('input', handleSearch);
+        document.addEventListener('keydown', handleKeyboardShortcuts);
+
+        // File handling
+        function openFile() {
+            fileInput.click();
+        }
+
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            updateStatus(`Loading ${file.name}...`, 'loading');
+            showLoadingState();
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const parser = new DOMParser();
+                    const xmlDoc = parser.parseFromString(e.target.result, "text/xml");
+                    
+                    // Check for XML parsing errors
+                    const parseError = xmlDoc.querySelector('parsererror');
+                    if (parseError) {
+                        throw new Error("Invalid L5X file format - XML parsing failed");
+                    }
+
+                    // Check if this is a valid L5X file
+                    const controller = xmlDoc.querySelector('Controller');
+                    if (!controller) {
+                        throw new Error("Invalid L5X file - No Controller element found");
+                    }
+
+                    projectData = parseL5X(xmlDoc);
+                    if (!projectData || !projectData.controller) {
+                        throw new Error("Failed to parse L5X file structure");
+                    }
+
+                    renderControllerOrganizer(projectData);
+                    updateStatus(`✅ ${projectData.controller.name} loaded successfully`);
+                    enableFeatures();
+                } catch (error) {
+                    console.error("File Processing Error:", error);
+                    updateStatus(`❌ Error: ${error.message}`, 'error');
+                    showErrorState(error.message);
+                }
+            };
+            
+            reader.onerror = () => {
+                updateStatus('❌ Failed to read file', 'error');
+                showErrorState('Could not read the selected file');
+            };
+            
+            reader.readAsText(file);
+        }
+
+        // L5X Parsing
+        function parseL5X(xmlDoc) {
+            try {
+                const controller = xmlDoc.querySelector('Controller');
+                if (!controller) {
+                    throw new Error("No Controller element found in L5X file");
+                }
+
+                const getAttrs = (node, attrs) => {
+                    if (!node) return {};
+                    return attrs.reduce((acc, attr) => ({
+                        ...acc, 
+                        [attr.toLowerCase()]: node.getAttribute(attr) || ''
+                    }), {});
+                };
+
+                // Parse controller info
+                const controllerInfo = getAttrs(controller, ['Name', 'ProcessorType', 'MajorRev', 'MinorRev']);
+
+                // Parse tasks
+                const tasks = Array.from(xmlDoc.querySelectorAll('Tasks > Task')).map(task => ({
+                    ...getAttrs(task, ['Name', 'Type', 'Priority', 'Watchdog']),
+                    programs: Array.from(task.querySelectorAll('ScheduledPrograms > ScheduledProgram')).map(sp => 
+                        sp.getAttribute('Name') || '')
+                }));
+
+                // Parse programs
+                const programs = Array.from(xmlDoc.querySelectorAll('Programs > Program')).map(program => {
+                    const programInfo = getAttrs(program, ['Name', 'Type', 'TestEdits']);
+                    
+                    programInfo.tags = Array.from(program.querySelectorAll(':scope > Tags > Tag')).map(tag =>
+                        getAttrs(tag, ['Name', 'TagType', 'DataType', 'Usage', 'Constant']));
+                    
+                    programInfo.routines = Array.from(program.querySelectorAll(':scope > Routines > Routine')).map(routine => {
+                        const routineInfo = getAttrs(routine, ['Name', 'Type']);
+                        const descElement = routine.querySelector('Description');
+                        routineInfo.description = descElement ? descElement.textContent.trim() : '';
+                        
+                        // Parse RLL content
+                        const rllContent = routine.querySelector('RLLContent');
+                        if (rllContent) {
+                            routineInfo.logic = {
+                                type: 'RLL',
+                                content: Array.from(rllContent.querySelectorAll('Rung')).map((rung, i) => {
+                                    const textElement = rung.querySelector('Text');
+                                    const commentElement = rung.querySelector('Comment');
+                                    
+                                    return {
+                                        number: rung.getAttribute('Number') || i.toString(),
+                                        text: textElement ? textElement.textContent.trim() : '',
+                                        comment: commentElement ? commentElement.textContent.trim() : ''
+                                    };
+                                })
+                            };
+                        }
+                        
+                        // Parse ST content
+                        const stContent = routine.querySelector('STContent');
+                        if (stContent) {
+                            routineInfo.logic = {
+                                type: 'ST',
+                                content: stContent.textContent.trim()
+                            };
+                        }
+                        
+                        return routineInfo;
+                    });
+                    
+                    return programInfo;
+                });
+
+                // Parse data types
+                const dataTypes = Array.from(xmlDoc.querySelectorAll('DataTypes > DataType')).map(dt => ({
+                    ...getAttrs(dt, ['Name', 'Family']),
+                    members: Array.from(dt.querySelectorAll('Members > Member')).map(member =>
+                        getAttrs(member, ['Name', 'DataType', 'Dimension', 'Radix']))
+                }));
+
+                // Parse controller tags
+                const controllerTags = Array.from(xmlDoc.querySelectorAll('Controller > Tags > Tag')).map(tag =>
+                    getAttrs(tag, ['Name', 'TagType', 'DataType', 'Usage', 'Constant']));
+
+                return {
+                    controller: controllerInfo,
+                    tasks: tasks,
+                    programs: programs,
+                    dataTypes: dataTypes,
+                    controllerTags: controllerTags
+                };
+            } catch (error) {
+                console.error("L5X parsing error:", error);
+                throw new Error(`Failed to parse L5X file: ${error.message}`);
+            }
+        }
+
+        // Render Controller Organizer Tree
+        function renderControllerOrganizer(data) {
+            try {
+                if (!data || !data.controller) {
+                    throw new Error("Invalid project data");
+                }
+
+                const tree = createTreeNode(data.controller.name || 'Unknown Controller', '🧠', [
+                    createTreeNode('Controller Tags', '🏷️', 
+                        (data.controllerTags || []).map(tag => 
+                            createTreeNode(tag.name || 'Unknown Tag', getTagIcon(tag), null, {
+                                type: 'controller-tag',
+                                tagName: tag.name || '',
+                                dataType: tag.datatype || tag.DataType || ''
+                            })
+                        ), { type: 'controller-tags' }
+                    ),
+                    createTreeNode('Tasks', '📋', 
+                        (data.tasks || []).map(task => 
+                            createTreeNode(`${task.name || 'Unknown Task'} (${task.type || 'Unknown'})`, getTaskIcon(task.type), 
+                                (task.programs || []).map(progName => {
+                                    const program = (data.programs || []).find(p => p.name === progName);
+                                    return program ? createProgramNode(program) : null;
+                                }).filter(Boolean), 
+                                { type: 'task', taskName: task.name || '' }
+                            )
+                        ), 
+                        { type: 'tasks' }
+                    ),
+                    createTreeNode('Data Types', '📊', 
+                        (data.dataTypes || []).map(dt => 
+                            createTreeNode(dt.name || 'Unknown DataType', '📋', null, {
+                                type: 'datatype',
+                                datatypeName: dt.name || ''
+                            })
+                        ), 
+                        { type: 'datatypes' }
+                    )
+                ], { type: 'controller' });
+
+                organizerContent.innerHTML = '';
+                organizerContent.appendChild(tree);
+                
+                // Expand controller and tasks by default with null checks
+                setTimeout(() => {
+                    const controllerNode = tree.querySelector('[data-type="controller"]');
+                    const tasksNode = tree.querySelector('[data-type="tasks"]');
+                    
+                    if (controllerNode) {
+                        const controllerLi = controllerNode.closest('li');
+                        if (controllerLi) expandTreeNode(controllerLi);
+                    }
+                    if (tasksNode) {
+                        const tasksLi = tasksNode.closest('li');
+                        if (tasksLi) expandTreeNode(tasksLi);
+                    }
+                }, 100);
+            } catch (error) {
+                console.error("Error rendering organizer:", error);
+                showErrorState(`Failed to render project tree: ${error.message}`);
+            }
+        }
+
+        function createProgramNode(program) {
+            if (!program || !program.name) return null;
+            
+            return createTreeNode(program.name, '💻', [
+                createTreeNode('Tags', '🏷️', 
+                    (program.tags || []).map(tag => 
+                        createTreeNode(tag.name || 'Unknown Tag', getTagIcon(tag), null, {
+                            type: 'program-tag',
+                            programName: program.name,
+                            tagName: tag.name || ''
+                        })
+                    ), 
+                    { type: 'program-tags', programName: program.name }
+                ),
+                createTreeNode('Routines', '📁', 
+                    (program.routines || []).map(routine => 
+                        createTreeNode(routine.name || 'Unknown Routine', getRoutineIcon(routine.type), null, {
+                            type: 'routine',
+                            programName: program.name,
+                            routineName: routine.name || ''
+                        })
+                    ), 
+                    { type: 'routines', programName: program.name }
+                )
+            ], { type: 'program', programName: program.name });
+        }
+
+        function createTreeNode(text, icon, children, data) {
+            const li = document.createElement('li');
+            li.className = 'tree-node';
+            if (data) {
+                Object.keys(data).forEach(key => li.dataset[key] = data[key]);
+            }
+
+            const hasChildren = children && children.length > 0;
+            const toggleIcon = hasChildren ? '▶' : '';
+
+            li.innerHTML = `
+                <div class="tree-item" tabindex="0" role="treeitem" ${hasChildren ? 'aria-expanded="false"' : ''}>
+                    <span class="tree-toggle" aria-hidden="true">${toggleIcon}</span>
+                    <span class="tree-icon" aria-hidden="true">${icon}</span>
+                    <span>${text}</span>
+                </div>
+            `;
+
+            if (hasChildren) {
+                const childContainer = document.createElement('ul');
+                childContainer.className = 'tree-children collapsed';
+                childContainer.setAttribute('role', 'group');
+                children.forEach(child => {
+                    if (child) childContainer.appendChild(child);
+                });
+                li.appendChild(childContainer);
+
+                // Add click handler for expand/collapse
+                const toggle = li.querySelector('.tree-toggle');
+                const item = li.querySelector('.tree-item');
+                
+                const toggleHandler = (e) => {
+                    e.stopPropagation();
+                    toggleTreeNode(li);
+                };
+                
+                toggle.addEventListener('click', toggleHandler);
+                item.addEventListener('dblclick', toggleHandler);
+            }
+
+            // Add click handler for selection
+            li.querySelector('.tree-item').addEventListener('click', (e) => {
+                if (e.target.closest('.tree-toggle')) return;
+                selectTreeItem(li);
+            });
+
+            // Add keyboard navigation
+            li.querySelector('.tree-item').addEventListener('keydown', (e) => {
+                handleTreeKeyboard(e, li);
+            });
+
+            return li;
+        }
+
+        function getTagIcon(tag) {
+            const type = tag.datatype || tag.DataType || '';
+            if (type.includes('BOOL')) return '🔘';
+            if (type.includes('INT') || type.includes('REAL')) return '🔢';
+            if (type.includes('STRING')) return '📝';
+            if (type.includes('TIMER')) return '⏱️';
+            if (type.includes('COUNTER')) return '🔢';
+            return '🏷️';
+        }
+
+        function getTaskIcon(type) {
+            switch (type) {
+                case 'CONTINUOUS': return '🔄';
+                case 'PERIODIC': return '⏰';
+                case 'EVENT': return '⚡';
+                default: return '📋';
+            }
+        }
+
+        function getRoutineIcon(type) {
+            switch (type) {
+                case 'RLL': return '📊';
+                case 'ST': return '📝';
+                case 'FBD': return '🔲';
+                case 'SFC': return '🔀';
+                default: return '📄';
+            }
+        }
+
+        function toggleTreeNode(node) {
+            const children = node.querySelector('.tree-children');
+            const toggle = node.querySelector('.tree-toggle');
+            const item = node.querySelector('.tree-item');
+            
+            if (children) {
+                const isExpanded = !children.classList.contains('collapsed');
+                children.classList.toggle('collapsed');
+                toggle.textContent = isExpanded ? '▶' : '▼';
+                item.setAttribute('aria-expanded', isExpanded ? 'false' : 'true');
+            }
+        }
+
+        function expandTreeNode(node) {
+            if (!node) return;
+            
+            const listItem = node.closest ? node.closest('li') : node;
+            if (!listItem) return;
+            
+            const children = listItem.querySelector('.tree-children');
+            const toggle = listItem.querySelector('.tree-toggle');
+            const item = listItem.querySelector('.tree-item');
+            
+            if (children && toggle && item) {
+                children.classList.remove('collapsed');
+                toggle.textContent = '▼';
+                item.setAttribute('aria-expanded', 'true');
+            }
+        }
+
+        function selectTreeItem(node) {
+            // Remove previous selection
+            document.querySelectorAll('.tree-item.selected').forEach(item => {
+                item.classList.remove('selected');
+            });
+
+            // Add selection to current item
+            const item = node.querySelector('.tree-item');
+            item.classList.add('selected');
+            selectedItem = node;
+
+            // Display content based on selection
+            displaySelectedContent(node);
+        }
+
+        function displaySelectedContent(node) {
+            const data = node.dataset;
+            
+            if (data.type === 'routine') {
+                displayRoutine(data.programName, data.routineName);
+            } else if (data.type === 'controller') {
+                displayControllerInfo();
+            } else if (data.type === 'program') {
+                displayProgramInfo(data.programName);
+            } else if (data.type === 'datatype') {
+                displayDataType(data.datatypeName);
+            } else {
+                displayGenericInfo(data);
+            }
+        }
+
+        function displayRoutine(programName, routineName) {
+            const program = projectData.programs.find(p => p.name === programName);
+            const routine = program?.routines.find(r => r.name === routineName);
+            
+            if (!routine) {
+                showErrorState('Routine not found');
+                return;
+            }
+
+            // Show header
+            contentHeader.style.display = 'block';
+            contentTitle.textContent = `Routine: ${routine.name}`;
+            contentMeta.innerHTML = `
+                <span><strong>Type:</strong> ${routine.type}</span>
+                <span><strong>Program:</strong> ${programName}</span>
+                ${routine.description ? `<span><strong>Description:</strong> ${routine.description}</span>` : ''}
+            `;
+
+            // Show view tabs for RLL routines
+            if (routine.logic?.type === 'RLL') {
+                viewTabs.style.display = 'flex';
+                renderLadderLogic(routine.logic.content);
+            } else if (routine.logic?.type === 'ST') {
+                viewTabs.style.display = 'none';
+                renderStructuredText(routine.logic.content);
+            } else {
+                viewTabs.style.display = 'none';
+                showErrorState('No logic content found for this routine');
+            }
+
+            // Enable features
+            crossRefBtn.disabled = false;
+            overviewBtn.disabled = routine.logic?.type !== 'RLL';
+            zoomControls.style.display = 'block';
+        }
+
+        function renderLadderLogic(rungs) {
+            if (currentView === 'text') {
+                renderNeutralText(rungs);
+                return;
+            }
+
+            const container = document.createElement('div');
+            container.className = 'ladder-container';
+            container.setAttribute('role', 'main');
+            container.setAttribute('aria-label', 'Ladder logic diagram');
+
+            rungs.forEach((rung, index) => {
+                const rungElement = createRungElement(rung, index);
+                container.appendChild(rungElement);
+            });
+
+            contentBody.innerHTML = '';
+            contentBody.appendChild(container);
+        }
+
+        function createRungElement(rung, index) {
+            const rungDiv = document.createElement('div');
+            rungDiv.className = 'rung';
+            rungDiv.setAttribute('tabindex', '0');
+            rungDiv.setAttribute('role', 'button');
+            rungDiv.setAttribute('aria-label', `Rung ${rung.number}`);
+            rungDiv.dataset.rungNumber = rung.number;
+
+            rungDiv.innerHTML = `
+                <div class="rung-header">
+                    <span class="rung-number" title="Click to select rung">${rung.number}</span>
+                    <span class="rung-comment">${rung.comment}</span>
+                    <div class="rung-actions">
+                        <button class="rung-action" data-action="copy" data-text="${encodeURIComponent(rung.text)}" title="Copy Neutral Text">📋</button>
+                        <button class="rung-action" data-action="crossref" data-rung="${rung.number}" title="Cross Reference">🔗</button>
+                    </div>
+                </div>
+                <div class="rung-content">
+                    ${renderRungLogic(rung.text)}
+                </div>
+            `;
+
+            // Add event listeners for rung actions
+            const copyBtn = rungDiv.querySelector('[data-action="copy"]');
+            const crossRefBtn = rungDiv.querySelector('[data-action="crossref"]');
+            
+            copyBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                copyNeutralText(decodeURIComponent(copyBtn.dataset.text));
+            });
+            
+            crossRefBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                showRungCrossRef(crossRefBtn.dataset.rung);
+            });
+
+            // Add click handler for rung selection
+            rungDiv.addEventListener('click', () => selectRung(rungDiv));
+            rungDiv.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    selectRung(rungDiv);
+                }
+            });
+
+            return rungDiv;
+        }
+
+        function renderRungLogic(rungText) {
+            if (!rungText || rungText.trim() === '') {
+                return '<svg class="ladder-svg" viewBox="0 0 400 60"><line x1="20" y1="30" x2="380" y2="30" class="power-rail" /></svg>';
+            }
+
+            // Parse and render the ladder logic
+            const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+            svg.setAttribute('class', 'ladder-svg');
+            svg.setAttribute('role', 'img');
+            svg.setAttribute('aria-label', `Ladder logic: ${rungText}`);
+
+            try {
+                const elements = parseRungLogic(rungText);
+                if (elements.length === 0) {
+                    // No elements parsed, show empty rung
+                    svg.setAttribute('viewBox', '0 0 400 60');
+                    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                    line.setAttribute('x1', '20');
+                    line.setAttribute('y1', '30');
+                    line.setAttribute('x2', '380');
+                    line.setAttribute('y2', '30');
+                    line.setAttribute('class', 'power-rail');
+                    svg.appendChild(line);
+                } else {
+                    renderLogicElements(svg, elements);
+                }
+            } catch (error) {
+                console.warn('Could not parse rung logic:', error);
+                // Fallback to simple power rail with error indication
+                svg.setAttribute('viewBox', '0 0 800 80');
+                const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                line.setAttribute('x1', '20');
+                line.setAttribute('y1', '40');
+                line.setAttribute('x2', '780');
+                line.setAttribute('y2', '40');
+                line.setAttribute('class', 'power-rail');
+                svg.appendChild(line);
+
+                // Add text representation
+                const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                text.setAttribute('x', '400');
+                text.setAttribute('y', '25');
+                text.setAttribute('class', 'element-text');
+                text.setAttribute('fill', '#dc2626');
+                text.textContent = 'Parse Error: ' + rungText.substring(0, 40) + (rungText.length > 40 ? '...' : '');
+                svg.appendChild(text);
+            }
+
+            return svg.outerHTML;
+        }
+
+        function parseRungLogic(rungText) {
+            if (!rungText || rungText.trim() === '') {
+                return [];
+            }
+
+            const elements = [];
+            let x = 50;
+            const y = 40;
+            let branchLevel = 0;
+            let branchStack = [];
+
+            // Enhanced parsing for ladder logic instructions
+            const tokens = tokenizeRungLogic(rungText);
+            
+            tokens.forEach((token, index) => {
+                if (token.type === 'BRANCH_START') {
+                    branchStack.push({ x: x, level: branchLevel });
+                    branchLevel++;
+                    x += 20; // Indent for branch
+                } else if (token.type === 'BRANCH_END') {
+                    if (branchStack.length > 0) {
+                        const lastBranch = branchStack.pop();
+                        x = lastBranch.x;
+                        branchLevel = lastBranch.level;
+                    }
+                } else if (token.type === 'INSTRUCTION') {
+                    elements.push({
+                        type: getElementType(token.instruction),
+                        instruction: token.instruction,
+                        tag: token.tag,
+                        x: x,
+                        y: y + (branchLevel * 25),
+                        branchLevel: branchLevel,
+                        width: getElementWidth(token.instruction)
+                    });
+                    x += getElementWidth(token.instruction) + 30;
+                }
+            });
+
+            return elements;
+        }
+
+        function tokenizeRungLogic(rungText) {
+            const tokens = [];
+            let current = 0;
+            
+            while (current < rungText.length) {
+                const char = rungText[current];
+                
+                if (char === '(') {
+                    // Look for instruction pattern: XIC(tag), OTE(tag), etc.
+                    const instructionMatch = rungText.substring(current - 4, current + 1).match(/([A-Z]{2,4})\(/);
+                    if (instructionMatch) {
+                        const instruction = instructionMatch[1];
+                        const tagStart = current + 1;
+                        const tagEnd = rungText.indexOf(')', tagStart);
+                        
+                        if (tagEnd !== -1) {
+                            const tag = rungText.substring(tagStart, tagEnd);
+                            tokens.push({
+                                type: 'INSTRUCTION',
+                                instruction: instruction,
+                                tag: tag
+                            });
+                            current = tagEnd + 1;
+                            continue;
+                        }
+                    }
+                } else if (char === '[') {
+                    tokens.push({ type: 'BRANCH_START' });
+                } else if (char === ']') {
+                    tokens.push({ type: 'BRANCH_END' });
+                }
+                
+                current++;
+            }
+            
+            return tokens;
+        }
+
+        function getElementWidth(instruction) {
+            // Return appropriate width based on instruction type
+            if (['XIC', 'XIO'].includes(instruction)) return 50;
+            if (['OTE', 'OTL', 'OTU'].includes(instruction)) return 60;
+            if (['TON', 'TOF', 'TONR'].includes(instruction)) return 90;
+            if (['CTU', 'CTD', 'CTUD'].includes(instruction)) return 70;
+            if (['MOV', 'COP', 'CPS', 'FLL'].includes(instruction)) return 80;
+            return 70; // Default width
+        }
+
+        function getElementType(instruction) {
+            if (['XIC', 'XIO'].includes(instruction)) return 'contact';
+            if (['OTE', 'OTL', 'OTU'].includes(instruction)) return 'coil';
+            if (['TON', 'TOF', 'TONR', 'CTU', 'CTD', 'CTUD', 'MOV', 'COP', 'CPS'].includes(instruction)) return 'function';
+            return 'function';
+        }
+
+        function renderLogicElements(svg, elements) {
+            const svgWidth = 800;
+            const svgHeight = Math.max(100, elements.length > 0 ? Math.max(...elements.map(e => e.y + 40)) : 80);
+            
+            // Ensure minimum dimensions and handle edge cases
+            const finalWidth = Math.max(svgWidth, 400);
+            const finalHeight = Math.max(svgHeight, 80);
+            
+            svg.setAttribute('viewBox', `0 0 ${finalWidth} ${finalHeight}`);
+            
+            // Draw power rails
+            const leftRail = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            leftRail.setAttribute('x1', '20');
+            leftRail.setAttribute('y1', '20');
+            leftRail.setAttribute('x2', '20');
+            leftRail.setAttribute('y2', svgHeight - 20);
+            leftRail.setAttribute('class', 'power-rail');
+            svg.appendChild(leftRail);
+
+            const rightRail = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            rightRail.setAttribute('x1', svgWidth - 20);
+            rightRail.setAttribute('y1', '20');
+            rightRail.setAttribute('x2', svgWidth - 20);
+            rightRail.setAttribute('y2', svgHeight - 20);
+            rightRail.setAttribute('class', 'power-rail');
+            svg.appendChild(rightRail);
+
+            // Draw horizontal power lines for each branch level
+            const branchLevels = [...new Set(elements.map(e => e.branchLevel))].sort((a, b) => a - b);
+            branchLevels.forEach(level => {
+                const y = 40 + (level * 25);
+                const powerLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                powerLine.setAttribute('x1', '20');
+                powerLine.setAttribute('y1', y);
+                powerLine.setAttribute('x2', svgWidth - 20);
+                powerLine.setAttribute('y2', y);
+                powerLine.setAttribute('class', 'power-rail');
+                svg.appendChild(powerLine);
+            });
+
+            // Draw elements
+            elements.forEach(element => {
+                const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+                group.setAttribute('class', element.type);
+                
+                if (element.type === 'contact') {
+                    drawContact(group, element);
+                } else if (element.type === 'coil') {
+                    drawCoil(group, element);
+                } else {
+                    drawFunctionBlock(group, element);
+                }
+
+                svg.appendChild(group);
+            });
+
+            // Draw branch connections
+            drawBranchConnections(svg, elements);
+        }
+
+        function drawContact(group, element) {
+            const x = element.x;
+            const y = element.y;
+            const width = 35;
+            const height = 25;
+            
+            // Draw contact rectangle
+            const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+            rect.setAttribute('x', x - width/2);
+            rect.setAttribute('y', y - height/2);
+            rect.setAttribute('width', width);
+            rect.setAttribute('height', height);
+            rect.setAttribute('fill', 'none');
+            rect.setAttribute('stroke', 'currentColor');
+            rect.setAttribute('stroke-width', '2');
+            rect.setAttribute('class', 'contact');
+            rect.setAttribute('title', `${element.instruction}(${element.tag})`);
+            group.appendChild(rect);
+
+            // Draw contact symbol
+            const symbol = element.instruction === 'XIC' ? '| |' : '|/|';
+            const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            text.setAttribute('x', x);
+            text.setAttribute('y', y);
+            text.setAttribute('class', 'element-text');
+            text.textContent = symbol;
+            group.appendChild(text);
+
+            // Add tag label with better positioning and truncation
+            if (element.tag) {
+                const tagText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                tagText.setAttribute('x', x);
+                tagText.setAttribute('y', y + 35);
+                tagText.setAttribute('class', 'element-tag');
+                // Truncate long tags to prevent overlap
+                const displayTag = element.tag.length > 12 ? element.tag.substring(0, 10) + '...' : element.tag;
+                tagText.textContent = displayTag;
+                group.appendChild(tagText);
+            }
+        }
+
+        function drawCoil(group, element) {
+            const x = element.x;
+            const y = element.y;
+            const radius = 18;
+            
+            // Draw coil circle
+            const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+            circle.setAttribute('cx', x);
+            circle.setAttribute('cy', y);
+            circle.setAttribute('r', radius);
+            circle.setAttribute('fill', 'none');
+            circle.setAttribute('stroke', 'currentColor');
+            circle.setAttribute('stroke-width', '2');
+            circle.setAttribute('class', 'coil');
+            circle.setAttribute('title', `${element.instruction}(${element.tag})`);
+            group.appendChild(circle);
+
+            // Draw coil symbol
+            let symbol = '( )';
+            if (element.instruction === 'OTL') symbol = '(L)';
+            else if (element.instruction === 'OTU') symbol = '(U)';
+            
+            const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            text.setAttribute('x', x);
+            text.setAttribute('y', y);
+            text.setAttribute('class', 'element-text');
+            text.textContent = symbol;
+            group.appendChild(text);
+
+            // Add tag label with better positioning and truncation
+            if (element.tag) {
+                const tagText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                tagText.setAttribute('x', x);
+                tagText.setAttribute('y', y + 35);
+                tagText.setAttribute('class', 'element-tag');
+                // Truncate long tags to prevent overlap
+                const displayTag = element.tag.length > 12 ? element.tag.substring(0, 10) + '...' : element.tag;
+                tagText.textContent = displayTag;
+                group.appendChild(tagText);
+            }
+        }
+
+        function drawFunctionBlock(group, element) {
+            const x = element.x;
+            const y = element.y;
+            const width = element.width || 60;
+            const height = 30;
+            
+            // Draw function block rectangle
+            const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+            rect.setAttribute('x', x - width/2);
+            rect.setAttribute('y', y - height/2);
+            rect.setAttribute('width', width);
+            rect.setAttribute('height', height);
+            rect.setAttribute('class', 'function-block');
+            rect.setAttribute('title', `${element.instruction}(${element.tag})`);
+            group.appendChild(rect);
+
+            // Draw instruction text
+            const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            text.setAttribute('x', x);
+            text.setAttribute('y', y);
+            text.setAttribute('class', 'element-text');
+            text.textContent = element.instruction;
+            group.appendChild(text);
+
+            // Add tag label with better positioning and truncation
+            if (element.tag) {
+                const tagText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                tagText.setAttribute('x', x);
+                tagText.setAttribute('y', y + 35);
+                tagText.setAttribute('class', 'element-tag');
+                // Truncate long tags to prevent overlap
+                const displayTag = element.tag.length > 15 ? element.tag.substring(0, 13) + '...' : element.tag;
+                tagText.textContent = displayTag;
+                group.appendChild(tagText);
+            }
+        }
+
+        function drawBranchConnections(svg, elements) {
+            // Find elements that need branch connections
+            const branchElements = elements.filter(e => e.branchLevel > 0);
+            
+            branchElements.forEach(element => {
+                const x = element.x;
+                const y = element.y;
+                const branchY = 40 + (element.branchLevel * 25);
+                
+                // Draw vertical connection to main power rail
+                const connection = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                connection.setAttribute('x1', x);
+                connection.setAttribute('y1', y);
+                connection.setAttribute('x2', x);
+                connection.setAttribute('y2', branchY);
+                connection.setAttribute('class', 'branch-connection');
+                connection.setAttribute('stroke-width', '3');
+                svg.appendChild(connection);
+            });
+        }
+
+        function renderNeutralText(rungs) {
+            const container = document.createElement('div');
+            container.className = 'text-container';
+            container.setAttribute('role', 'main');
+            container.setAttribute('aria-label', 'Neutral text representation');
+
+            rungs.forEach(rung => {
+                const rungDiv = document.createElement('div');
+                rungDiv.className = 'text-rung';
+
+                let formattedText = rung.text;
+                // Highlight instructions and tags
+                formattedText = formattedText.replace(/\b([A-Z]{2,4})\b/g, '<span class="text-instruction">$1</span>');
+                formattedText = formattedText.replace(/\(([^)]+)\)/g, '(<span class="text-tag">$1</span>)');
+
+                rungDiv.innerHTML = `
+                    <div class="text-rung-header">Rung ${rung.number} ${rung.comment ? `- ${rung.comment}` : ''}</div>
+                    <pre class="text-rung-content">${formattedText || 'Empty Rung'}</pre>
+                `;
+
+                container.appendChild(rungDiv);
+            });
+
+            contentBody.innerHTML = '';
+            contentBody.appendChild(container);
+        }
+
+        function renderStructuredText(content) {
+            viewTabs.style.display = 'none';
+            
+            const container = document.createElement('div');
+            container.className = 'text-container';
+            container.innerHTML = `<pre class="text-rung-content">${content.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</pre>`;
+            
+            contentBody.innerHTML = '';
+            contentBody.appendChild(container);
+        }
+
+        function displayControllerInfo() {
+            contentHeader.style.display = 'block';
+            contentTitle.textContent = `Controller: ${projectData.controller.name}`;
+            contentMeta.innerHTML = `
+                <span><strong>Processor:</strong> ${projectData.controller.processortype}</span>
+                <span><strong>Revision:</strong> ${projectData.controller.majorrev}.${projectData.controller.minorrev}</span>
+                <span><strong>Programs:</strong> ${projectData.programs.length}</span>
+                <span><strong>Tasks:</strong> ${projectData.tasks.length}</span>
+            `;
+            
+            viewTabs.style.display = 'none';
+            contentBody.innerHTML = `
+                <div style="padding: 24px;">
+                    <h3>Project Overview</h3>
+                    <p>This controller contains ${projectData.programs.length} programs across ${projectData.tasks.length} tasks.</p>
+                    <p>Controller tags: ${projectData.controllerTags.length}</p>
+                    <p>Data types: ${projectData.dataTypes.length}</p>
+                </div>
+            `;
+            
+            crossRefBtn.disabled = true;
+            overviewBtn.disabled = true;
+            zoomControls.style.display = 'none';
+        }
+
+        function displayProgramInfo(programName) {
+            const program = projectData.programs.find(p => p.name === programName);
+            if (!program) return;
+
+            contentHeader.style.display = 'block';
+            contentTitle.textContent = `Program: ${program.name}`;
+            contentMeta.innerHTML = `
+                <span><strong>Type:</strong> ${program.type}</span>
+                <span><strong>Routines:</strong> ${program.routines.length}</span>
+                <span><strong>Tags:</strong> ${program.tags.length}</span>
+            `;
+            
+            viewTabs.style.display = 'none';
+            contentBody.innerHTML = `
+                <div style="padding: 24px;">
+                    <h3>Program Information</h3>
+                    <p>This program contains ${program.routines.length} routines and ${program.tags.length} tags.</p>
+                    <h4>Routines:</h4>
+                    <ul>
+                        ${program.routines.map(r => `<li>${r.name} (${r.type})</li>`).join('')}
+                    </ul>
+                </div>
+            `;
+            
+            crossRefBtn.disabled = true;
+            overviewBtn.disabled = true;
+            zoomControls.style.display = 'none';
+        }
+
+        function displayDataType(datatypeName) {
+            const datatype = projectData.dataTypes.find(dt => dt.name === datatypeName);
+            if (!datatype) return;
+
+            contentHeader.style.display = 'block';
+            contentTitle.textContent = `Data Type: ${datatype.name}`;
+            contentMeta.innerHTML = `
+                <span><strong>Family:</strong> ${datatype.family || 'None'}</span>
+                <span><strong>Members:</strong> ${datatype.members.length}</span>
+            `;
+            
+            viewTabs.style.display = 'none';
+            
+            const membersHtml = datatype.members.length > 0 
+                ? `<table style="width: 100%; border-collapse: collapse; margin-top: 16px;">
+                    <thead>
+                        <tr style="background: var(--secondary-bg);">
+                            <th style="padding: 8px; text-align: left; border: 1px solid var(--border-color);">Name</th>
+                            <th style="padding: 8px; text-align: left; border: 1px solid var(--border-color);">Data Type</th>
+                            <th style="padding: 8px; text-align: left; border: 1px solid var(--border-color);">Dimension</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${datatype.members.map(m => `
+                            <tr>
+                                <td style="padding: 8px; border: 1px solid var(--border-color);">${m.name}</td>
+                                <td style="padding: 8px; border: 1px solid var(--border-color);">${m.datatype}</td>
+                                <td style="padding: 8px; border: 1px solid var(--border-color);">${m.dimension || '1'}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>`
+                : '<p>No members defined.</p>';
+            
+            contentBody.innerHTML = `
+                <div style="padding: 24px;">
+                    <h3>Data Type Members</h3>
+                    ${membersHtml}
+                </div>
+            `;
+            
+            crossRefBtn.disabled = true;
+            overviewBtn.disabled = true;
+            zoomControls.style.display = 'none';
+        }
+
+        function displayGenericInfo(data) {
+            contentHeader.style.display = 'block';
+            contentTitle.textContent = 'Information';
+            contentMeta.innerHTML = `<span><strong>Type:</strong> ${data.type}</span>`;
+            
+            viewTabs.style.display = 'none';
+            contentBody.innerHTML = `
+                <div style="padding: 24px;">
+                    <h3>Item Details</h3>
+                    <p>Selected item type: ${data.type}</p>
+                    <pre>${JSON.stringify(data, null, 2)}</pre>
+                </div>
+            `;
+            
+            crossRefBtn.disabled = true;
+            overviewBtn.disabled = true;
+            zoomControls.style.display = 'none';
+        }
+
+        // View Management
+        function switchView(view) {
+            currentView = view;
+            
+            // Update tab appearance
+            document.querySelectorAll('.view-tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.querySelector(`[data-view="${view}"]`).classList.add('active');
+            
+            // Re-render current content
+            if (selectedItem && selectedItem.dataset.type === 'routine') {
+                displaySelectedContent(selectedItem);
+            }
+        }
+
+        // Search functionality
+        function handleSearch() {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                const query = searchInput.value.toLowerCase();
+                filterTree(query);
+            }, 300);
+        }
+
+        function filterTree(query) {
+            const items = document.querySelectorAll('.tree-item');
+            
+            items.forEach(item => {
+                const text = item.textContent.toLowerCase();
+                const node = item.closest('li');
+                const matches = text.includes(query);
+                
+                node.style.display = matches || query === '' ? '' : 'none';
+                
+                if (matches && query !== '') {
+                    // Expand parents to show matching items
+                    let parent = node.parentElement;
+                    while (parent && parent.classList.contains('tree-children')) {
+                        parent.classList.remove('collapsed');
+                        const parentItem = parent.previousElementSibling;
+                        if (parentItem) {
+                            const toggle = parentItem.querySelector('.tree-toggle');
+                            if (toggle) toggle.textContent = '▼';
+                            parentItem.setAttribute('aria-expanded', 'true');
+                        }
+                        parent = parent.parentElement?.parentElement;
+                    }
+                }
+            });
+        }
+
+        // Keyboard shortcuts
+        function handleKeyboardShortcuts(e) {
+            if (e.ctrlKey || e.metaKey) {
+                switch (e.key) {
+                    case 'g':
+                        e.preventDefault();
+                        showGoToDialog();
+                        break;
+                    case 'e':
+                        e.preventDefault();
+                        if (!crossRefBtn.disabled) showCrossReference();
+                        break;
+                    case 'b':
+                        e.preventDefault();
+                        if (!overviewBtn.disabled) showRoutineOverview();
+                        break;
+                    case 'f':
+                        e.preventDefault();
+                        searchInput.focus();
+                        break;
+                    case '=':
+                    case '+':
+                        e.preventDefault();
+                        zoomIn();
+                        break;
+                    case '-':
+                        e.preventDefault();
+                        zoomOut();
+                        break;
+                    case '0':
+                        e.preventDefault();
+                        resetZoom();
+                        break;
+                }
+            }
+        }
+
+        function handleTreeKeyboard(e, node) {
+            switch (e.key) {
+                case 'ArrowUp':
+                    e.preventDefault();
+                    focusPreviousItem(node);
+                    break;
+                case 'ArrowDown':
+                    e.preventDefault();
+                    focusNextItem(node);
+                    break;
+                case 'ArrowRight':
+                    e.preventDefault();
+                    if (node.querySelector('.tree-children')) {
+                        expandTreeNode(node.querySelector('.tree-item'));
+                    }
+                    break;
+                case 'ArrowLeft':
+                    e.preventDefault();
+                    if (node.querySelector('.tree-children:not(.collapsed)')) {
+                        toggleTreeNode(node);
+                    } else {
+                        focusParentItem(node);
+                    }
+                    break;
+                case 'Enter':
+                case ' ':
+                    e.preventDefault();
+                    selectTreeItem(node);
+                    break;
+            }
+        }
+
+        function focusPreviousItem(currentNode) {
+            const items = Array.from(document.querySelectorAll('.tree-item'));
+            const currentIndex = items.indexOf(currentNode.querySelector('.tree-item'));
+            if (currentIndex > 0) {
+                items[currentIndex - 1].focus();
+            }
+        }
+
+        function focusNextItem(currentNode) {
+            const items = Array.from(document.querySelectorAll('.tree-item'));
+            const currentIndex = items.indexOf(currentNode.querySelector('.tree-item'));
+            if (currentIndex < items.length - 1) {
+                items[currentIndex + 1].focus();
+            }
+        }
+
+        function focusParentItem(currentNode) {
+            const parent = currentNode.parentElement?.parentElement;
+            if (parent && parent.classList.contains('tree-node')) {
+                parent.querySelector('.tree-item').focus();
+            }
+        }
+
+        // Zoom controls
+        function zoomIn() {
+            currentZoom = Math.min(currentZoom * 1.2, 4);
+            updateZoom();
+        }
+
+        function zoomOut() {
+            currentZoom = Math.max(currentZoom / 1.2, 0.25);
+            updateZoom();
+        }
+
+        function resetZoom() {
+            currentZoom = 1;
+            updateZoom();
+        }
+
+        function updateZoom() {
+            document.documentElement.style.setProperty('--zoom-factor', currentZoom);
+            zoomLevel.textContent = Math.round(currentZoom * 100) + '%';
+        }
+
+        // Rung operations
+        function selectRung(rungElement) {
+            // Remove previous selection
+            document.querySelectorAll('.rung.selected').forEach(rung => {
+                rung.classList.remove('selected');
+            });
+            
+            // Add selection to current rung
+            rungElement.classList.add('selected');
+            rungElement.focus();
+            
+            updateStatus(`Selected rung ${rungElement.dataset.rungNumber}`);
+        }
+
+        function copyNeutralText(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                updateStatus('Neutral text copied to clipboard', 'success');
+            }).catch(() => {
+                updateStatus('Failed to copy neutral text', 'error');
+            });
+        }
+
+        function showRungCrossRef(rungNumber) {
+            showModal('Cross Reference', `
+                <div class="cross-ref-list">
+                    <div class="cross-ref-item">
+                        <div class="cross-ref-location">Rung ${rungNumber}</div>
+                        <div class="cross-ref-context">Current location</div>
+                    </div>
+                    <div style="padding: 16px; text-align: center; color: var(--muted-text);">
+                        Cross-reference analysis not yet implemented for individual rungs.
+                        This would show all locations where tags from this rung are used.
+                    </div>
+                </div>
+            `);
+        }
+
+        // Modal dialogs
+        function showModal(title, body, actionText = 'OK', actionCallback = null) {
+            const overlay = document.getElementById('modalOverlay');
+            const modalTitle = document.getElementById('modalTitle');
+            const modalBody = document.getElementById('modalBody');
+            const modalAction = document.getElementById('modalAction');
+            
+            modalTitle.textContent = title;
+            modalBody.innerHTML = body;
+            modalAction.textContent = actionText;
+            
+            if (actionCallback) {
+                modalAction.onclick = () => {
+                    actionCallback();
+                    closeModal();
+                };
+            } else {
+                modalAction.onclick = closeModal;
+            }
+            
+            overlay.style.display = 'flex';
+            
+            // Focus management
+            const firstFocusable = overlay.querySelector('button, input, select, textarea, [tabindex]:not([tabindex="-1"])');
+            if (firstFocusable) {
+                firstFocusable.focus();
+            }
+        }
+
+        function closeModal() {
+            document.getElementById('modalOverlay').style.display = 'none';
+        }
+
+        function showGoToDialog() {
+            if (!projectData) {
+                updateStatus('No project loaded', 'error');
+                return;
+            }
+            
+            const routineOptions = projectData.programs.flatMap(program => 
+                program.routines.map(routine => 
+                    `<option value="routine:${program.name}:${routine.name}">${program.name}/${routine.name}</option>`
+                )
+            ).join('');
+            
+            const programOptions = projectData.programs.map(program =>
+                `<option value="program:${program.name}">${program.name}</option>`
+            ).join('');
+            
+            showModal('Go To', `
+                <div style="margin-bottom: 16px;">
+                    <label for="goToSelect" style="display: block; margin-bottom: 8px; font-weight: 500;">Select destination:</label>
+                    <select id="goToSelect" style="width: 100%; padding: 8px; border: 1px solid var(--border-color); border-radius: 4px;">
+                        <optgroup label="Programs">
+                            ${programOptions}
+                        </optgroup>
+                        <optgroup label="Routines">
+                            ${routineOptions}
+                        </optgroup>
+                    </select>
+                </div>
+                <div>
+                    <label for="rungInput" style="display: block; margin-bottom: 8px; font-weight: 500;">Rung number (optional):</label>
+                    <input type="number" id="rungInput" placeholder="Enter rung number" style="width: 100%; padding: 8px; border: 1px solid var(--border-color); border-radius: 4px;">
+                </div>
+            `, 'Go', () => {
+                const select = document.getElementById('goToSelect');
+                const rungInput = document.getElementById('rungInput');
+                const [type, ...parts] = select.value.split(':');
+                
+                if (type === 'routine') {
+                    const [programName, routineName] = parts;
+                    const routineNode = document.querySelector(`[data-type="routine"][data-program-name="${programName}"][data-routine-name="${routineName}"]`);
+                    if (routineNode) {
+                        selectTreeItem(routineNode);
+                        
+                        // Scroll to specific rung if provided
+                        if (rungInput.value) {
+                            setTimeout(() => {
+                                const rungElement = document.querySelector(`[data-rung-number="${rungInput.value}"]`);
+                                if (rungElement) {
+                                    rungElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                    selectRung(rungElement);
+                                }
+                            }, 100);
+                        }
+                    }
+                } else if (type === 'program') {
+                    const programName = parts[0];
+                    const programNode = document.querySelector(`[data-type="program"][data-program-name="${programName}"]`);
+                    if (programNode) {
+                        selectTreeItem(programNode);
+                    }
+                }
+            });
+        }
+
+        function showCrossReference() {
+            if (!selectedItem) {
+                updateStatus('No item selected', 'error');
+                return;
+            }
+            
+            const data = selectedItem.dataset;
+            let crossRefs = [];
+            
+            // Generate cross-references based on item type
+            if (data.type === 'routine') {
+                crossRefs = findRoutineCrossReferences(data.programName, data.routineName);
+            } else if (data.type === 'controller-tag' || data.type === 'program-tag') {
+                crossRefs = findTagCrossReferences(data.tagName, data.programName);
+            }
+            
+            const crossRefHtml = crossRefs.length > 0 
+                ? crossRefs.map(ref => `
+                    <div class="cross-ref-item" onclick="navigateToReference('${ref.location}')">
+                        <div class="cross-ref-location">${ref.location}</div>
+                        <div class="cross-ref-context">${ref.context}</div>
+                    </div>
+                `).join('')
+                : '<div style="padding: 16px; text-align: center; color: var(--muted-text);">No cross-references found.</div>';
+            
+            showModal('Cross Reference', `
+                <div class="cross-ref-list">
+                    ${crossRefHtml}
+                </div>
+            `);
+        }
+
+        function findRoutineCrossReferences(programName, routineName) {
+            const crossRefs = [];
+            
+            // Find JSR calls to this routine
+            projectData.programs.forEach(program => {
+                program.routines.forEach(routine => {
+                    if (routine.logic?.type === 'RLL') {
+                        routine.logic.content.forEach(rung => {
+                            if (rung.text.includes(`JSR(${routineName})`)) {
+                                crossRefs.push({
+                                    location: `${program.name}/${routine.name} - Rung ${rung.number}`,
+                                    context: `JSR call: ${rung.text.substring(0, 50)}...`
+                                });
+                            }
+                        });
+                    }
+                });
+            });
+            
+            return crossRefs;
+        }
+
+        function findTagCrossReferences(tagName, programName) {
+            const crossRefs = [];
+            
+            // Search in all routines
+            projectData.programs.forEach(program => {
+                program.routines.forEach(routine => {
+                    if (routine.logic?.type === 'RLL') {
+                        routine.logic.content.forEach(rung => {
+                            if (rung.text.includes(tagName)) {
+                                crossRefs.push({
+                                    location: `${program.name}/${routine.name} - Rung ${rung.number}`,
+                                    context: `Usage: ${rung.text.substring(0, 50)}...`
+                                });
+                            }
+                        });
+                    }
+                });
+            });
+            
+            return crossRefs;
+        }
+
+        function navigateToReference(location) {
+            closeModal();
+            
+            // Parse location string (e.g., "Program1/Routine1 - Rung 5")
+            const match = location.match(/(.+?)\/(.+?) - Rung (\d+)/);
+            if (match) {
+                const [, programName, routineName, rungNumber] = match;
+                const routineNode = document.querySelector(`[data-type="routine"][data-program-name="${programName}"][data-routine-name="${routineName}"]`);
+                
+                if (routineNode) {
+                    selectTreeItem(routineNode);
+                    
+                    setTimeout(() => {
+                        const rungElement = document.querySelector(`[data-rung-number="${rungNumber}"]`);
+                        if (rungElement) {
+                            rungElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            selectRung(rungElement);
+                        }
+                    }, 100);
+                }
+            }
+        }
+
+        function showRoutineOverview() {
+            if (!selectedItem || selectedItem.dataset.type !== 'routine') {
+                updateStatus('No routine selected', 'error');
+                return;
+            }
+            
+            const data = selectedItem.dataset;
+            const program = projectData.programs.find(p => p.name === data.programName);
+            const routine = program?.routines.find(r => r.name === data.routineName);
+            
+            if (!routine || routine.logic?.type !== 'RLL') {
+                updateStatus('Routine overview only available for ladder logic', 'error');
+                return;
+            }
+            
+            const overviewSvg = generateRoutineOverview(routine.logic.content);
+            
+            showModal('Routine Overview', `
+                <div style="text-align: center; margin-bottom: 16px;">
+                    <strong>${routine.name}</strong> - ${routine.logic.content.length} rungs
+                </div>
+                <div style="max-height: 400px; overflow: auto; border: 1px solid var(--border-color); background: var(--secondary-bg);">
+                    ${overviewSvg}
+                </div>
+                <div style="margin-top: 12px; font-size: 0.85rem; color: var(--muted-text); text-align: center;">
+                    Click on a rung in the overview to navigate to it
+                </div>
+            `);
+        }
+
+        function generateRoutineOverview(rungs) {
+            const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+            svg.setAttribute('viewBox', `0 0 600 ${rungs.length * 30 + 40}`);
+            svg.setAttribute('style', 'width: 100%; height: auto; cursor: pointer;');
+            
+            rungs.forEach((rung, index) => {
+                const y = 20 + index * 30;
+                
+                // Rung background
+                const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                rect.setAttribute('x', '10');
+                rect.setAttribute('y', y - 10);
+                rect.setAttribute('width', '580');
+                rect.setAttribute('height', '25');
+                rect.setAttribute('fill', rung.text ? '#f0f9ff' : '#f8f9fa');
+                rect.setAttribute('stroke', '#e2e8f0');
+                rect.setAttribute('rx', '3');
+                rect.style.cursor = 'pointer';
+                rect.onclick = () => navigateToRung(rung.number);
+                svg.appendChild(rect);
+                
+                // Rung number
+                const rungText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                rungText.setAttribute('x', '20');
+                rungText.setAttribute('y', y + 3);
+                rungText.setAttribute('font-size', '10');
+                rungText.setAttribute('font-weight', 'bold');
+                rungText.setAttribute('fill', '#2563eb');
+                rungText.textContent = rung.number;
+                rungText.style.cursor = 'pointer';
+                rungText.onclick = () => navigateToRung(rung.number);
+                svg.appendChild(rungText);
+                
+                // Simplified logic representation
+                if (rung.text) {
+                    const logicLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                    logicLine.setAttribute('x1', '60');
+                    logicLine.setAttribute('y1', y);
+                    logicLine.setAttribute('x2', '550');
+                    logicLine.setAttribute('y2', y);
+                    logicLine.setAttribute('stroke', '#374151');
+                    logicLine.setAttribute('stroke-width', '2');
+                    svg.appendChild(logicLine);
+                    
+                    // Simple element representation
+                    const instructions = rung.text.match(/([A-Z]{2,4})\(/g) || [];
+                    instructions.forEach((instr, i) => {
+                        const x = 100 + i * 50;
+                        const element = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                        element.setAttribute('x', x - 8);
+                        element.setAttribute('y', y - 6);
+                        element.setAttribute('width', '16');
+                        element.setAttribute('height', '12');
+                        element.setAttribute('fill', getInstructionColor(instr.replace('(', '')));
+                        element.setAttribute('stroke', '#374151');
+                        svg.appendChild(element);
+                    });
+                }
+                
+                // Comment indicator
+                if (rung.comment) {
+                    const commentIcon = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                    commentIcon.setAttribute('x', '570');
+                    commentIcon.setAttribute('y', y + 3);
+                    commentIcon.setAttribute('font-size', '8');
+                    commentIcon.setAttribute('fill', '#059669');
+                    commentIcon.textContent = '💬';
+                    svg.appendChild(commentIcon);
+                }
+            });
+            
+            return svg.outerHTML;
+        }
+
+        function getInstructionColor(instruction) {
+            if (['XIC', 'XIO'].includes(instruction)) return '#2563eb';
+            if (['OTE', 'OTL', 'OTU'].includes(instruction)) return '#ea580c';
+            return '#7c3aed';
+        }
+
+        function navigateToRung(rungNumber) {
+            closeModal();
+            
+            setTimeout(() => {
+                const rungElement = document.querySelector(`[data-rung-number="${rungNumber}"]`);
+                if (rungElement) {
+                    rungElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    selectRung(rungElement);
+                }
+            }, 100);
+        }
+
+        // Utility functions
+        function updateStatus(message, type = 'info') {
+            statusText.textContent = message;
+            statusText.className = type === 'loading' ? 'loading' : '';
+            
+            if (type === 'success') {
+                setTimeout(() => updateStatus('Ready'), 3000);
+            }
+        }
+
+        function showLoadingState() {
+            contentBody.innerHTML = `
+                <div class="welcome-screen">
+                    <div class="welcome-icon loading">⚙️</div>
+                    <h3>Loading Project...</h3>
+                    <p>Parsing L5X file and building project structure</p>
+                </div>
+            `;
+        }
+
+        function showErrorState(message) {
+            contentBody.innerHTML = `
+                <div class="welcome-screen">
+                    <div class="welcome-icon">❌</div>
+                    <h3>Error</h3>
+                    <p>${message}</p>
+                    <button class="btn" onclick="openFile()" style="margin-top: 16px;">Try Another File</button>
+                </div>
+            `;
+        }
+
+        function enableFeatures() {
+            crossRefBtn.disabled = false;
+            // Other feature buttons will be enabled based on selection
+        }
+
+        // Accessibility enhancements
+        function announceToScreenReader(message) {
+            const announcement = document.createElement('div');
+            announcement.setAttribute('aria-live', 'polite');
+            announcement.setAttribute('aria-atomic', 'true');
+            announcement.className = 'sr-only';
+            announcement.textContent = message;
+            document.body.appendChild(announcement);
+            
+            setTimeout(() => {
+                document.body.removeChild(announcement);
+            }, 1000);
+        }
+
+        // Initialize application
+        function initialize() {
+            updateStatus('Ready to load L5X project file');
+            
+            // Set up resize observer for responsive behavior
+            if (window.ResizeObserver) {
+                const resizeObserver = new ResizeObserver(() => {
+                    // Handle responsive adjustments
+                    if (window.innerWidth < 768) {
+                        document.documentElement.style.setProperty('--min-touch-target', '44px');
+                    } else {
+                        document.documentElement.style.setProperty('--min-touch-target', '40px');
+                    }
+                });
+                resizeObserver.observe(document.body);
+            }
+            
+            // Handle focus management for modals
+            document.addEventListener('keydown', (e) => {
+                const modal = document.getElementById('modalOverlay');
+                if (modal.style.display === 'flex' && e.key === 'Escape') {
+                    closeModal();
+                }
+            });
+            
+            // Announce app ready to screen readers
+            announceToScreenReader('Studio 5000 PLC Viewer ready. Load an L5X file to begin.');
+        }
+
+        // Start the application
+        initialize();
+    </script>
+</body>
+</html>
