@@ -379,28 +379,19 @@
             background: var(--hover-bg);
         }
 
-        /* SVG Ladder Elements */
-        .ladder-svg {
-            width: 100%;
-            height: auto;
-            min-height: 60px;
+        /* Canvas Ladder Elements */
+        .ladder-canvas {
+            display: block;
+            width: 800px;
+            height: 120px;
             background: var(--content-bg);
             border: 1px solid var(--border-color);
             border-radius: 4px;
-            shape-rendering: crispEdges;
-            text-rendering: optimizeLegibility;
-        }
-
-        /* Force crisp rendering for all SVG elements */
-        .ladder-svg * {
-            shape-rendering: crispEdges !important;
-            text-rendering: optimizeLegibility !important;
-        }
-
-        .ladder-svg text {
-            font-smooth: never !important;
-            -webkit-font-smoothing: none !important;
-            vector-effect: non-scaling-stroke !important;
+            image-rendering: -webkit-optimize-contrast;
+            image-rendering: -moz-crisp-edges;
+            image-rendering: crisp-edges;
+            image-rendering: pixelated;
+            margin: 10px 0;
         }
 
         .power-rail {
@@ -479,31 +470,7 @@
             fill: rgba(16, 185, 129, 0.2);
         }
 
-        .element-text {
-            font-family: 'Courier New', monospace;
-            font-size: 11px;
-            font-weight: 600;
-            fill: #1f2937 !important;
-            text-anchor: middle;
-            dominant-baseline: central;
-            pointer-events: none;
-            text-rendering: optimizeLegibility;
-            font-smooth: never;
-            -webkit-font-smoothing: none;
-            vector-effect: non-scaling-stroke;
-        }
 
-        .element-tag {
-            font-family: 'Courier New', monospace;
-            font-size: 10px;
-            fill: #6b7280 !important;
-            text-anchor: middle;
-            pointer-events: none;
-            text-rendering: optimizeLegibility;
-            font-smooth: never;
-            -webkit-font-smoothing: none;
-            vector-effect: non-scaling-stroke;
-        }
 
         /* Branch connection styling */
         .branch-connection {
@@ -837,6 +804,7 @@
         <button class="btn btn-secondary" onclick="showRoutineOverview()" aria-label="Show routine overview" disabled id="overviewBtn">
             🗺️ Overview (Ctrl+B)
         </button>
+        <button class="btn btn-secondary" onclick="testSymbolRendering()" title="Test Symbols">🧪 Test Symbols</button>
     </div>
 
     <!-- Status Bar -->
@@ -1324,11 +1292,35 @@
             }
         }
 
+        function displaySelectedContent(node) {
+            const data = node.dataset;
+            console.log('Displaying selected content:', data); // Debug log
+            
+            if (data.type === 'routine') {
+                console.log('Routine selected:', data.programName, data.routineName); // Debug log
+                displayRoutine(data.programName, data.routineName);
+            } else if (data.type === 'controller') {
+                displayControllerInfo();
+            } else if (data.type === 'program') {
+                displayProgramInfo(data.programName);
+            } else if (data.type === 'datatype') {
+                displayDataType(data.datatypeName);
+            } else {
+                displayGenericInfo(data);
+            }
+        }
+
         function displayRoutine(programName, routineName) {
+            console.log('Displaying routine:', programName, routineName); // Debug log
+            
             const program = projectData.programs.find(p => p.name === programName);
+            console.log('Found program:', program); // Debug log
+            
             const routine = program?.routines.find(r => r.name === routineName);
+            console.log('Found routine:', routine); // Debug log
             
             if (!routine) {
+                console.error('Routine not found:', programName, routineName); // Debug log
                 showErrorState('Routine not found');
                 return;
             }
@@ -1342,14 +1334,18 @@
                 ${routine.description ? `<span><strong>Description:</strong> ${routine.description}</span>` : ''}
             `;
 
+            console.log('Routine logic:', routine.logic); // Debug log
+
             // Show view tabs for RLL routines
             if (routine.logic?.type === 'RLL') {
+                console.log('Rendering RLL logic with content:', routine.logic.content); // Debug log
                 viewTabs.style.display = 'flex';
                 renderLadderLogic(routine.logic.content);
             } else if (routine.logic?.type === 'ST') {
                 viewTabs.style.display = 'none';
                 renderStructuredText(routine.logic.content);
             } else {
+                console.warn('No logic content found for routine:', routine); // Debug log
                 viewTabs.style.display = 'none';
                 showErrorState('No logic content found for this routine');
             }
@@ -1361,6 +1357,8 @@
         }
 
         function renderLadderLogic(rungs) {
+            console.log('renderLadderLogic called with rungs:', rungs); // Debug log
+            
             if (currentView === 'text') {
                 renderNeutralText(rungs);
                 return;
@@ -1371,16 +1369,50 @@
             container.setAttribute('role', 'main');
             container.setAttribute('aria-label', 'Ladder logic diagram');
 
+            console.log('Creating rung elements for', rungs.length, 'rungs'); // Debug log
+            
             rungs.forEach((rung, index) => {
+                console.log('Processing rung', index, ':', rung); // Debug log
                 const rungElement = createRungElement(rung, index);
                 container.appendChild(rungElement);
             });
 
+            console.log('Container created with', container.children.length, 'children'); // Debug log
+            console.log('Container HTML:', container.innerHTML.substring(0, 500) + '...'); // Debug log
+
             contentBody.innerHTML = '';
             contentBody.appendChild(container);
+            
+            console.log('Content body now contains', contentBody.children.length, 'children'); // Debug log
+            
+            // Check for canvases in the final DOM
+            const canvases = contentBody.querySelectorAll('canvas');
+            console.log('Found', canvases.length, 'canvas elements in content body'); // Debug log
+            canvases.forEach((canvas, index) => {
+                console.log('Canvas', index, ':', canvas.width, 'x', canvas.height, 'style:', canvas.style.cssText); // Debug log
+                
+                // Check if canvas is visible
+                const rect = canvas.getBoundingClientRect();
+                console.log('Canvas', index, 'bounding rect:', rect); // Debug log
+                console.log('Canvas', index, 'computed style:', window.getComputedStyle(canvas)); // Debug log
+                
+                // Test if canvas context is working
+                const ctx = canvas.getContext('2d');
+                if (ctx) {
+                    console.log('Canvas', index, 'context is available'); // Debug log
+                    // Draw a test pattern to verify it's working
+                    ctx.fillStyle = '#00ff00';
+                    ctx.fillRect(5, 5, 20, 20);
+                    console.log('Canvas', index, 'test pattern drawn'); // Debug log
+                } else {
+                    console.error('Canvas', index, 'context is NOT available'); // Debug log
+                }
+            });
         }
 
         function createRungElement(rung, index) {
+            console.log('Creating rung element for rung:', rung.number, 'with text:', rung.text);
+            
             const rungDiv = document.createElement('div');
             rungDiv.className = 'rung';
             rungDiv.setAttribute('tabindex', '0');
@@ -1388,19 +1420,42 @@
             rungDiv.setAttribute('aria-label', `Rung ${rung.number}`);
             rungDiv.dataset.rungNumber = rung.number;
 
-            rungDiv.innerHTML = `
-                <div class="rung-header">
-                    <span class="rung-number" title="Click to select rung">${rung.number}</span>
-                    <span class="rung-comment">${rung.comment}</span>
-                    <div class="rung-actions">
-                        <button class="rung-action" data-action="copy" data-text="${encodeURIComponent(rung.text)}" title="Copy Neutral Text">📋</button>
-                        <button class="rung-action" data-action="crossref" data-rung="${rung.number}" title="Cross Reference">🔗</button>
-                    </div>
-                </div>
-                <div class="rung-content">
-                    ${renderRungLogic(rung.text)}
+            // Create header
+            const headerDiv = document.createElement('div');
+            headerDiv.className = 'rung-header';
+            headerDiv.innerHTML = `
+                <span class="rung-number" title="Click to select rung">${rung.number}</span>
+                <span class="rung-comment">${rung.comment}</span>
+                <div class="rung-actions">
+                    <button class="rung-action" data-action="copy" data-text="${encodeURIComponent(rung.text)}" title="Copy Neutral Text">📋</button>
+                    <button class="rung-action" data-action="crossref" data-rung="${rung.number}" title="Cross Reference">🔗</button>
                 </div>
             `;
+
+            // Create content container
+            const contentDiv = document.createElement('div');
+            contentDiv.className = 'rung-content';
+
+            // Get canvas element from renderRungLogic
+            const canvas = renderRungLogic(rung.text);
+            console.log('Canvas returned for rung', rung.number, ':', canvas);
+            
+            if (canvas) {
+                contentDiv.appendChild(canvas);
+                console.log('Canvas appended to content div');
+            }
+
+            // Assemble rung
+            rungDiv.appendChild(headerDiv);
+            rungDiv.appendChild(contentDiv);
+
+            // Check if canvas was created
+            const canvasInRung = rungDiv.querySelector('canvas');
+            console.log('Canvas found in rung', rung.number, ':', canvasInRung);
+            if (canvasInRung) {
+                console.log('Canvas dimensions:', canvasInRung.width, 'x', canvasInRung.height);
+                console.log('Canvas style:', canvasInRung.style.cssText);
+            }
 
             // Add event listeners for rung actions
             const copyBtn = rungDiv.querySelector('[data-action="copy"]');
@@ -1429,108 +1484,212 @@
         }
 
         function renderRungLogic(rungText) {
+            console.log('renderRungLogic called with:', rungText);
+            
             if (!rungText || rungText.trim() === '') {
-                return '<svg class="ladder-svg" viewBox="0 0 400 60"><line x1="20" y1="30" x2="380" y2="30" class="power-rail" /></svg>';
+                console.log('Empty rung text, creating basic canvas');
+                const canvas = document.createElement('canvas');
+                canvas.className = 'ladder-canvas';
+                canvas.width = 400;
+                canvas.height = 60;
+                canvas.style.border = '2px solid red'; // Debug border
+                
+                // Test basic drawing
+                const ctx = canvas.getContext('2d');
+                ctx.fillStyle = '#ff0000';
+                ctx.fillRect(10, 10, 50, 30);
+                console.log('Basic canvas created with red rectangle');
+                
+                return canvas; // Return actual canvas element
             }
 
-            // Parse and render the ladder logic
-            const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-            svg.setAttribute('class', 'ladder-svg');
-            svg.setAttribute('role', 'img');
-            svg.setAttribute('aria-label', `Ladder logic: ${rungText}`);
+            // Use canvas for crisp rendering instead of SVG
+            const canvas = document.createElement('canvas');
+            canvas.className = 'ladder-canvas';
+            canvas.setAttribute('role', 'img');
+            canvas.setAttribute('aria-label', `Ladder logic: ${rungText}`);
+            canvas.style.border = '2px solid blue'; // Debug border
+
+            console.log('Canvas element created:', canvas);
 
             try {
-                const elements = parseRungLogic(rungText);
+                const elements = parseRungLogicAdvanced(rungText);
+                console.log('Parsed elements:', elements);
+                
                 if (elements.length === 0) {
                     // No elements parsed, show empty rung
-                    svg.setAttribute('viewBox', '0 0 400 60');
-                    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-                    line.setAttribute('x1', '20');
-                    line.setAttribute('y1', '30');
-                    line.setAttribute('x2', '380');
-                    line.setAttribute('y2', '30');
-                    line.setAttribute('class', 'power-rail');
-                    svg.appendChild(line);
+                    console.log('No elements found, creating empty rung canvas');
+                    canvas.width = 400;
+                    canvas.height = 60;
+                    const ctx = canvas.getContext('2d');
+                    
+                    // Test drawing on empty rung
+                    ctx.fillStyle = '#00ff00';
+                    ctx.fillRect(10, 10, 50, 30);
+                    console.log('Empty rung canvas created with green rectangle');
+                    
+                    drawPowerRail(ctx, 20, 30, 380, 30);
                 } else {
-                    renderLogicElements(svg, elements);
+                    console.log('Rendering elements on canvas');
+                    renderLogicElementsCanvas(canvas, elements);
                 }
             } catch (error) {
-                console.warn('Could not parse rung logic:', error);
+                console.error('Error in renderRungLogic:', error);
                 // Fallback to simple power rail with error indication
-                svg.setAttribute('viewBox', '0 0 800 80');
-                const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-                line.setAttribute('x1', '20');
-                line.setAttribute('y1', '40');
-                line.setAttribute('x2', '780');
-                line.setAttribute('y2', '40');
-                line.setAttribute('class', 'power-rail');
-                svg.appendChild(line);
-
+                canvas.width = 800;
+                canvas.height = 80;
+                const ctx = canvas.getContext('2d');
+                
+                // Test drawing on error canvas
+                ctx.fillStyle = '#ffff00';
+                ctx.fillRect(10, 10, 50, 30);
+                console.log('Error canvas created with yellow rectangle');
+                
+                drawPowerRail(ctx, 20, 40, 780, 40);
+                
                 // Add text representation
-                const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-                text.setAttribute('x', '400');
-                text.setAttribute('y', '25');
-                text.setAttribute('class', 'element-text');
-                text.setAttribute('fill', '#dc2626');
-                text.textContent = 'Parse Error: ' + rungText.substring(0, 40) + (rungText.length > 40 ? '...' : '');
-                svg.appendChild(text);
+                ctx.font = '12px "Courier New", monospace';
+                ctx.fillStyle = '#dc2626';
+                ctx.textAlign = 'center';
+                ctx.fillText('Parse Error: ' + rungText.substring(0, 40) + (rungText.length > 40 ? '...' : ''), 400, 25);
             }
 
-            return svg.outerHTML;
+            console.log('Returning canvas element:', canvas);
+            return canvas; // Return actual canvas element
         }
 
-        function parseRungLogic(rungText) {
+        function parseRungLogicAdvanced(rungText) {
+            console.log('=== PARSING RUNG LOGIC ADVANCED ===');
+            console.log('Rung text:', rungText);
+            
             if (!rungText || rungText.trim() === '') {
+                console.log('Empty rung text, returning empty array');
                 return [];
             }
 
+            // Parse with branch support
             const elements = [];
-            let x = 50;
-            const y = 40;
-            let branchLevel = 0;
-            let branchStack = [];
-
-            // Enhanced parsing for ladder logic instructions
-            const tokens = tokenizeRungLogic(rungText);
+            let currentBranchLevel = 0;
+            let currentX = 0;
             
-            tokens.forEach((token, index) => {
-                if (token.type === 'BRANCH_START') {
-                    branchStack.push({ x: x, level: branchLevel });
-                    branchLevel++;
-                    x += 20; // Indent for branch
-                } else if (token.type === 'BRANCH_END') {
-                    if (branchStack.length > 0) {
-                        const lastBranch = branchStack.pop();
-                        x = lastBranch.x;
-                        branchLevel = lastBranch.level;
-                    }
-                } else if (token.type === 'INSTRUCTION') {
-                    elements.push({
-                        type: getElementType(token.instruction),
-                        instruction: token.instruction,
-                        tag: token.tag,
-                        x: x,
-                        y: y + (branchLevel * 25),
-                        branchLevel: branchLevel,
-                        width: getElementWidth(token.instruction)
-                    });
-                    x += getElementWidth(token.instruction) + 30;
-                }
-            });
-
+            // Find all instructions and their positions
+            const instructionRegex = /([A-Z]{2,4})\(([^)]+)\)/g;
+            let match;
+            let lastIndex = 0;
+            
+            while ((match = instructionRegex.exec(rungText)) !== null) {
+                const instruction = match[1];
+                const tag = match[2];
+                const matchIndex = match.index;
+                
+                // Check for branch markers before this instruction
+                const textBefore = rungText.substring(lastIndex, matchIndex);
+                const openBrackets = (textBefore.match(/\[/g) || []).length;
+                const closeBrackets = (textBefore.match(/\]/g) || []).length;
+                
+                currentBranchLevel += openBrackets - closeBrackets;
+                
+                console.log('Found instruction:', instruction, 'with tag:', tag, 'at branch level:', currentBranchLevel);
+                
+                const element = {
+                    type: getElementType(instruction),
+                    instruction: instruction,
+                    tag: tag,
+                    x: 0, // Will be positioned by renderLogicElementsCanvas
+                    y: 0, // Will be positioned by renderLogicElementsCanvas
+                    width: getElementWidth(instruction),
+                    branchLevel: currentBranchLevel
+                };
+                
+                elements.push(element);
+                lastIndex = matchIndex + match[0].length;
+            }
+            
+            console.log('Parsed elements with branches:', elements);
+            console.log('=== PARSING COMPLETE ===');
             return elements;
         }
 
-        function tokenizeRungLogic(rungText) {
+        function parseRungStructure(rungText) {
+            // This function parses the rung into a tree structure representing series/parallel relationships
+            const tokens = tokenizeRungLogicAdvanced(rungText);
+            const structure = {
+                type: 'series',
+                elements: [],
+                branches: []
+            };
+            
+            let currentSeries = structure;
+            let branchStack = [];
+            
+            tokens.forEach(token => {
+                if (token.type === 'BRANCH_START') {
+                    // Start a new parallel branch
+                    const newBranch = {
+                        type: 'series',
+                        elements: [],
+                        branches: [],
+                        parent: currentSeries
+                    };
+                    currentSeries.branches.push(newBranch);
+                    branchStack.push(currentSeries);
+                    currentSeries = newBranch;
+                } else if (token.type === 'BRANCH_END') {
+                    // End current branch, return to parent
+                    if (branchStack.length > 0) {
+                        currentSeries = branchStack.pop();
+                    }
+                } else if (token.type === 'INSTRUCTION') {
+                    // Add instruction to current series
+                    currentSeries.elements.push({
+                        type: getElementType(token.instruction),
+                        instruction: token.instruction,
+                        tag: token.tag,
+                        width: getElementWidth(token.instruction)
+                    });
+                }
+            });
+            
+            return structure;
+        }
+
+        function flattenRungStructure(structure, x = 50, y = 40, branchLevel = 0) {
+            const elements = [];
+            let currentX = x;
+            
+            // Process series elements first
+            structure.elements.forEach(element => {
+                elements.push({
+                    ...element,
+                    x: currentX,
+                    y: y + (branchLevel * 25),
+                    branchLevel: branchLevel
+                });
+                currentX += element.width + 30;
+            });
+            
+            // Process parallel branches
+            structure.branches.forEach((branch, index) => {
+                const branchElements = flattenRungStructure(branch, x + 20, y, branchLevel + 1);
+                elements.push(...branchElements);
+            });
+            
+            return elements;
+        }
+
+        function tokenizeRungLogicAdvanced(rungText) {
             const tokens = [];
             let current = 0;
+            
+            console.log('=== PARSING RUNG TEXT ===');
+            console.log('Rung text:', rungText);
             
             while (current < rungText.length) {
                 const char = rungText[current];
                 
                 if (char === '(') {
                     // Look for instruction pattern: XIC(tag), OTE(tag), etc.
-                    const instructionMatch = rungText.substring(current - 4, current + 1).match(/([A-Z]{2,4})\(/);
+                    const instructionMatch = rungText.substring(Math.max(0, current - 4), current + 1).match(/([A-Z]{2,4})\(/);
                     if (instructionMatch) {
                         const instruction = instructionMatch[1];
                         const tagStart = current + 1;
@@ -1538,6 +1697,7 @@
                         
                         if (tagEnd !== -1) {
                             const tag = rungText.substring(tagStart, tagEnd);
+                            console.log('Found instruction:', instruction, 'with tag:', tag);
                             tokens.push({
                                 type: 'INSTRUCTION',
                                 instruction: instruction,
@@ -1548,258 +1708,500 @@
                         }
                     }
                 } else if (char === '[') {
+                    console.log('Found branch start');
                     tokens.push({ type: 'BRANCH_START' });
                 } else if (char === ']') {
+                    console.log('Found branch end');
                     tokens.push({ type: 'BRANCH_END' });
                 }
                 
                 current++;
             }
             
+            console.log('Parsed tokens:', tokens);
+            console.log('=== PARSING COMPLETE ===');
             return tokens;
         }
 
-        function getElementWidth(instruction) {
-            // Return appropriate width based on instruction type
-            if (['XIC', 'XIO'].includes(instruction)) return 50;
-            if (['OTE', 'OTL', 'OTU'].includes(instruction)) return 60;
-            if (['TON', 'TOF', 'TONR'].includes(instruction)) return 90;
-            if (['CTU', 'CTD', 'CTUD'].includes(instruction)) return 70;
-            if (['MOV', 'COP', 'CPS', 'FLL'].includes(instruction)) return 80;
-            return 70; // Default width
-        }
-
-        function getElementType(instruction) {
-            if (['XIC', 'XIO'].includes(instruction)) return 'contact';
-            if (['OTE', 'OTL', 'OTU'].includes(instruction)) return 'coil';
-            if (['TON', 'TOF', 'TONR', 'CTU', 'CTD', 'CTUD', 'MOV', 'COP', 'CPS'].includes(instruction)) return 'function';
-            return 'function';
-        }
-
-        function renderLogicElements(svg, elements) {
-            const svgWidth = 800;
-            const svgHeight = Math.max(100, elements.length > 0 ? Math.max(...elements.map(e => e.y + 40)) : 80);
+        function renderLogicElementsCanvas(canvas, elements) {
+            console.log('=== RENDER LOGIC ELEMENTS CANVAS ===');
+            console.log('Canvas element:', canvas);
+            console.log('Rendering elements:', elements);
             
-            // Ensure minimum dimensions and handle edge cases
-            const finalWidth = Math.max(svgWidth, 400);
-            const finalHeight = Math.max(svgHeight, 80);
+            const canvasWidth = 800;
+            const canvasHeight = 160; // Increased height for branches
             
-            svg.setAttribute('viewBox', `0 0 ${finalWidth} ${finalHeight}`);
+            console.log('Canvas dimensions:', canvasWidth, 'x', canvasHeight);
             
-            // Draw power rails with crisp rendering
-            const leftRail = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-            leftRail.setAttribute('x1', '20');
-            leftRail.setAttribute('y1', '20');
-            leftRail.setAttribute('x2', '20');
-            leftRail.setAttribute('y2', svgHeight - 20);
-            leftRail.setAttribute('class', 'power-rail');
-            leftRail.setAttribute('shape-rendering', 'crispEdges');
-            svg.appendChild(leftRail);
+            // Set canvas size
+            canvas.width = canvasWidth;
+            canvas.height = canvasHeight;
+            canvas.style.width = canvasWidth + 'px';
+            canvas.style.height = canvasHeight + 'px';
+            
+            console.log('Canvas dimensions after:', canvas.width, 'x', canvas.height);
+            
+            const ctx = canvas.getContext('2d');
+            console.log('Canvas context:', ctx);
+            
+            // Clear canvas with white background
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+            console.log('Canvas cleared with white background');
+            
+            // Draw left and right power rails (thick green lines)
+            ctx.strokeStyle = '#10b981'; // Green color for power rails
+            ctx.lineWidth = 6;
+            ctx.beginPath();
+            ctx.moveTo(20, 20);
+            ctx.lineTo(20, canvasHeight - 20);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(canvasWidth - 20, 20);
+            ctx.lineTo(canvasWidth - 20, canvasHeight - 20);
+            ctx.stroke();
+            console.log('Power rails drawn');
 
-            const rightRail = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-            rightRail.setAttribute('x1', svgWidth - 20);
-            rightRail.setAttribute('y1', '20');
-            rightRail.setAttribute('x2', svgWidth - 20);
-            rightRail.setAttribute('y2', svgHeight - 20);
-            rightRail.setAttribute('class', 'power-rail');
-            rightRail.setAttribute('shape-rendering', 'crispEdges');
-            svg.appendChild(rightRail);
+            // Draw main horizontal connection line (grey like Studio 5000)
+            ctx.strokeStyle = '#6b7280'; // Grey color for main connection line
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(40, 80);
+            ctx.lineTo(canvasWidth - 40, 80);
+            ctx.stroke();
+            console.log('Main connection line drawn');
 
-            // Draw horizontal power lines for each branch level
-            const branchLevels = [...new Set(elements.map(e => e.branchLevel))].sort((a, b) => a - b);
-            branchLevels.forEach(level => {
-                const y = 40 + (level * 25);
-                const powerLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-                powerLine.setAttribute('x1', '20');
-                powerLine.setAttribute('y1', Math.round(y));
-                powerLine.setAttribute('x2', svgWidth - 20);
-                powerLine.setAttribute('y2', Math.round(y));
-                powerLine.setAttribute('class', 'power-rail');
-                powerLine.setAttribute('shape-rendering', 'crispEdges');
-                svg.appendChild(powerLine);
+            // Group elements by branch level
+            const elementsByBranch = {};
+            elements.forEach(element => {
+                if (!elementsByBranch[element.branchLevel]) {
+                    elementsByBranch[element.branchLevel] = [];
+                }
+                elementsByBranch[element.branchLevel].push(element);
             });
 
-            // Draw elements
-            elements.forEach(element => {
-                const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-                group.setAttribute('class', element.type);
+            // Separate inputs and outputs for each branch level
+            const inputsByBranch = {};
+            const outputsByBranch = {};
+            
+            Object.keys(elementsByBranch).forEach(branchLevel => {
+                const branchElements = elementsByBranch[branchLevel];
+                inputsByBranch[branchLevel] = branchElements.filter(e => e.type === 'contact' || e.type === 'function');
+                outputsByBranch[branchLevel] = branchElements.filter(e => e.type === 'coil');
+            });
+
+            // Position and draw elements for each branch level
+            Object.keys(elementsByBranch).forEach(branchLevel => {
+                const level = parseInt(branchLevel);
+                const branchY = 80 + (level * 30); // Each branch level is 30px apart
                 
-                if (element.type === 'contact') {
-                    drawContact(group, element);
-                } else if (element.type === 'coil') {
-                    drawCoil(group, element);
-                } else {
-                    drawFunctionBlock(group, element);
+                // Draw branch power rail if not main level
+                if (level > 0) {
+                    ctx.strokeStyle = '#6b7280';
+                    ctx.lineWidth = 3;
+                    ctx.beginPath();
+                    ctx.moveTo(40, branchY);
+                    ctx.lineTo(canvasWidth - 40, branchY);
+                    ctx.stroke();
+                    console.log('Branch power rail drawn at level', level, 'y=', branchY);
                 }
 
-                svg.appendChild(group);
-            });
+                // Position input elements for this branch
+                const inputs = inputsByBranch[branchLevel] || [];
+                let currentX = 80;
+                
+                inputs.forEach((element, index) => {
+                    element.x = currentX;
+                    element.y = branchY;
+                    
+                    console.log('Drawing input element', index, 'at branch level', level, ':', element);
+                    if (element.type === 'contact') {
+                        drawContactCanvas(ctx, element);
+                    } else {
+                        drawFunctionBlockCanvas(ctx, element);
+                    }
+                    
+                    currentX += element.width + 40;
+                });
 
-            // Draw branch connections
-            drawBranchConnections(svg, elements);
+                // Position output elements for this branch (on the right)
+                const outputs = outputsByBranch[branchLevel] || [];
+                const outputStartX = canvasWidth - 200;
+                currentX = outputStartX;
+                
+                outputs.forEach((element, index) => {
+                    element.x = currentX;
+                    element.y = branchY;
+                    
+                    console.log('Drawing output element', index, 'at branch level', level, ':', element);
+                    drawCoilCanvas(ctx, element);
+                    
+                    currentX += element.width + 40;
+                });
+
+                // Draw connections between input elements in this branch
+                for (let i = 0; i < inputs.length - 1; i++) {
+                    const current = inputs[i];
+                    const next = inputs[i + 1];
+                    
+                    ctx.strokeStyle = '#6b7280';
+                    ctx.lineWidth = 3;
+                    ctx.setLineDash([]);
+                    
+                    const startX = Math.round(current.x + current.width / 2);
+                    const endX = Math.round(next.x - next.width / 2);
+                    const y = Math.round(branchY);
+                    
+                    ctx.beginPath();
+                    ctx.moveTo(startX, y);
+                    ctx.lineTo(endX, y);
+                    ctx.stroke();
+                    console.log('Input connection drawn at branch level', level, 'from', startX, 'to', endX);
+                }
+
+                // Draw connections between output elements in this branch
+                for (let i = 0; i < outputs.length - 1; i++) {
+                    const current = outputs[i];
+                    const next = outputs[i + 1];
+                    
+                    ctx.strokeStyle = '#6b7280';
+                    ctx.lineWidth = 3;
+                    ctx.setLineDash([]);
+                    
+                    const startX = Math.round(current.x + current.width / 2);
+                    const endX = Math.round(next.x - next.width / 2);
+                    const y = Math.round(branchY);
+                    
+                    ctx.beginPath();
+                    ctx.moveTo(startX, y);
+                    ctx.lineTo(endX, y);
+                    ctx.stroke();
+                    console.log('Output connection drawn at branch level', level, 'from', startX, 'to', endX);
+                }
+
+                // Draw connection from last input to first output in this branch
+                if (inputs.length > 0 && outputs.length > 0) {
+                    const lastInput = inputs[inputs.length - 1];
+                    const firstOutput = outputs[0];
+                    
+                    ctx.strokeStyle = '#6b7280';
+                    ctx.lineWidth = 3;
+                    ctx.setLineDash([]);
+                    
+                    const startX = Math.round(lastInput.x + lastInput.width / 2);
+                    const endX = Math.round(firstOutput.x - firstOutput.width / 2);
+                    const y = Math.round(branchY);
+                    
+                    ctx.beginPath();
+                    ctx.moveTo(startX, y);
+                    ctx.lineTo(endX, y);
+                    ctx.stroke();
+                    console.log('Input to output connection drawn at branch level', level, 'from', startX, 'to', endX);
+                }
+
+                // Draw vertical branch connections if not main level
+                if (level > 0) {
+                    // Find elements to connect to main line
+                    const branchElements = elementsByBranch[branchLevel];
+                    if (branchElements.length > 0) {
+                        const firstElement = branchElements[0];
+                        const lastElement = branchElements[branchElements.length - 1];
+                        
+                        // Draw vertical line from main line to first element
+                        ctx.strokeStyle = '#6b7280';
+                        ctx.lineWidth = 2; // 2px for branch connections as per spec
+                        ctx.setLineDash([3, 3]); // Dashed line for branches
+                        
+                        const mainY = 80;
+                        const branchY = 80 + (level * 30);
+                        
+                        ctx.beginPath();
+                        ctx.moveTo(firstElement.x, mainY);
+                        ctx.lineTo(firstElement.x, branchY);
+                        ctx.stroke();
+                        
+                        // Draw vertical line from last element back to main line
+                        ctx.beginPath();
+                        ctx.moveTo(lastElement.x, branchY);
+                        ctx.lineTo(lastElement.x, mainY);
+                        ctx.stroke();
+                        
+                        // Reset line dash for other connections
+                        ctx.setLineDash([]);
+                        
+                        console.log('Branch connections drawn for level', level);
+                    }
+                }
+            });
+            
+            // Final verification marker
+            ctx.fillStyle = '#00ff00';
+            ctx.fillRect(canvasWidth - 30, canvasHeight - 30, 20, 20);
+            console.log('Final verification marker drawn at bottom-right');
+            
+            console.log('=== RENDER LOGIC ELEMENTS CANVAS COMPLETE ===');
         }
 
-        function drawContact(group, element) {
-            const x = element.x;
-            const y = element.y;
+        function drawPowerRail(ctx, x1, y1, x2, y2) {
+            console.log('Drawing power rail from:', x1, y1, 'to:', x2, y2); // Debug log
+            
+            ctx.strokeStyle = '#374151';
+            ctx.lineWidth = 3;
+            ctx.lineCap = 'round';
+            ctx.beginPath();
+            ctx.moveTo(Math.round(x1), Math.round(y1));
+            ctx.lineTo(Math.round(x2), Math.round(y2));
+            ctx.stroke();
+            
+            console.log('Power rail drawn'); // Debug log
+        }
+
+        function drawContactCanvas(ctx, element) {
+            console.log('Drawing contact:', element); // Debug log
+            
+            const x = Math.round(element.x);
+            const y = Math.round(element.y);
             const width = 35;
             const height = 25;
             
             // Draw contact rectangle with crisp rendering
-            const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-            rect.setAttribute('x', Math.round(x - width/2));
-            rect.setAttribute('y', Math.round(y - height/2));
-            rect.setAttribute('width', width);
-            rect.setAttribute('height', height);
-            rect.setAttribute('fill', 'none');
-            rect.setAttribute('stroke', 'currentColor');
-            rect.setAttribute('stroke-width', '2');
-            rect.setAttribute('class', 'contact');
-            rect.setAttribute('title', `${element.instruction}(${element.tag})`);
-            rect.setAttribute('shape-rendering', 'crispEdges');
-            group.appendChild(rect);
+            ctx.strokeStyle = '#2563eb';
+            ctx.lineWidth = 2;
+            ctx.fillStyle = '#ffffff';
+            
+            // Draw rectangle with pixel-perfect alignment
+            const rectX = Math.round(x - width/2);
+            const rectY = Math.round(y - height/2);
+            
+            console.log('Drawing contact rectangle at:', rectX, rectY, width, height); // Debug log
+            ctx.strokeRect(rectX, rectY, width, height);
+            ctx.fillRect(rectX, rectY, width, height);
+            ctx.strokeRect(rectX, rectY, width, height);
 
             // Draw contact symbol with crisp text
             const symbol = element.instruction === 'XIC' ? '| |' : '|/|';
-            const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-            text.setAttribute('x', Math.round(x));
-            text.setAttribute('y', Math.round(y));
-            text.setAttribute('class', 'element-text');
-            text.setAttribute('fill', '#1f2937');
-            text.setAttribute('text-rendering', 'optimizeLegibility');
-            text.setAttribute('font-smooth', 'never');
-            text.setAttribute('vector-effect', 'non-scaling-stroke');
-            text.textContent = symbol;
-            group.appendChild(text);
+            ctx.font = 'bold 12px "Courier New", monospace';
+            ctx.fillStyle = '#1f2937';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            
+            console.log('Drawing contact text:', symbol, 'at:', x, y); // Debug log
+            ctx.fillText(symbol, x, y);
 
             // Add tag label with better positioning and truncation
             if (element.tag) {
-                const tagText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-                tagText.setAttribute('x', Math.round(x));
-                tagText.setAttribute('y', Math.round(y + 35));
-                tagText.setAttribute('class', 'element-tag');
-                tagText.setAttribute('text-rendering', 'optimizeLegibility');
-                tagText.setAttribute('font-smooth', 'never');
+                ctx.font = '10px "Courier New", monospace';
+                ctx.fillStyle = '#6b7280';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'top';
                 // Truncate long tags to prevent overlap
                 const displayTag = element.tag.length > 12 ? element.tag.substring(0, 10) + '...' : element.tag;
-                tagText.textContent = displayTag;
-                group.appendChild(tagText);
+                ctx.fillText(displayTag, x, y + 20);
             }
         }
 
-        function drawCoil(group, element) {
-            const x = element.x;
-            const y = element.y;
+        function drawCoilCanvas(ctx, element) {
+            console.log('Drawing coil:', element); // Debug log
+            
+            const x = Math.round(element.x);
+            const y = Math.round(element.y);
             const radius = 18;
             
             // Draw coil circle with crisp rendering
-            const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-            circle.setAttribute('cx', Math.round(x));
-            circle.setAttribute('cy', Math.round(y));
-            circle.setAttribute('r', radius);
-            circle.setAttribute('fill', '#ffffff');
-            circle.setAttribute('stroke', '#ea580c');
-            circle.setAttribute('stroke-width', '2');
-            circle.setAttribute('class', 'coil');
-            circle.setAttribute('title', `${element.instruction}(${element.tag})`);
-            circle.setAttribute('shape-rendering', 'crispEdges');
-            circle.setAttribute('vector-effect', 'non-scaling-stroke');
-            group.appendChild(circle);
+            ctx.strokeStyle = '#ea580c';
+            ctx.lineWidth = 2;
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.arc(x, y, radius, 0, 2 * Math.PI);
+            ctx.fill();
+            ctx.stroke();
+            
+            console.log('Drew coil circle at:', x, y, 'radius:', radius); // Debug log
 
             // Draw coil symbol with crisp text
             let symbol = '( )';
             if (element.instruction === 'OTL') symbol = '(L)';
             else if (element.instruction === 'OTU') symbol = '(U)';
             
-            const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-            text.setAttribute('x', Math.round(x));
-            text.setAttribute('y', Math.round(y));
-            text.setAttribute('class', 'element-text');
-            text.setAttribute('fill', '#1f2937');
-            text.setAttribute('text-rendering', 'optimizeLegibility');
-            text.setAttribute('font-smooth', 'never');
-            text.setAttribute('vector-effect', 'non-scaling-stroke');
-            text.textContent = symbol;
-            group.appendChild(text);
+            ctx.font = 'bold 12px "Courier New", monospace';
+            ctx.fillStyle = '#1f2937';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            
+            console.log('Drawing coil text:', symbol, 'at:', x, y); // Debug log
+            ctx.fillText(symbol, x, y);
 
             // Add tag label with better positioning and truncation
             if (element.tag) {
-                const tagText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-                tagText.setAttribute('x', Math.round(x));
-                tagText.setAttribute('y', Math.round(y + 35));
-                tagText.setAttribute('class', 'element-tag');
-                tagText.setAttribute('text-rendering', 'optimizeLegibility');
-                tagText.setAttribute('font-smooth', 'never');
+                ctx.font = '10px "Courier New", monospace';
+                ctx.fillStyle = '#6b7280';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'top';
                 // Truncate long tags to prevent overlap
                 const displayTag = element.tag.length > 12 ? element.tag.substring(0, 10) + '...' : element.tag;
-                tagText.textContent = displayTag;
-                group.appendChild(tagText);
+                ctx.fillText(displayTag, x, y + 25);
             }
         }
 
-        function drawFunctionBlock(group, element) {
-            const x = element.x;
-            const y = element.y;
+        function drawFunctionBlockCanvas(ctx, element) {
+            const x = Math.round(element.x);
+            const y = Math.round(element.y);
             const width = element.width || 60;
             const height = 30;
             
             // Draw function block rectangle with crisp rendering
-            const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-            rect.setAttribute('x', Math.round(x - width/2));
-            rect.setAttribute('y', Math.round(y - height/2));
-            rect.setAttribute('width', width);
-            rect.setAttribute('height', height);
-            rect.setAttribute('class', 'function-block');
-            rect.setAttribute('title', `${element.instruction}(${element.tag})`);
-            rect.setAttribute('shape-rendering', 'crispEdges');
-            group.appendChild(rect);
+            ctx.strokeStyle = '#7c3aed';
+            ctx.lineWidth = 2;
+            ctx.fillStyle = '#ffffff';
+            
+            // Draw rectangle with pixel-perfect alignment
+            const rectX = Math.round(x - width/2);
+            const rectY = Math.round(y - height/2);
+            ctx.strokeRect(rectX, rectY, width, height);
+            ctx.fillRect(rectX, rectY, width, height);
+            ctx.strokeRect(rectX, rectY, width, height);
 
             // Draw instruction text with crisp rendering
-            const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-            text.setAttribute('x', Math.round(x));
-            text.setAttribute('y', Math.round(y));
-            text.setAttribute('class', 'element-text');
-            text.setAttribute('fill', '#1f2937');
-            text.setAttribute('text-rendering', 'optimizeLegibility');
-            text.setAttribute('font-smooth', 'never');
-            text.setAttribute('vector-effect', 'non-scaling-stroke');
-            text.textContent = element.instruction;
-            group.appendChild(text);
+            ctx.font = 'bold 12px "Courier New", monospace';
+            ctx.fillStyle = '#1f2937';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(element.instruction, x, y);
 
             // Add tag label with better positioning and truncation
             if (element.tag) {
-                const tagText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-                tagText.setAttribute('x', Math.round(x));
-                tagText.setAttribute('y', Math.round(y + 35));
-                tagText.setAttribute('class', 'element-tag');
-                tagText.setAttribute('text-rendering', 'optimizeLegibility');
-                tagText.setAttribute('font-smooth', 'never');
+                ctx.font = '10px "Courier New", monospace';
+                ctx.fillStyle = '#6b7280';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'top';
                 // Truncate long tags to prevent overlap
                 const displayTag = element.tag.length > 15 ? element.tag.substring(0, 13) + '...' : element.tag;
-                tagText.textContent = displayTag;
-                group.appendChild(tagText);
+                ctx.fillText(displayTag, x, y + 20);
             }
         }
 
-        function drawBranchConnections(svg, elements) {
-            // Find elements that need branch connections
-            const branchElements = elements.filter(e => e.branchLevel > 0);
+        function drawBranchConnectionsCanvas(ctx, elements) {
+            if (elements.length === 0) return;
             
-            branchElements.forEach(element => {
-                const x = element.x;
-                const y = element.y;
-                const branchY = 40 + (element.branchLevel * 25);
-                
-                // Draw vertical connection to main power rail
-                const connection = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-                connection.setAttribute('x1', x);
-                connection.setAttribute('y1', y);
-                connection.setAttribute('x2', x);
-                connection.setAttribute('y2', branchY);
-                connection.setAttribute('class', 'branch-connection');
-                connection.setAttribute('stroke-width', '3');
-                svg.appendChild(connection);
+            // Group elements by branch level
+            const elementsByLevel = {};
+            elements.forEach(element => {
+                if (!elementsByLevel[element.branchLevel]) {
+                    elementsByLevel[element.branchLevel] = [];
+                }
+                elementsByLevel[element.branchLevel].push(element);
             });
+            
+            // Draw connections for each branch level
+            Object.keys(elementsByLevel).forEach(level => {
+                const levelElements = elementsByLevel[level];
+                const branchY = 40 + (parseInt(level) * 25);
+                
+                if (level === '0') {
+                    // Main power rail - draw horizontal connections between elements
+                    for (let i = 0; i < levelElements.length - 1; i++) {
+                        const current = levelElements[i];
+                        const next = levelElements[i + 1];
+                        
+                        ctx.strokeStyle = '#374151';
+                        ctx.lineWidth = 3;
+                        ctx.setLineDash([]);
+                        
+                        const startX = Math.round(current.x + current.width / 2);
+                        const endX = Math.round(next.x - next.width / 2);
+                        const y = Math.round(current.y);
+                        
+                        ctx.beginPath();
+                        ctx.moveTo(startX, y);
+                        ctx.lineTo(endX, y);
+                        ctx.stroke();
+                    }
+                } else {
+                    // Branch level - draw vertical connections and horizontal power rails
+                    ctx.strokeStyle = '#374151';
+                    ctx.lineWidth = 3;
+                    ctx.setLineDash([3, 3]);
+                    
+                    // Draw vertical connections from main rail to branch elements
+                    levelElements.forEach(element => {
+                        const x = Math.round(element.x);
+                        const y = Math.round(element.y);
+                        const mainY = 40; // Main power rail Y position
+                        
+                        ctx.beginPath();
+                        ctx.moveTo(x, mainY);
+                        ctx.lineTo(x, branchY);
+                        ctx.stroke();
+                    });
+                    
+                    // Draw horizontal power rail for this branch level
+                    ctx.setLineDash([]);
+                    const minX = Math.min(...levelElements.map(e => e.x - e.width / 2));
+                    const maxX = Math.max(...levelElements.map(e => e.x + e.width / 2));
+                    
+                    ctx.beginPath();
+                    ctx.moveTo(20, branchY);
+                    ctx.lineTo(minX - 10, branchY);
+                    ctx.stroke();
+                    
+                    ctx.beginPath();
+                    ctx.moveTo(maxX + 10, branchY);
+                    ctx.lineTo(780, branchY);
+                    ctx.stroke();
+                    
+                    // Draw horizontal connections between branch elements
+                    for (let i = 0; i < levelElements.length - 1; i++) {
+                        const current = levelElements[i];
+                        const next = levelElements[i + 1];
+                        
+                        const startX = Math.round(current.x + current.width / 2);
+                        const endX = Math.round(next.x - next.width / 2);
+                        const y = Math.round(branchY);
+                        
+                        ctx.beginPath();
+                        ctx.moveTo(startX, y);
+                        ctx.lineTo(endX, y);
+                        ctx.stroke();
+                    }
+                }
+            });
+        }
+
+        function getElementWidth(instruction) {
+            console.log('Getting element width for instruction:', instruction);
+            let width;
+            // Return appropriate width based on instruction type
+            if (['XIC', 'XIO'].includes(instruction)) {
+                width = 50;
+            } else if (['OTE', 'OTL', 'OTU'].includes(instruction)) {
+                width = 60;
+            } else if (['TON', 'TOF', 'TONR'].includes(instruction)) {
+                width = 90;
+            } else if (['CTU', 'CTD', 'CTUD'].includes(instruction)) {
+                width = 70;
+            } else if (['MOV', 'COP', 'CPS', 'FLL'].includes(instruction)) {
+                width = 80;
+            } else {
+                width = 70; // Default width
+            }
+            console.log('Element width determined:', width);
+            return width;
+        }
+
+        function getElementType(instruction) {
+            console.log('Getting element type for instruction:', instruction);
+            let type;
+            if (['XIC', 'XIO'].includes(instruction)) {
+                type = 'contact';
+            } else if (['OTE', 'OTL', 'OTU'].includes(instruction)) {
+                type = 'coil';
+            } else if (['TON', 'TOF', 'TONR', 'CTU', 'CTD', 'CTUD', 'MOV', 'COP', 'CPS'].includes(instruction)) {
+                type = 'function';
+            } else {
+                type = 'function';
+            }
+            console.log('Element type determined:', type);
+            return type;
         }
 
         function renderNeutralText(rungs) {
@@ -2560,6 +2962,123 @@
 
         // Start the application
         initialize();
+
+        // Test function to create sample ladder logic
+        function createTestLadderLogic() {
+            const testRungs = [
+                {
+                    number: 0,
+                    text: 'XIC(Start_Button) OTE(Run_Light)',
+                    comment: 'Start button controls run light'
+                },
+                {
+                    number: 1,
+                    text: 'XIC(Stop_Button) XIO(Run_Light) OTE(Stop_Light)',
+                    comment: 'Stop button with run light feedback'
+                },
+                {
+                    number: 2,
+                    text: 'XIC(Start_Button) [XIC(Proximity_Sensor) OTE(Conveyor_Motor)] OTE(Status_OK)',
+                    comment: 'Start with parallel branch for sensor'
+                },
+                {
+                    number: 3,
+                    text: 'XIC(Start_Button) [XIC(Proximity_Sensor) TON(Timer1, 5.0)] [XIC(Stop_Button) XIO(Run_Light)] OTE(Status_OK)',
+                    comment: 'Complex parallel branches example'
+                },
+                {
+                    number: 4,
+                    text: 'XIC(Reset_Button) OTL(Latch_Output)',
+                    comment: 'Latch output example'
+                }
+            ];
+            
+            return testRungs;
+        }
+
+        // Function to test symbol rendering
+        function testSymbolRendering() {
+            console.log('=== TEST SYMBOL RENDERING START ===');
+            
+            // First, test basic canvas functionality
+            const testCanvas = document.createElement('canvas');
+            testCanvas.width = 300;
+            testCanvas.height = 100;
+            testCanvas.style.border = '2px solid red';
+            testCanvas.style.margin = '10px';
+            
+            const ctx = testCanvas.getContext('2d');
+            ctx.fillStyle = '#ff0000';
+            ctx.fillRect(10, 10, 50, 30);
+            ctx.fillStyle = '#00ff00';
+            ctx.fillRect(70, 10, 50, 30);
+            ctx.fillStyle = '#0000ff';
+            ctx.fillRect(130, 10, 50, 30);
+            
+            ctx.fillStyle = '#000000';
+            ctx.font = '16px Arial';
+            ctx.fillText('CANVAS TEST', 10, 70);
+            
+            // Add to page temporarily
+            document.body.appendChild(testCanvas);
+            console.log('Basic canvas test added to page');
+            
+            const testRungs = createTestLadderLogic();
+            console.log('Testing symbol rendering with:', testRungs);
+            
+            // Display test routine directly
+            displayTestRoutine(testRungs);
+            
+            // Check if canvases are visible after rendering
+            setTimeout(() => {
+                const allCanvases = document.querySelectorAll('canvas');
+                console.log('Found', allCanvases.length, 'canvas elements in the page');
+                allCanvases.forEach((canvas, index) => {
+                    const rect = canvas.getBoundingClientRect();
+                    console.log('Canvas', index, ':', {
+                        width: canvas.width,
+                        height: canvas.height,
+                        styleWidth: canvas.style.width,
+                        styleHeight: canvas.style.height,
+                        visible: rect.width > 0 && rect.height > 0,
+                        rect: rect
+                    });
+                });
+            }, 100);
+            
+            // Remove test canvas after 3 seconds
+            setTimeout(() => {
+                if (testCanvas.parentNode) {
+                    testCanvas.parentNode.removeChild(testCanvas);
+                    console.log('Test canvas removed');
+                }
+            }, 3000);
+            
+            console.log('=== TEST SYMBOL RENDERING END ===');
+        }
+
+        // Function to display test routine directly
+        function displayTestRoutine(rungs) {
+            // Show header
+            contentHeader.style.display = 'block';
+            contentTitle.textContent = 'Test Routine: Sample Ladder Logic';
+            contentMeta.innerHTML = `
+                <span><strong>Type:</strong> RLL</span>
+                <span><strong>Program:</strong> Test</span>
+                <span><strong>Description:</strong> Sample ladder logic for testing symbols</span>
+            `;
+
+            // Show view tabs
+            viewTabs.style.display = 'flex';
+            
+            // Render the ladder logic
+            renderLadderLogic(rungs);
+            
+            // Enable features
+            crossRefBtn.disabled = false;
+            overviewBtn.disabled = false;
+            zoomControls.style.display = 'block';
+        }
     </script>
 </body>
 </html>

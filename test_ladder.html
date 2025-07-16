@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ladder Logic Canvas Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background: #f5f5f5;
+        }
+        .test-container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        canvas {
+            border: 2px solid #ccc;
+            margin: 10px 0;
+        }
+        button {
+            background: #2563eb;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #1d4ed8;
+        }
+        .debug-info {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 12px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>Ladder Logic Canvas Test</h1>
+    
+    <div class="test-container">
+        <h2>Basic Canvas Test</h2>
+        <button onclick="testBasicCanvas()">Test Basic Canvas</button>
+        <div id="basic-test"></div>
+    </div>
+    
+    <div class="test-container">
+        <h2>Ladder Symbol Test</h2>
+        <button onclick="testLadderSymbols()">Test Ladder Symbols</button>
+        <div id="ladder-test"></div>
+    </div>
+    
+    <div class="test-container">
+        <h2>Full Rung Test</h2>
+        <button onclick="testFullRung()">Test Full Rung</button>
+        <div id="rung-test"></div>
+    </div>
+    
+    <div class="debug-info" id="debug-output">
+        Debug output will appear here...
+    </div>
+
+    <script>
+        function log(message) {
+            const debug = document.getElementById('debug-output');
+            debug.innerHTML += message + '<br>';
+            console.log(message);
+        }
+
+        function clearDebug() {
+            document.getElementById('debug-output').innerHTML = 'Debug output will appear here...<br>';
+        }
+
+        function testBasicCanvas() {
+            clearDebug();
+            log('=== BASIC CANVAS TEST ===');
+            
+            const container = document.getElementById('basic-test');
+            container.innerHTML = '';
+            
+            const canvas = document.createElement('canvas');
+            canvas.width = 400;
+            canvas.height = 100;
+            canvas.style.border = '2px solid red';
+            
+            const ctx = canvas.getContext('2d');
+            log('Canvas created: ' + canvas.width + 'x' + canvas.height);
+            
+            // Test basic drawing
+            ctx.fillStyle = '#ff0000';
+            ctx.fillRect(10, 10, 50, 30);
+            log('Red rectangle drawn at (10,10)');
+            
+            ctx.fillStyle = '#00ff00';
+            ctx.fillRect(70, 10, 50, 30);
+            log('Green rectangle drawn at (70,10)');
+            
+            ctx.fillStyle = '#0000ff';
+            ctx.fillRect(130, 10, 50, 30);
+            log('Blue rectangle drawn at (130,10)');
+            
+            ctx.fillStyle = '#000000';
+            ctx.font = '16px Arial';
+            ctx.fillText('CANVAS TEST', 10, 70);
+            log('Text drawn: CANVAS TEST');
+            
+            container.appendChild(canvas);
+            log('Canvas added to page');
+            log('=== BASIC CANVAS TEST COMPLETE ===');
+        }
+
+        function testLadderSymbols() {
+            clearDebug();
+            log('=== LADDER SYMBOL TEST ===');
+            
+            const container = document.getElementById('ladder-test');
+            container.innerHTML = '';
+            
+            const canvas = document.createElement('canvas');
+            canvas.width = 800;
+            canvas.height = 200;
+            canvas.style.border = '2px solid blue';
+            
+            const ctx = canvas.getContext('2d');
+            log('Canvas created: ' + canvas.width + 'x' + canvas.height);
+            
+            // Clear with white background
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            log('Canvas cleared with white background');
+            
+            // Draw left and right power rails (thick green lines)
+            ctx.strokeStyle = '#10b981'; // Green color for power rails
+            ctx.lineWidth = 6;
+            ctx.beginPath();
+            ctx.moveTo(20, 20);
+            ctx.lineTo(20, canvas.height - 20);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(canvas.width - 20, 20);
+            ctx.lineTo(canvas.width - 20, canvas.height - 20);
+            ctx.stroke();
+            log('Power rails drawn');
+            
+            // Draw main horizontal connection line (grey like Studio 5000)
+            ctx.strokeStyle = '#6b7280'; // Grey color for main connection line
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(40, 100);
+            ctx.lineTo(canvas.width - 40, 100);
+            ctx.stroke();
+            log('Main connection line drawn');
+            
+            // Position inputs on the left side
+            let currentX = 80;
+            const mainLineY = 100;
+            
+            // XIC contact
+            drawContact(ctx, currentX, mainLineY, 'XIC', 'Start_Button');
+            log('XIC contact drawn at (' + currentX + ',' + mainLineY + ')');
+            currentX += 80;
+            
+            // XIO contact
+            drawContact(ctx, currentX, mainLineY, 'XIO', 'Stop_Button');
+            log('XIO contact drawn at (' + currentX + ',' + mainLineY + ')');
+            currentX += 80;
+            
+            // TON function block
+            drawFunctionBlock(ctx, currentX, mainLineY, 'TON', 'Timer1');
+            log('TON function block drawn at (' + currentX + ',' + mainLineY + ')');
+            currentX += 100;
+            
+            // TOF function block
+            drawFunctionBlock(ctx, currentX, mainLineY, 'TOF', 'Timer2');
+            log('TOF function block drawn at (' + currentX + ',' + mainLineY + ')');
+            currentX += 100;
+            
+            // CTU function block
+            drawFunctionBlock(ctx, currentX, mainLineY, 'CTU', 'Counter1');
+            log('CTU function block drawn at (' + currentX + ',' + mainLineY + ')');
+            currentX += 100;
+            
+            // Position outputs on the right side
+            const outputStartX = canvas.width - 300;
+            currentX = outputStartX;
+            
+            // OTE coil
+            drawCoil(ctx, currentX, mainLineY, 'OTE', 'Run_Light');
+            log('OTE coil drawn at (' + currentX + ',' + mainLineY + ')');
+            currentX += 80;
+            
+            // OTL coil
+            drawCoil(ctx, currentX, mainLineY, 'OTL', 'Latch_Output');
+            log('OTL coil drawn at (' + currentX + ',' + mainLineY + ')');
+            currentX += 80;
+            
+            // OTU coil
+            drawCoil(ctx, currentX, mainLineY, 'OTU', 'Unlatch_Output');
+            log('OTU coil drawn at (' + currentX + ',' + mainLineY + ')');
+            
+            container.appendChild(canvas);
+            log('Canvas added to page');
+            log('=== LADDER SYMBOL TEST COMPLETE ===');
+        }
+
+        function drawContact(ctx, x, y, instruction, tag) {
+            const width = 35;
+            const height = 25;
+            
+            // Draw contact rectangle
+            ctx.strokeStyle = '#2563eb';
+            ctx.lineWidth = 2;
+            ctx.fillStyle = '#ffffff';
+            
+            const rectX = Math.round(x - width/2);
+            const rectY = Math.round(y - height/2);
+            
+            ctx.strokeRect(rectX, rectY, width, height);
+            ctx.fillRect(rectX, rectY, width, height);
+            ctx.strokeRect(rectX, rectY, width, height);
+
+            // Draw contact symbol
+            const symbol = instruction === 'XIC' ? '| |' : '|/|';
+            ctx.font = 'bold 12px "Courier New", monospace';
+            ctx.fillStyle = '#1f2937';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(symbol, x, y);
+
+            // Add tag label
+            if (tag) {
+                ctx.font = '10px "Courier New", monospace';
+                ctx.fillStyle = '#6b7280';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'top';
+                const displayTag = tag.length > 12 ? tag.substring(0, 10) + '...' : tag;
+                ctx.fillText(displayTag, x, y + 20);
+            }
+        }
+
+        function drawCoil(ctx, x, y, instruction, tag) {
+            const radius = 18;
+            
+            // Draw coil circle
+            ctx.strokeStyle = '#ea580c';
+            ctx.lineWidth = 2;
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.arc(x, y, radius, 0, 2 * Math.PI);
+            ctx.fill();
+            ctx.stroke();
+
+            // Draw coil symbol
+            let symbol = '( )';
+            if (instruction === 'OTL') symbol = '(L)';
+            else if (instruction === 'OTU') symbol = '(U)';
+            
+            ctx.font = 'bold 12px "Courier New", monospace';
+            ctx.fillStyle = '#1f2937';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(symbol, x, y);
+
+            // Add tag label
+            if (tag) {
+                ctx.font = '10px "Courier New", monospace';
+                ctx.fillStyle = '#6b7280';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'top';
+                const displayTag = tag.length > 12 ? tag.substring(0, 10) + '...' : tag;
+                ctx.fillText(displayTag, x, y + 25);
+            }
+        }
+
+        function drawFunctionBlock(ctx, x, y, instruction, tag) {
+            const width = 60;
+            const height = 30;
+            
+            // Draw function block rectangle
+            ctx.strokeStyle = '#7c3aed';
+            ctx.lineWidth = 2;
+            ctx.fillStyle = '#ffffff';
+            
+            const rectX = Math.round(x - width/2);
+            const rectY = Math.round(y - height/2);
+            ctx.strokeRect(rectX, rectY, width, height);
+            ctx.fillRect(rectX, rectY, width, height);
+            ctx.strokeRect(rectX, rectY, width, height);
+
+            // Draw instruction text
+            ctx.font = 'bold 12px "Courier New", monospace';
+            ctx.fillStyle = '#1f2937';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(instruction, x, y);
+
+            // Add tag label
+            if (tag) {
+                ctx.font = '10px "Courier New", monospace';
+                ctx.fillStyle = '#6b7280';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'top';
+                const displayTag = tag.length > 15 ? tag.substring(0, 13) + '...' : tag;
+                ctx.fillText(displayTag, x, y + 20);
+            }
+        }
+
+        function testFullRung() {
+            clearDebug();
+            log('=== FULL RUNG TEST ===');
+            
+            const container = document.getElementById('rung-test');
+            container.innerHTML = '';
+            
+            // Test data with parallel branches
+            const testRung = {
+                number: 0,
+                text: 'XIC(Start_Button) [XIC(Proximity_Sensor) OTE(Conveyor_Motor)] OTE(Run_Light)',
+                comment: 'Start button with parallel branch for sensor'
+            };
+            
+            log('Test rung data: ' + JSON.stringify(testRung));
+            
+            // Parse the rung
+            const elements = parseRungLogic(testRung.text);
+            log('Parsed elements: ' + JSON.stringify(elements));
+            
+            // Create canvas
+            const canvas = document.createElement('canvas');
+            canvas.width = 800;
+            canvas.height = 120;
+            canvas.style.border = '2px solid green';
+            
+            const ctx = canvas.getContext('2d');
+            log('Canvas created: ' + canvas.width + 'x' + canvas.height);
+            
+            // Clear with white background
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            log('Canvas cleared with white background');
+            
+            // Draw left and right power rails (thick green lines)
+            ctx.strokeStyle = '#10b981'; // Green color for power rails
+            ctx.lineWidth = 6;
+            ctx.beginPath();
+            ctx.moveTo(20, 20);
+            ctx.lineTo(20, canvas.height - 20);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(canvas.width - 20, 20);
+            ctx.lineTo(canvas.width - 20, canvas.height - 20);
+            ctx.stroke();
+            log('Power rails drawn');
+            
+            // Draw main horizontal connection line
+            ctx.strokeStyle = '#2563eb'; // Blue for main connection line
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(40, 60);
+            ctx.lineTo(canvas.width - 40, 60);
+            ctx.stroke();
+            log('Main connection line drawn');
+            
+            // Position elements along the main line
+            let currentX = 80;
+            const mainLineY = 60;
+            
+            elements.forEach((element, index) => {
+                // Update element position to be on the main line
+                element.x = currentX;
+                element.y = mainLineY;
+                
+                log('Drawing element ' + index + ': ' + JSON.stringify(element));
+                
+                if (element.type === 'contact') {
+                    drawContact(ctx, element.x, element.y, element.instruction, element.tag);
+                } else if (element.type === 'coil') {
+                    drawCoil(ctx, element.x, element.y, element.instruction, element.tag);
+                } else {
+                    drawFunctionBlock(ctx, element.x, element.y, element.instruction, element.tag);
+                }
+                
+                // Move to next position
+                currentX += element.width + 40;
+            });
+            
+            // Draw connections between elements along the main line
+            for (let i = 0; i < elements.length - 1; i++) {
+                const current = elements[i];
+                const next = elements[i + 1];
+                
+                ctx.strokeStyle = '#2563eb';
+                ctx.lineWidth = 3;
+                ctx.setLineDash([]);
+                
+                const startX = Math.round(current.x + current.width / 2);
+                const endX = Math.round(next.x - next.width / 2);
+                const y = Math.round(mainLineY);
+                
+                ctx.beginPath();
+                ctx.moveTo(startX, y);
+                ctx.lineTo(endX, y);
+                ctx.stroke();
+                log('Connection drawn from ' + startX + ' to ' + endX + ' at y=' + y);
+            }
+            
+            container.appendChild(canvas);
+            log('Canvas added to page');
+            log('=== FULL RUNG TEST COMPLETE ===');
+        }
+
+        function parseRungLogic(rungText) {
+            log('Parsing rung text: ' + rungText);
+            
+            const elements = [];
+            
+            // Simple regex to find instructions
+            const instructionRegex = /([A-Z]{2,4})\(([^)]+)\)/g;
+            let match;
+            
+            while ((match = instructionRegex.exec(rungText)) !== null) {
+                const instruction = match[1];
+                const tag = match[2];
+                
+                log('Found instruction: ' + instruction + ' with tag: ' + tag);
+                
+                const element = {
+                    type: getElementType(instruction),
+                    instruction: instruction,
+                    tag: tag,
+                    x: 0, // Will be positioned by rendering function
+                    y: 0, // Will be positioned by rendering function
+                    width: getElementWidth(instruction)
+                };
+                
+                elements.push(element);
+            }
+            
+            log('Parsed ' + elements.length + ' elements');
+            return elements;
+        }
+
+        function getElementType(instruction) {
+            if (['XIC', 'XIO'].includes(instruction)) return 'contact';
+            if (['OTE', 'OTL', 'OTU'].includes(instruction)) return 'coil';
+            return 'function';
+        }
+
+        function getElementWidth(instruction) {
+            if (['XIC', 'XIO'].includes(instruction)) return 50;
+            if (['OTE', 'OTL', 'OTU'].includes(instruction)) return 60;
+            return 70;
+        }
+
+        // Auto-run basic test on load
+        window.onload = function() {
+            log('Page loaded, ready for testing');
+        };
+    </script>
+</body>
+</html> 
