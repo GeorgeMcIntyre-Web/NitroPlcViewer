@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Parallel Branch</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }
+        canvas { border: 2px solid green; margin: 10px 0; background: white; }
+        .info { background: #e0f2fe; padding: 15px; border-radius: 4px; margin: 10px 0; }
+    </style>
+</head>
+<body>
+    <h1>Simple Parallel Branch Test</h1>
+    
+    <div class="info">
+        <h3>Expected Layout:</h3>
+        <ul>
+            <li>Long start line from left power rail</li>
+            <li>Start_Button on main line</li>
+            <li>Parallel branch drops DOWN with TWO separate horizontal lines</li>
+            <li>Proximity_Sensor on TOP parallel line</li>
+            <li>Emergency_Stop on BOTTOM parallel line</li>
+            <li>Short merge back to main line</li>
+            <li>Motor_Output on main line</li>
+        </ul>
+    </div>
+    
+    <canvas id="canvas" width="800" height="300"></canvas>
+
+    <script>
+        function drawSimpleParallelBranch() {
+            const canvas = document.getElementById('canvas');
+            const ctx = canvas.getContext('2d');
+            
+            // Clear canvas
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw power rails
+            ctx.strokeStyle = '#10b981';
+            ctx.lineWidth = 6;
+            ctx.beginPath();
+            ctx.moveTo(20, 20);
+            ctx.lineTo(20, canvas.height - 20);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(canvas.width - 20, 20);
+            ctx.lineTo(canvas.width - 20, canvas.height - 20);
+            ctx.stroke();
+            
+            // Draw main horizontal line
+            ctx.strokeStyle = '#6b7280';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(20, 100);
+            ctx.lineTo(canvas.width - 20, 100);
+            ctx.stroke();
+            
+            // Start line (40px from left rail - very close)
+            const startX = 40;
+            
+            // Draw Start_Button on main line
+            drawContact(ctx, startX, 100, 'XIC', 'Start_Button');
+            
+            // Split point (80px after Start_Button)
+            const splitX = startX + 80;
+            
+            // Draw split vertical line DOWN from main line
+            ctx.strokeStyle = '#6b7280';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(splitX, 100);
+            ctx.lineTo(splitX, 140);
+            ctx.stroke();
+            
+            // PARALLEL BRANCH - TWO SEPARATE HORIZONTAL LINES
+            
+            // Top parallel path (Proximity_Sensor)
+            const topPathY = 140;
+            ctx.beginPath();
+            ctx.moveTo(splitX, topPathY);
+            ctx.lineTo(splitX + 200, topPathY);
+            ctx.stroke();
+            
+            // Bottom parallel path (Emergency_Stop)
+            const bottomPathY = 180;
+            ctx.beginPath();
+            ctx.moveTo(splitX, bottomPathY);
+            ctx.lineTo(splitX + 200, bottomPathY);
+            ctx.stroke();
+            
+            // Draw elements on parallel paths
+            drawContact(ctx, splitX + 50, topPathY, 'XIC', 'Proximity_Sensor');
+            drawContact(ctx, splitX + 50, bottomPathY, 'XIO', 'Emergency_Stop');
+            
+            // Merge point (short 40px after branch)
+            const mergeX = splitX + 200 + 40;
+            
+            // Draw merge vertical lines UP to main line
+            ctx.beginPath();
+            ctx.moveTo(mergeX, topPathY);
+            ctx.lineTo(mergeX, 140);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(mergeX, bottomPathY);
+            ctx.lineTo(mergeX, 140);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(mergeX, 140);
+            ctx.lineTo(mergeX, 100);
+            ctx.stroke();
+            
+            // Draw Motor_Output on main line (close to right power rail)
+            const outputX = 760; // Positioned 40px from right power rail (800 - 20 - 40 = 760)
+            drawCoil(ctx, outputX, 100, 'OTE', 'Motor_Output');
+        }
+
+        function drawContact(ctx, x, y, instruction, tag) {
+            const width = 35;
+            const height = 25;
+            
+            ctx.strokeStyle = '#2563eb';
+            ctx.lineWidth = 2;
+            ctx.fillStyle = '#ffffff';
+            
+            const rectX = Math.round(x - width/2);
+            const rectY = Math.round(y - height/2);
+            
+            ctx.strokeRect(rectX, rectY, width, height);
+            ctx.fillRect(rectX, rectY, width, height);
+            ctx.strokeRect(rectX, rectY, width, height);
+
+            const symbol = instruction === 'XIC' ? '| |' : '|/|';
+            ctx.font = 'bold 12px "Courier New", monospace';
+            ctx.fillStyle = '#1f2937';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(symbol, x, y);
+
+            if (tag) {
+                ctx.font = '10px "Courier New", monospace';
+                ctx.fillStyle = '#6b7280';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'top';
+                const tagY = Math.round(y + height/2 + 15);
+                ctx.fillText(tag, x, tagY);
+            }
+        }
+
+        function drawCoil(ctx, x, y, instruction, tag) {
+            const radius = 18;
+            
+            ctx.strokeStyle = '#ea580c';
+            ctx.lineWidth = 2;
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.arc(x, y, radius, 0, 2 * Math.PI);
+            ctx.fill();
+            ctx.stroke();
+
+            let symbol = '( )';
+            if (instruction === 'OTL') symbol = '(L)';
+            else if (instruction === 'OTU') symbol = '(U)';
+            
+            ctx.font = 'bold 12px "Courier New", monospace';
+            ctx.fillStyle = '#1f2937';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(symbol, x, y);
+
+            if (tag) {
+                ctx.font = '10px "Courier New", monospace';
+                ctx.fillStyle = '#6b7280';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'top';
+                const tagY = Math.round(y + radius + 15);
+                ctx.fillText(tag, x, tagY);
+            }
+        }
+
+        // Run on load
+        window.onload = function() {
+            drawSimpleParallelBranch();
+        };
+    </script>
+</body>
+</html> 

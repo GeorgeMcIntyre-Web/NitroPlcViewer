@@ -1,0 +1,780 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Ladder Logic Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background: #f5f5f5;
+        }
+        .test-container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        canvas {
+            border: 2px solid #2563eb;
+            margin: 10px 0;
+        }
+        .canvas-container {
+            display: flex;
+            justify-content: center;
+            margin: 10px 0;
+            width: 100%;
+        }
+        .canvas-container canvas {
+            margin: 0;
+        }
+        button {
+            background: #2563eb;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #1d4ed8;
+        }
+    </style>
+</head>
+<body>
+    <h1>Simple Ladder Logic Test</h1>
+    
+    <div class="test-container">
+        <h2>Test Ladder Logic Rendering</h2>
+        <button onclick="testSimpleRung()">Test Simple Rung</button>
+        <div id="test-output"></div>
+    </div>
+
+    <script>
+        // Text wrapping function - Improved for consistency
+        function wrapText(ctx, text, maxWidth) {
+            if (!text || !text.trim()) return [''];
+            
+            // Ensure font is set before measurement
+            ctx.font = '10px "Courier New", monospace';
+            
+            const words = text.split('_');
+            const lines = [];
+            let currentLine = words[0];
+            
+            for (let i = 1; i < words.length; i++) {
+                const word = words[i];
+                const testLine = currentLine + '_' + word;
+                const width = ctx.measureText(testLine).width;
+                
+                if (width <= maxWidth) {
+                    currentLine = testLine;
+                } else {
+                    lines.push(currentLine);
+                    currentLine = word;
+                }
+            }
+            lines.push(currentLine);
+            return lines;
+        }
+        
+        // Function to draw wrapped text centered - Improved positioning
+        function drawWrappedText(ctx, text, x, y, maxWidth, lineHeight = 12) {
+            if (!text || !text.trim()) return;
+            
+            const lines = wrapText(ctx, text, maxWidth);
+            const totalHeight = lines.length * lineHeight;
+            const startY = y - totalHeight / 2;
+            
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'top';
+            
+            lines.forEach((line, index) => {
+                ctx.fillText(line, x, startY + index * lineHeight);
+            });
+        }
+
+        function testSimpleRung() {
+            console.log('Testing simple rung...');
+            try {
+            
+            const container = document.getElementById('test-output');
+            container.innerHTML = '';
+            
+            const canvas = document.createElement('canvas');
+            canvas.width = 1600; // Balanced width with proper padding from edges
+            canvas.height = 300;
+            canvas.style.border = '2px solid green';
+            
+            const ctx = canvas.getContext('2d');
+            
+            // Clear canvas
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Calculate proper positioning for full-width utilization
+            const rungY = 100;
+            
+            // Draw power rails positioned between canvas edges and elements
+            ctx.strokeStyle = '#10b981';
+            ctx.lineWidth = 6;
+            ctx.beginPath();
+            ctx.moveTo(50, 20); // Left rail positioned between canvas edge and contact
+            ctx.lineTo(50, canvas.height - 20);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(canvas.width - 50, 20); // Right rail positioned between coil and canvas edge
+            ctx.lineTo(canvas.width - 50, canvas.height - 20);
+            ctx.stroke();
+            
+            // Draw a simple contact - positioned relative to left power rail
+            const contactX = 50 + 40; // 40px to the right of left power rail (more padding)
+            const contactY = rungY;
+            const contactWidth = 35;
+            const contactHeight = 25;
+            
+            // Contact rectangle
+            ctx.strokeStyle = '#2563eb';
+            ctx.lineWidth = 2;
+            ctx.fillStyle = '#ffffff';
+            ctx.strokeRect(contactX - contactWidth/2, contactY - contactHeight/2, contactWidth, contactHeight);
+            ctx.fillRect(contactX - contactWidth/2, contactY - contactHeight/2, contactWidth, contactHeight);
+            ctx.strokeRect(contactX - contactWidth/2, contactY - contactHeight/2, contactWidth, contactHeight);
+            
+            // Contact symbol
+            ctx.font = 'bold 12px "Courier New", monospace';
+            ctx.fillStyle = '#1f2937';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('| |', contactX, contactY);
+            
+            // Contact tag - centered and wrapped
+            ctx.font = '10px "Courier New", monospace';
+            ctx.fillStyle = '#6b7280';
+            drawWrappedText(ctx, 'Start_Button', contactX, contactY + contactHeight/2 + 20, 70);
+            
+            // Draw a second contact - positioned next to the first one
+            const contact2X = contactX + 80; // 80px to the right of first contact
+            const contact2Y = rungY;
+            const contact2Width = 35;
+            const contact2Height = 25;
+            
+            // Second contact rectangle
+            ctx.strokeStyle = '#2563eb';
+            ctx.lineWidth = 2;
+            ctx.fillStyle = '#ffffff';
+            ctx.strokeRect(contact2X - contact2Width/2, contact2Y - contact2Height/2, contact2Width, contact2Height);
+            ctx.fillRect(contact2X - contact2Width/2, contact2Y - contact2Height/2, contact2Width, contact2Height);
+            ctx.strokeRect(contact2X - contact2Width/2, contact2Y - contact2Height/2, contact2Width, contact2Height);
+            
+            // Second contact symbol
+            ctx.font = 'bold 12px "Courier New", monospace';
+            ctx.fillStyle = '#1f2937';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('| |', contact2X, contact2Y);
+            
+            // Second contact tag - centered and wrapped
+            ctx.font = '10px "Courier New", monospace';
+            ctx.fillStyle = '#6b7280';
+            drawWrappedText(ctx, 'Stop_Button', contact2X, contact2Y + contact2Height/2 + 20, 70);
+            
+            // Draw branch elements - parallel paths after Stop_Button
+            // Branch contact 1 (upper path)
+            const branchContact1X = contact2X + 80; // 80px to the right of Stop_Button
+            const branchContact1Y = rungY - 40; // 40px above the main rung
+            const branchContact1Width = 35;
+            const branchContact1Height = 25;
+            
+            // Branch contact 1 rectangle
+            ctx.strokeStyle = '#2563eb';
+            ctx.lineWidth = 2;
+            ctx.fillStyle = '#ffffff';
+            ctx.strokeRect(branchContact1X - branchContact1Width/2, branchContact1Y - branchContact1Height/2, branchContact1Width, branchContact1Height);
+            ctx.fillRect(branchContact1X - branchContact1Width/2, branchContact1Y - branchContact1Height/2, branchContact1Width, branchContact1Height);
+            ctx.strokeRect(branchContact1X - branchContact1Width/2, branchContact1Y - branchContact1Height/2, branchContact1Width, branchContact1Height);
+            
+            // Branch contact 1 symbol
+            ctx.font = 'bold 12px "Courier New", monospace';
+            ctx.fillStyle = '#1f2937';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('| |', branchContact1X, branchContact1Y);
+            
+            // Branch contact 1 tag
+            ctx.font = '10px "Courier New", monospace';
+            ctx.fillStyle = '#6b7280';
+            drawWrappedText(ctx, 'Limit_Switch', branchContact1X, branchContact1Y + branchContact1Height/2 + 20, 70);
+            
+            // Branch contact 2 (lower path)
+            const branchContact2X = contact2X + 80; // Same X position as branch contact 1
+            const branchContact2Y = rungY + 40; // 40px below the main rung
+            const branchContact2Width = 35;
+            const branchContact2Height = 25;
+            
+            // Branch contact 2 rectangle
+            ctx.strokeStyle = '#2563eb';
+            ctx.lineWidth = 2;
+            ctx.fillStyle = '#ffffff';
+            ctx.strokeRect(branchContact2X - branchContact2Width/2, branchContact2Y - branchContact2Height/2, branchContact2Width, branchContact2Height);
+            ctx.fillRect(branchContact2X - branchContact2Width/2, branchContact2Y - branchContact2Height/2, branchContact2Width, branchContact2Height);
+            ctx.strokeRect(branchContact2X - branchContact2Width/2, branchContact2Y - branchContact2Height/2, branchContact2Width, branchContact2Height);
+            
+            // Branch contact 2 symbol
+            ctx.font = 'bold 12px "Courier New", monospace';
+            ctx.fillStyle = '#1f2937';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('| |', branchContact2X, branchContact2Y);
+            
+            // Branch contact 2 tag
+            ctx.font = '10px "Courier New", monospace';
+            ctx.fillStyle = '#6b7280';
+            drawWrappedText(ctx, 'Pressure_Switch', branchContact2X, branchContact2Y + branchContact2Height/2 + 20, 70);
+            
+            // Draw a contact after the parallel branch
+            const postBranchContactX = branchContact1X + 80; // 80px to the right of branch contacts
+            const postBranchContactY = rungY;
+            const postBranchContactWidth = 35;
+            const postBranchContactHeight = 25;
+            
+            // Post-branch contact rectangle
+            ctx.strokeStyle = '#2563eb';
+            ctx.lineWidth = 2;
+            ctx.fillStyle = '#ffffff';
+            ctx.strokeRect(postBranchContactX - postBranchContactWidth/2, postBranchContactY - postBranchContactHeight/2, postBranchContactWidth, postBranchContactHeight);
+            ctx.fillRect(postBranchContactX - postBranchContactWidth/2, postBranchContactY - postBranchContactHeight/2, postBranchContactWidth, postBranchContactHeight);
+            ctx.strokeRect(postBranchContactX - postBranchContactWidth/2, postBranchContactY - postBranchContactHeight/2, postBranchContactWidth, postBranchContactHeight);
+            
+            // Post-branch contact symbol
+            ctx.font = 'bold 12px "Courier New", monospace';
+            ctx.fillStyle = '#1f2937';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('| |', postBranchContactX, postBranchContactY);
+            
+            // Post-branch contact tag
+            ctx.font = '10px "Courier New", monospace';
+            ctx.fillStyle = '#6b7280';
+            drawWrappedText(ctx, 'Emergency_Stop', postBranchContactX, postBranchContactY + postBranchContactHeight/2 + 20, 70);
+            
+            // Draw a second contact after the Emergency_Stop
+            const postBranchContact2X = postBranchContactX + 80; // 80px to the right of Emergency_Stop
+            const postBranchContact2Y = rungY;
+            const postBranchContact2Width = 35;
+            const postBranchContact2Height = 25;
+            
+            // Second post-branch contact rectangle
+            ctx.strokeStyle = '#2563eb';
+            ctx.lineWidth = 2;
+            ctx.fillStyle = '#ffffff';
+            ctx.strokeRect(postBranchContact2X - postBranchContact2Width/2, postBranchContact2Y - postBranchContact2Height/2, postBranchContact2Width, postBranchContact2Height);
+            ctx.fillRect(postBranchContact2X - postBranchContact2Width/2, postBranchContact2Y - postBranchContact2Height/2, postBranchContact2Width, postBranchContact2Height);
+            ctx.strokeRect(postBranchContact2X - postBranchContact2Width/2, postBranchContact2Y - postBranchContact2Height/2, postBranchContact2Width, postBranchContact2Height);
+            
+            // Second post-branch contact symbol
+            ctx.font = 'bold 12px "Courier New", monospace';
+            ctx.fillStyle = '#1f2937';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('| |', postBranchContact2X, postBranchContact2Y);
+            
+            // Second post-branch contact tag
+            ctx.font = '10px "Courier New", monospace';
+            ctx.fillStyle = '#6b7280';
+            drawWrappedText(ctx, 'Safety_Interlock', postBranchContact2X, postBranchContact2Y + postBranchContact2Height/2 + 20, 70);
+            
+            // Draw second branch elements - parallel paths after Safety_Interlock
+            // Second branch contact 1 (upper path)
+            const branch2Contact1X = postBranchContact2X + 80; // 80px to the right of Safety_Interlock
+            const branch2Contact1Y = rungY - 40; // 40px above the main rung
+            const branch2Contact1Width = 35;
+            const branch2Contact1Height = 25;
+            
+            // Second branch contact 1 rectangle
+            ctx.strokeStyle = '#2563eb';
+            ctx.lineWidth = 2;
+            ctx.fillStyle = '#ffffff';
+            ctx.strokeRect(branch2Contact1X - branch2Contact1Width/2, branch2Contact1Y - branch2Contact1Height/2, branch2Contact1Width, branch2Contact1Height);
+            ctx.fillRect(branch2Contact1X - branch2Contact1Width/2, branch2Contact1Y - branch2Contact1Height/2, branch2Contact1Width, branch2Contact1Height);
+            ctx.strokeRect(branch2Contact1X - branch2Contact1Width/2, branch2Contact1Y - branch2Contact1Height/2, branch2Contact1Width, branch2Contact1Height);
+            
+            // Second branch contact 1 symbol
+            ctx.font = 'bold 12px "Courier New", monospace';
+            ctx.fillStyle = '#1f2937';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('| |', branch2Contact1X, branch2Contact1Y);
+            
+            // Second branch contact 1 tag
+            ctx.font = '10px "Courier New", monospace';
+            ctx.fillStyle = '#6b7280';
+            drawWrappedText(ctx, 'Proximity_Sensor', branch2Contact1X, branch2Contact1Y + branch2Contact1Height/2 + 20, 70);
+            
+            // Second branch contact 2 (upper path)
+            const branch2Contact2X = branch2Contact1X + 60; // 60px to the right of first upper contact
+            const branch2Contact2Y = rungY - 40; // Same Y as first upper contact
+            const branch2Contact2Width = 35;
+            const branch2Contact2Height = 25;
+            
+            // Second branch contact 2 rectangle
+            ctx.strokeStyle = '#2563eb';
+            ctx.lineWidth = 2;
+            ctx.fillStyle = '#ffffff';
+            ctx.strokeRect(branch2Contact2X - branch2Contact2Width/2, branch2Contact2Y - branch2Contact2Height/2, branch2Contact2Width, branch2Contact2Height);
+            ctx.fillRect(branch2Contact2X - branch2Contact2Width/2, branch2Contact2Y - branch2Contact2Height/2, branch2Contact2Width, branch2Contact2Height);
+            ctx.strokeRect(branch2Contact2X - branch2Contact2Width/2, branch2Contact2Y - branch2Contact2Height/2, branch2Contact2Width, branch2Contact2Height);
+            
+            // Second branch contact 2 symbol
+            ctx.font = 'bold 12px "Courier New", monospace';
+            ctx.fillStyle = '#1f2937';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('| |', branch2Contact2X, branch2Contact2Y);
+            
+            // Second branch contact 2 tag
+            ctx.font = '10px "Courier New", monospace';
+            ctx.fillStyle = '#6b7280';
+            drawWrappedText(ctx, 'Photo_Sensor', branch2Contact2X, branch2Contact2Y + branch2Contact2Height/2 + 20, 70);
+            
+            // Second branch contact 3 (lower path)
+            const branch2Contact3X = branch2Contact1X; // Same X as first upper contact
+            const branch2Contact3Y = rungY + 40; // 40px below the main rung
+            const branch2Contact3Width = 35;
+            const branch2Contact3Height = 25;
+            
+            // Second branch contact 3 rectangle
+            ctx.strokeStyle = '#2563eb';
+            ctx.lineWidth = 2;
+            ctx.fillStyle = '#ffffff';
+            ctx.strokeRect(branch2Contact3X - branch2Contact3Width/2, branch2Contact3Y - branch2Contact3Height/2, branch2Contact3Width, branch2Contact3Height);
+            ctx.fillRect(branch2Contact3X - branch2Contact3Width/2, branch2Contact3Y - branch2Contact3Height/2, branch2Contact3Width, branch2Contact3Height);
+            ctx.strokeRect(branch2Contact3X - branch2Contact3Width/2, branch2Contact3Y - branch2Contact3Height/2, branch2Contact3Width, branch2Contact3Height);
+            
+            // Second branch contact 3 symbol
+            ctx.font = 'bold 12px "Courier New", monospace';
+            ctx.fillStyle = '#1f2937';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('| |', branch2Contact3X, branch2Contact3Y);
+            
+            // Second branch contact 3 tag
+            ctx.font = '10px "Courier New", monospace';
+            ctx.fillStyle = '#6b7280';
+            drawWrappedText(ctx, 'Temperature_Sensor', branch2Contact3X, branch2Contact3Y + branch2Contact3Height/2 + 20, 70);
+            
+            // Draw third branch elements - parallel paths after second branch
+            // Third branch contact 1 (upper path - single contact)
+            const branch3Contact1X = branch2Contact2X + 80; // 80px to the right of second branch
+            const branch3Contact1Y = rungY - 40; // 40px above the main rung
+            const branch3Contact1Width = 35;
+            const branch3Contact1Height = 25;
+            
+            // Third branch contact 1 rectangle
+            ctx.strokeStyle = '#2563eb';
+            ctx.lineWidth = 2;
+            ctx.fillStyle = '#ffffff';
+            ctx.strokeRect(branch3Contact1X - branch3Contact1Width/2, branch3Contact1Y - branch3Contact1Height/2, branch3Contact1Width, branch3Contact1Height);
+            ctx.fillRect(branch3Contact1X - branch3Contact1Width/2, branch3Contact1Y - branch3Contact1Height/2, branch3Contact1Width, branch3Contact1Height);
+            ctx.strokeRect(branch3Contact1X - branch3Contact1Width/2, branch3Contact1Y - branch3Contact1Height/2, branch3Contact1Width, branch3Contact1Height);
+            
+            // Third branch contact 1 symbol
+            ctx.font = 'bold 12px "Courier New", monospace';
+            ctx.fillStyle = '#1f2937';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('| |', branch3Contact1X, branch3Contact1Y);
+            
+            // Third branch contact 1 tag
+            ctx.font = '10px "Courier New", monospace';
+            ctx.fillStyle = '#6b7280';
+            drawWrappedText(ctx, 'Flow_Sensor', branch3Contact1X, branch3Contact1Y + branch3Contact1Height/2 + 20, 70);
+            
+            // Third branch contact 2 (lower path - first contact)
+            const branch3Contact2X = branch3Contact1X; // Same X as upper contact
+            const branch3Contact2Y = rungY + 40; // 40px below the main rung
+            const branch3Contact2Width = 35;
+            const branch3Contact2Height = 25;
+            
+            // Third branch contact 2 rectangle
+            ctx.strokeStyle = '#2563eb';
+            ctx.lineWidth = 2;
+            ctx.fillStyle = '#ffffff';
+            ctx.strokeRect(branch3Contact2X - branch3Contact2Width/2, branch3Contact2Y - branch3Contact2Height/2, branch3Contact2Width, branch3Contact2Height);
+            ctx.fillRect(branch3Contact2X - branch3Contact2Width/2, branch3Contact2Y - branch3Contact2Height/2, branch3Contact2Width, branch3Contact2Height);
+            ctx.strokeRect(branch3Contact2X - branch3Contact2Width/2, branch3Contact2Y - branch3Contact2Height/2, branch3Contact2Width, branch3Contact2Height);
+            
+            // Third branch contact 2 symbol
+            ctx.font = 'bold 12px "Courier New", monospace';
+            ctx.fillStyle = '#1f2937';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('| |', branch3Contact2X, branch3Contact2Y);
+            
+            // Third branch contact 2 tag
+            ctx.font = '10px "Courier New", monospace';
+            ctx.fillStyle = '#6b7280';
+            drawWrappedText(ctx, 'Level_Sensor', branch3Contact2X, branch3Contact2Y + branch3Contact2Height/2 + 20, 70);
+            
+            // Third branch contact 3 (lower path - second contact)
+            const branch3Contact3X = branch3Contact2X + 60; // 60px to the right of first lower contact
+            const branch3Contact3Y = rungY + 40; // Same Y as first lower contact
+            const branch3Contact3Width = 35;
+            const branch3Contact3Height = 25;
+            
+            // Third branch contact 3 rectangle
+            ctx.strokeStyle = '#2563eb';
+            ctx.lineWidth = 2;
+            ctx.fillStyle = '#ffffff';
+            ctx.strokeRect(branch3Contact3X - branch3Contact3Width/2, branch3Contact3Y - branch3Contact3Height/2, branch3Contact3Width, branch3Contact3Height);
+            ctx.fillRect(branch3Contact3X - branch3Contact3Width/2, branch3Contact3Y - branch3Contact3Height/2, branch3Contact3Width, branch3Contact3Height);
+            ctx.strokeRect(branch3Contact3X - branch3Contact3Width/2, branch3Contact3Y - branch3Contact3Height/2, branch3Contact3Width, branch3Contact3Height);
+            
+            // Third branch contact 3 symbol
+            ctx.font = 'bold 12px "Courier New", monospace';
+            ctx.fillStyle = '#1f2937';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('| |', branch3Contact3X, branch3Contact3Y);
+            
+            // Third branch contact 3 tag
+            ctx.font = '10px "Courier New", monospace';
+            ctx.fillStyle = '#6b7280';
+            drawWrappedText(ctx, 'Pressure_Sensor2', branch3Contact3X, branch3Contact3Y + branch3Contact3Height/2 + 20, 70);
+            
+            // Draw main horizontal line in segments to avoid overlapping with branch
+            ctx.strokeStyle = '#6b7280';
+            ctx.lineWidth = 3;
+            
+            // Left segment: from left power rail to first contact
+            ctx.beginPath();
+            ctx.moveTo(50, rungY); // Start at left power rail
+            ctx.lineTo(contactX - contactWidth/2, rungY); // Stop before first contact
+            ctx.stroke();
+            
+            // Middle segment: from second contact to branch start
+            ctx.beginPath();
+            ctx.moveTo(contact2X + contact2Width/2, rungY); // Start after second contact
+            ctx.lineTo(branchContact1X - branchContact1Width/2 - 20, rungY); // Stop before branch
+            ctx.stroke();
+            
+            // Post-branch segment: from branch end to first post-branch contact
+            ctx.beginPath();
+            ctx.moveTo(branchContact1X + branchContact1Width/2 + 20, rungY); // Start after branch
+            ctx.lineTo(postBranchContactX - postBranchContactWidth/2, rungY); // Stop before first post-branch contact
+            ctx.stroke();
+            
+            // Middle post-branch segment: from first to second post-branch contact
+            ctx.beginPath();
+            ctx.moveTo(postBranchContactX + postBranchContactWidth/2, rungY); // Start after first post-branch contact
+            ctx.lineTo(postBranchContact2X - postBranchContact2Width/2, rungY); // Stop before second post-branch contact
+            ctx.stroke();
+            
+            // Second branch segment: from second post-branch contact to second branch start
+            ctx.beginPath();
+            ctx.moveTo(postBranchContact2X + postBranchContact2Width/2, rungY); // Start after second post-branch contact
+            ctx.lineTo(branch2Contact1X - branch2Contact1Width/2 - 20, rungY); // Stop before second branch
+            ctx.stroke();
+            
+            // Third branch segment: from second branch end to third branch start
+            ctx.beginPath();
+            ctx.moveTo(branch2Contact2X + branch2Contact2Width/2 + 20, rungY); // Start after second branch
+            ctx.lineTo(branch3Contact1X - branch3Contact1Width/2 - 20, rungY); // Stop before third branch
+            ctx.stroke();
+            
+            // Right segment: from third branch end to right power rail
+            ctx.beginPath();
+            ctx.moveTo(branch3Contact3X + branch3Contact3Width/2 + 20, rungY); // Start after third branch
+            ctx.lineTo(canvas.width - 50, rungY); // End at right power rail
+            ctx.stroke();
+            
+            // Draw a simple coil - positioned relative to right power rail
+            const coilX = (canvas.width - 50) - 40; // 40px to the left of right power rail (more padding)
+            const coilY = rungY;
+            const coilRadius = 18;
+            
+            // Coil circle
+            ctx.strokeStyle = '#ea580c';
+            ctx.lineWidth = 2;
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.arc(coilX, coilY, coilRadius, 0, 2 * Math.PI);
+            ctx.fill();
+            ctx.stroke();
+            
+            // Coil symbol
+            ctx.font = 'bold 12px "Courier New", monospace';
+            ctx.fillStyle = '#1f2937';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('( )', coilX, coilY);
+            
+            // Coil tag - centered and wrapped
+            ctx.font = '10px "Courier New", monospace';
+            ctx.fillStyle = '#6b7280';
+            drawWrappedText(ctx, 'Motor_Output', coilX, coilY + coilRadius + 20, 70);
+            
+            // Draw a second coil - positioned next to the first one
+            const coil2X = coilX - 80; // 80px to the left of first coil
+            const coil2Y = rungY;
+            const coil2Radius = 18;
+            
+            // Second coil circle
+            ctx.strokeStyle = '#ea580c';
+            ctx.lineWidth = 2;
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.arc(coil2X, coil2Y, coil2Radius, 0, 2 * Math.PI);
+            ctx.fill();
+            ctx.stroke();
+            
+            // Second coil symbol
+            ctx.font = 'bold 12px "Courier New", monospace';
+            ctx.fillStyle = '#1f2937';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('( )', coil2X, coil2Y);
+            
+            // Second coil tag - centered and wrapped
+            ctx.font = '10px "Courier New", monospace';
+            ctx.fillStyle = '#6b7280';
+            drawWrappedText(ctx, 'Light_Output', coil2X, coil2Y + coil2Radius + 20, 70);
+            
+            // Draw connections spanning the full width
+            ctx.strokeStyle = '#6b7280';
+            ctx.lineWidth = 3;
+            
+            // Left power rail to contact
+            ctx.beginPath();
+            ctx.moveTo(50, rungY); // Left power rail
+            ctx.lineTo(contactX - contactWidth/2, rungY);
+            ctx.stroke();
+            
+            // First contact to second contact
+            ctx.beginPath();
+            ctx.moveTo(contactX + contactWidth/2, rungY);
+            ctx.lineTo(contact2X - contact2Width/2, rungY);
+            ctx.stroke();
+            
+            // Branch connections from Stop_Button
+            // Horizontal line from Stop_Button to branch point
+            ctx.beginPath();
+            ctx.moveTo(contact2X + contact2Width/2, rungY);
+            ctx.lineTo(branchContact1X - branchContact1Width/2 - 20, rungY);
+            ctx.stroke();
+            
+            // Vertical lines to branch contacts
+            ctx.beginPath();
+            ctx.moveTo(branchContact1X - branchContact1Width/2 - 20, rungY);
+            ctx.lineTo(branchContact1X - branchContact1Width/2 - 20, branchContact1Y);
+            ctx.stroke();
+            
+            ctx.beginPath();
+            ctx.moveTo(branchContact1X - branchContact1Width/2 - 20, rungY);
+            ctx.lineTo(branchContact1X - branchContact1Width/2 - 20, branchContact2Y);
+            ctx.stroke();
+            
+            // Horizontal padding lines within the branch
+            // Upper branch padding lines
+            ctx.beginPath();
+            ctx.moveTo(branchContact1X - branchContact1Width/2 - 20, branchContact1Y);
+            ctx.lineTo(branchContact1X - branchContact1Width/2, branchContact1Y);
+            ctx.stroke();
+            
+            ctx.beginPath();
+            ctx.moveTo(branchContact1X + branchContact1Width/2, branchContact1Y);
+            ctx.lineTo(branchContact1X + branchContact1Width/2 + 20, branchContact1Y);
+            ctx.stroke();
+            
+            // Lower branch padding lines
+            ctx.beginPath();
+            ctx.moveTo(branchContact2X - branchContact2Width/2 - 20, branchContact2Y);
+            ctx.lineTo(branchContact2X - branchContact2Width/2, branchContact2Y);
+            ctx.stroke();
+            
+            ctx.beginPath();
+            ctx.moveTo(branchContact2X + branchContact2Width/2, branchContact2Y);
+            ctx.lineTo(branchContact2X + branchContact2Width/2 + 20, branchContact2Y);
+            ctx.stroke();
+            
+            // Branch contacts to main line continuation
+            ctx.beginPath();
+            ctx.moveTo(branchContact1X + branchContact1Width/2 + 20, branchContact1Y);
+            ctx.lineTo(branchContact1X + branchContact1Width/2 + 20, rungY);
+            ctx.stroke();
+            
+            ctx.beginPath();
+            ctx.moveTo(branchContact2X + branchContact2Width/2 + 20, branchContact2Y);
+            ctx.lineTo(branchContact2X + branchContact2Width/2 + 20, rungY);
+            ctx.stroke();
+            
+            // Second branch connections from Safety_Interlock
+            // Horizontal line from Safety_Interlock to second branch point
+            ctx.beginPath();
+            ctx.moveTo(postBranchContact2X + postBranchContact2Width/2, rungY);
+            ctx.lineTo(branch2Contact1X - branch2Contact1Width/2 - 20, rungY);
+            ctx.stroke();
+            
+            // Vertical lines to second branch contacts
+            ctx.beginPath();
+            ctx.moveTo(branch2Contact1X - branch2Contact1Width/2 - 20, rungY);
+            ctx.lineTo(branch2Contact1X - branch2Contact1Width/2 - 20, branch2Contact1Y);
+            ctx.stroke();
+            
+            ctx.beginPath();
+            ctx.moveTo(branch2Contact1X - branch2Contact1Width/2 - 20, rungY);
+            ctx.lineTo(branch2Contact1X - branch2Contact1Width/2 - 20, branch2Contact3Y);
+            ctx.stroke();
+            
+            // Horizontal padding lines within the second branch
+            // Upper branch padding lines
+            ctx.beginPath();
+            ctx.moveTo(branch2Contact1X - branch2Contact1Width/2 - 20, branch2Contact1Y);
+            ctx.lineTo(branch2Contact1X - branch2Contact1Width/2, branch2Contact1Y);
+            ctx.stroke();
+            
+            ctx.beginPath();
+            ctx.moveTo(branch2Contact1X + branch2Contact1Width/2, branch2Contact1Y);
+            ctx.lineTo(branch2Contact2X - branch2Contact2Width/2, branch2Contact1Y);
+            ctx.stroke();
+            
+            ctx.beginPath();
+            ctx.moveTo(branch2Contact2X + branch2Contact2Width/2, branch2Contact1Y);
+            ctx.lineTo(branch2Contact2X + branch2Contact2Width/2 + 20, branch2Contact1Y);
+            ctx.stroke();
+            
+            // Lower branch padding lines
+            ctx.beginPath();
+            ctx.moveTo(branch2Contact3X - branch2Contact3Width/2 - 20, branch2Contact3Y);
+            ctx.lineTo(branch2Contact3X - branch2Contact3Width/2, branch2Contact3Y);
+            ctx.stroke();
+            
+            ctx.beginPath();
+            ctx.moveTo(branch2Contact3X + branch2Contact3Width/2, branch2Contact3Y);
+            ctx.lineTo(branch2Contact3X + branch2Contact3Width/2 + 20, branch2Contact3Y);
+            ctx.stroke();
+            
+            // Second branch contacts to main line continuation
+            // Upper path connects to vertical line (both contacts must be satisfied)
+            ctx.beginPath();
+            ctx.moveTo(branch2Contact2X + branch2Contact2Width/2 + 20, branch2Contact1Y);
+            ctx.lineTo(branch2Contact2X + branch2Contact2Width/2 + 20, rungY);
+            ctx.stroke();
+            
+            // Lower path connects directly to the upper path's vertical line (creating AND logic)
+            ctx.beginPath();
+            ctx.moveTo(branch2Contact3X + branch2Contact3Width/2 + 20, branch2Contact3Y);
+            ctx.lineTo(branch2Contact2X + branch2Contact2Width/2 + 20, branch2Contact3Y);
+            ctx.stroke();
+            
+            // Connect the vertical line back to the main rung
+            ctx.beginPath();
+            ctx.moveTo(branch2Contact2X + branch2Contact2Width/2 + 20, branch2Contact3Y);
+            ctx.lineTo(branch2Contact2X + branch2Contact2Width/2 + 20, rungY);
+            ctx.stroke();
+            
+            // Third branch connections from second branch
+            // Horizontal line from second branch to third branch point
+            ctx.beginPath();
+            ctx.moveTo(branch2Contact2X + branch2Contact2Width/2 + 20, rungY);
+            ctx.lineTo(branch3Contact1X - branch3Contact1Width/2 - 20, rungY);
+            ctx.stroke();
+            
+            // Vertical lines to third branch contacts
+            ctx.beginPath();
+            ctx.moveTo(branch3Contact1X - branch3Contact1Width/2 - 20, rungY);
+            ctx.lineTo(branch3Contact1X - branch3Contact1Width/2 - 20, branch3Contact1Y);
+            ctx.stroke();
+            
+            ctx.beginPath();
+            ctx.moveTo(branch3Contact1X - branch3Contact1Width/2 - 20, rungY);
+            ctx.lineTo(branch3Contact1X - branch3Contact1Width/2 - 20, branch3Contact2Y);
+            ctx.stroke();
+            
+            // Horizontal padding lines within the third branch
+            // Upper branch padding lines
+            ctx.beginPath();
+            ctx.moveTo(branch3Contact1X - branch3Contact1Width/2 - 20, branch3Contact1Y);
+            ctx.lineTo(branch3Contact1X - branch3Contact1Width/2, branch3Contact1Y);
+            ctx.stroke();
+            
+            ctx.beginPath();
+            ctx.moveTo(branch3Contact1X + branch3Contact1Width/2, branch3Contact1Y);
+            ctx.lineTo(branch3Contact1X + branch3Contact1Width/2 + 20, branch3Contact1Y);
+            ctx.stroke();
+            
+            // Lower branch padding lines
+            ctx.beginPath();
+            ctx.moveTo(branch3Contact2X - branch3Contact2Width/2 - 20, branch3Contact2Y);
+            ctx.lineTo(branch3Contact2X - branch3Contact2Width/2, branch3Contact2Y);
+            ctx.stroke();
+            
+            ctx.beginPath();
+            ctx.moveTo(branch3Contact2X + branch3Contact2Width/2, branch3Contact2Y);
+            ctx.lineTo(branch3Contact3X - branch3Contact3Width/2, branch3Contact2Y);
+            ctx.stroke();
+            
+            ctx.beginPath();
+            ctx.moveTo(branch3Contact3X + branch3Contact3Width/2, branch3Contact2Y);
+            ctx.lineTo(branch3Contact3X + branch3Contact3Width/2 + 20, branch3Contact2Y);
+            ctx.stroke();
+            
+            // Third branch contacts to main line continuation
+            // Upper path connects to vertical line (single contact)
+            ctx.beginPath();
+            ctx.moveTo(branch3Contact1X + branch3Contact1Width/2 + 20, branch3Contact1Y);
+            ctx.lineTo(branch3Contact3X + branch3Contact3Width/2 + 20, branch3Contact1Y);
+            ctx.stroke();
+
+            // Lower path connects directly to the upper path's vertical line (creating AND logic)
+            ctx.beginPath();
+            ctx.moveTo(branch3Contact3X + branch3Contact3Width/2 + 20, branch3Contact2Y);
+            ctx.lineTo(branch3Contact3X + branch3Contact3Width/2 + 20, branch3Contact1Y);
+            ctx.stroke();
+
+            // Connect the vertical line back to the main rung (at the end of the lower path)
+            ctx.beginPath();
+            ctx.moveTo(branch3Contact3X + branch3Contact3Width/2 + 20, branch3Contact2Y);
+            ctx.lineTo(branch3Contact3X + branch3Contact3Width/2 + 20, rungY);
+            ctx.stroke();
+            
+            // Continue main line to first coil
+            ctx.beginPath();
+            ctx.moveTo(branch3Contact1X + branch3Contact1Width/2 + 20, rungY);
+            ctx.lineTo(coil2X - coil2Radius, rungY);
+            ctx.stroke();
+            
+            // First coil to second coil
+            ctx.beginPath();
+            ctx.moveTo(coil2X + coil2Radius, rungY);
+            ctx.lineTo(coilX - coilRadius, rungY);
+            ctx.stroke();
+            
+            // Second coil to right power rail
+            ctx.beginPath();
+            ctx.moveTo(coilX + coilRadius, rungY);
+            ctx.lineTo(canvas.width - 50, rungY); // Right power rail (will be further right with wider canvas)
+            ctx.stroke();
+            
+            // Create canvas container for right alignment
+            const canvasContainer = document.createElement('div');
+            canvasContainer.className = 'canvas-container';
+            canvasContainer.appendChild(canvas);
+            container.appendChild(canvasContainer);
+            console.log('Simple rung test completed');
+            } catch (error) {
+                console.error('Error in testSimpleRung:', error);
+            }
+        }
+        
+        // Auto-run test on load
+        window.onload = function() {
+            console.log('Simple test ready');
+            testSimpleRung();
+        };
+    </script>
+</body>
+</html> 

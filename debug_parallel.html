@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug Parallel Branch</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .debug { background: #f0f0f0; padding: 10px; margin: 10px; border: 1px solid #ccc; }
+        canvas { border: 2px solid green; margin: 10px 0; }
+    </style>
+</head>
+<body>
+    <h1>Debug Parallel Branch</h1>
+    <div class="debug" id="debug-output"></div>
+    <canvas id="canvas" width="800" height="300"></canvas>
+
+    <script>
+        function log(message) {
+            document.getElementById('debug-output').innerHTML += message + '<br>';
+            console.log(message);
+        }
+
+        function parseRungLogic(rungText) {
+            log('=== PARSING RUNG TEXT ===');
+            log('Input: ' + rungText);
+            
+            const tokens = rungText.split(/(\s+|[\[\]|])/).filter(token => token.trim() && token !== ' ');
+            log('Tokens: ' + JSON.stringify(tokens));
+            
+            const rung = {
+                inputs: { elements: [] },
+                outputs: { elements: [] },
+                parallelBranches: [],
+                junctions: []
+            };
+            
+            let currentBranch = rung.inputs;
+            let branchStack = [rung.inputs];
+            let currentLevel = 0;
+            let currentParallelBranch = null;
+            
+            for (let i = 0; i < tokens.length; i++) {
+                const token = tokens[i].trim();
+                log('Processing token: "' + token + '"');
+                
+                if (token === '[') {
+                    currentLevel++;
+                    currentParallelBranch = { 
+                        level: currentLevel, 
+                        paths: [[]],
+                        parent: currentBranch,
+                        splitPoint: null,
+                        mergePoint: null
+                    };
+                    
+                    const junction = {
+                        type: 'split',
+                        x: 0,
+                        y: 0,
+                        parentBranch: currentBranch,
+                        parallelBranch: currentParallelBranch
+                    };
+                    
+                    rung.parallelBranches.push(currentParallelBranch);
+                    rung.junctions.push(junction);
+                    branchStack.push(currentParallelBranch);
+                    currentBranch = currentParallelBranch;
+                    log('Started parallel branch level ' + currentLevel);
+                    
+                } else if (token === '|') {
+                    if (currentParallelBranch) {
+                        currentParallelBranch.paths.push([]);
+                        log('Started new parallel path within branch level ' + currentLevel);
+                        log('Current paths count: ' + currentParallelBranch.paths.length);
+                    }
+                    
+                } else if (token === ']') {
+                    const parallelBranch = currentBranch;
+                    const parentBranch = branchStack[branchStack.length - 2];
+                    
+                    const junction = {
+                        type: 'merge',
+                        x: 0,
+                        y: 0,
+                        parentBranch: parentBranch,
+                        parallelBranch: parallelBranch
+                    };
+                    
+                    rung.junctions.push(junction);
+                    branchStack.pop();
+                    currentBranch = parentBranch;
+                    currentLevel--;
+                    currentParallelBranch = null;
+                    log('Ended parallel branch, back to level ' + currentLevel);
+                    
+                } else if (token) {
+                    const instructionMatch = token.match(/([A-Z]{2,4})\(([^)]+)\)/);
+                    if (instructionMatch) {
+                        const instruction = instructionMatch[1];
+                        const tag = instructionMatch[2];
+                        
+                        const element = {
+                            type: getElementType(instruction),
+                            instruction: instruction,
+                            tag: tag,
+                            width: calculateElementWidth(instruction, tag),
+                            height: getElementHeight(instruction)
+                        };
+                        
+                        if (['OTE', 'OTL', 'OTU'].includes(instruction)) {
+                            rung.outputs.elements.push(element);
+                            log('Added output element: ' + instruction + '(' + tag + ')');
+                        } else {
+                            if (currentParallelBranch) {
+                                const currentPathIndex = currentParallelBranch.paths.length - 1;
+                                currentParallelBranch.paths[currentPathIndex].push(element);
+                                log('Added element to parallel branch path ' + currentPathIndex + ': ' + instruction + '(' + tag + ')');
+                                log('Path ' + currentPathIndex + ' now has ' + currentParallelBranch.paths[currentPathIndex].length + ' elements');
+                            } else {
+                                currentBranch.elements.push(element);
+                                log('Added input element to main branch: ' + instruction + '(' + tag + ')');
+                            }
+                        }
+                    }
+                }
+            }
+            
+            log('=== FINAL RUNG STRUCTURE ===');
+            log('Inputs: ' + rung.inputs.elements.length + ' elements');
+            log('Outputs: ' + rung.outputs.elements.length + ' elements');
+            log('Parallel branches: ' + rung.parallelBranches.length);
+            
+            rung.parallelBranches.forEach((branch, index) => {
+                log('Branch ' + index + ' has ' + branch.paths.length + ' paths:');
+                branch.paths.forEach((path, pathIndex) => {
+                    log('  Path ' + pathIndex + ' has ' + path.length + ' elements: ' + 
+                        path.map(e => e.instruction + '(' + e.tag + ')').join(', '));
+                });
+            });
+            
+            return rung;
+        }
+
+        function getElementType(instruction) {
+            if (['XIC', 'XIO'].includes(instruction)) return 'contact';
+            if (['OTE', 'OTL', 'OTU'].includes(instruction)) return 'coil';
+            return 'function';
+        }
+
+        function calculateElementWidth(instruction, tag) {
+            const baseWidth = getElementWidth(instruction);
+            const tagWidth = tag.length * 8;
+            return Math.max(baseWidth + 20, tagWidth + 25);
+        }
+
+        function getElementWidth(instruction) {
+            if (['XIC', 'XIO'].includes(instruction)) return 35;
+            if (['OTE', 'OTL', 'OTU'].includes(instruction)) return 36;
+            return 60;
+        }
+
+        function getElementHeight(instruction) {
+            if (['XIC', 'XIO'].includes(instruction)) return 25;
+            if (['OTE', 'OTL', 'OTU'].includes(instruction)) return 36;
+            return 30;
+        }
+
+        function drawSimpleLayout() {
+            const canvas = document.getElementById('canvas');
+            const ctx = canvas.getContext('2d');
+            
+            // Clear canvas
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw power rails
+            ctx.strokeStyle = '#10b981';
+            ctx.lineWidth = 6;
+            ctx.beginPath();
+            ctx.moveTo(20, 20);
+            ctx.lineTo(20, canvas.height - 20);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(canvas.width - 20, 20);
+            ctx.lineTo(canvas.width - 20, canvas.height - 20);
+            ctx.stroke();
+            
+            // Draw main horizontal line
+            ctx.strokeStyle = '#6b7280';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(20, 100);
+            ctx.lineTo(canvas.width - 20, 100);
+            ctx.stroke();
+            
+            // Parse the rung
+            const testRung = {
+                text: 'XIC(Start_Button) [XIC(Proximity_Sensor) | XIO(Emergency_Stop)] OTE(Motor_Output)'
+            };
+            
+            const parsedRung = parseRungLogic(testRung.text);
+            
+            // Draw elements based on parsed structure
+            let currentX = 200; // Start position
+            
+            // Draw input elements
+            parsedRung.inputs.elements.forEach(element => {
+                drawContact(ctx, currentX, 100, element.instruction, element.tag);
+                currentX += element.width + 40;
+            });
+            
+            // Draw parallel branches
+            parsedRung.parallelBranches.forEach((branch, branchIndex) => {
+                const splitX = currentX;
+                
+                // Draw split vertical line
+                ctx.strokeStyle = '#6b7280';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.moveTo(splitX, 100);
+                ctx.lineTo(splitX, 140);
+                ctx.stroke();
+                
+                // Draw each parallel path
+                branch.paths.forEach((path, pathIndex) => {
+                    const pathY = 140 + pathIndex * 40;
+                    
+                    // Draw horizontal line for this path
+                    ctx.beginPath();
+                    ctx.moveTo(splitX, pathY);
+                    ctx.lineTo(splitX + 200, pathY);
+                    ctx.stroke();
+                    
+                    // Draw elements on this path
+                    let pathX = splitX + 50;
+                    path.forEach(element => {
+                        drawContact(ctx, pathX, pathY, element.instruction, element.tag);
+                        pathX += element.width + 40;
+                    });
+                });
+                
+                // Draw merge vertical line
+                const mergeX = splitX + 200;
+                ctx.beginPath();
+                ctx.moveTo(mergeX, 140);
+                ctx.lineTo(mergeX, 100);
+                ctx.stroke();
+                
+                currentX = mergeX + 50;
+            });
+            
+            // Draw output elements
+            parsedRung.outputs.elements.forEach(element => {
+                drawCoil(ctx, currentX, 100, element.instruction, element.tag);
+                currentX += element.width + 40;
+            });
+        }
+
+        function drawContact(ctx, x, y, instruction, tag) {
+            const width = 35;
+            const height = 25;
+            
+            ctx.strokeStyle = '#2563eb';
+            ctx.lineWidth = 2;
+            ctx.fillStyle = '#ffffff';
+            
+            const rectX = Math.round(x - width/2);
+            const rectY = Math.round(y - height/2);
+            
+            ctx.strokeRect(rectX, rectY, width, height);
+            ctx.fillRect(rectX, rectY, width, height);
+            ctx.strokeRect(rectX, rectY, width, height);
+
+            const symbol = instruction === 'XIC' ? '| |' : '|/|';
+            ctx.font = 'bold 12px "Courier New", monospace';
+            ctx.fillStyle = '#1f2937';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(symbol, x, y);
+
+            if (tag) {
+                ctx.font = '10px "Courier New", monospace';
+                ctx.fillStyle = '#6b7280';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'top';
+                const tagY = Math.round(y + height/2 + 15);
+                ctx.fillText(tag, x, tagY);
+            }
+        }
+
+        function drawCoil(ctx, x, y, instruction, tag) {
+            const radius = 18;
+            
+            ctx.strokeStyle = '#ea580c';
+            ctx.lineWidth = 2;
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.arc(x, y, radius, 0, 2 * Math.PI);
+            ctx.fill();
+            ctx.stroke();
+
+            let symbol = '( )';
+            if (instruction === 'OTL') symbol = '(L)';
+            else if (instruction === 'OTU') symbol = '(U)';
+            
+            ctx.font = 'bold 12px "Courier New", monospace';
+            ctx.fillStyle = '#1f2937';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(symbol, x, y);
+
+            if (tag) {
+                ctx.font = '10px "Courier New", monospace';
+                ctx.fillStyle = '#6b7280';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'top';
+                const tagY = Math.round(y + radius + 15);
+                ctx.fillText(tag, x, tagY);
+            }
+        }
+
+        // Run debug on load
+        window.onload = function() {
+            log('=== DEBUG PARALLEL BRANCH ===');
+            drawSimpleLayout();
+        };
+    </script>
+</body>
+</html> 

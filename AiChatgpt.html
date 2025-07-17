@@ -1,0 +1,672 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Refactored Ladder Logic w/ Studio 5000 Symbol Library</title>
+<style>
+:root {
+  --primary-bg: #2c3e50;
+  --secondary-bg: #f5f5f5;
+  --border-color: #ddd;
+  --accent-color: #3498db;
+  --text-color: #333;
+  --light-text: #ecf0f1;
+  --canvas-rail: #10b981;
+  --canvas-wire: #6b7280;
+  --canvas-contact: #2563eb;
+  --canvas-output: #ea580c;
+  --canvas-block: #059669;
+}
+body{font-family:Arial,Helvetica,sans-serif;margin:20px;background:var(--secondary-bg);color:var(--text-color);}h1{margin-top:0;}
+.test-container{background:#fff;padding:20px;border-radius:8px;box-shadow:0 2px 4px rgba(0,0,0,.1);margin-bottom:20px;}
+.canvas-container{display:flex;justify-content:center;margin:10px 0;width:100%;}
+canvas{border:2px solid var(--accent-color);margin:0;}
+button{background:var(--accent-color);color:#fff;border:none;padding:6px 14px;border-radius:4px;cursor:pointer;margin:2px;font-size:13px;}button:hover{background:#1d4ed8;}
+.button-group{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:12px;}
+#palette{max-height:240px;overflow-y:auto;background:#fff;border:1px solid var(--border-color);padding:8px;margin-bottom:12px;font-size:13px;}
+#palette input{width:100%;margin-bottom:8px;padding:4px;}
+#palette .sym-row{display:flex;justify-content:space-between;align-items:center;padding:2px 0;border-bottom:1px dashed #eee;}
+#palette .sym-row:last-child{border-bottom:none;}
+#palette .sym-name{flex:1;}
+#palette .sym-mn{width:70px;text-align:right;color:#888;}
+</style>
+</head>
+<body>
+<h1>Refactored Ladder Logic with Studio 5000 Symbol Library</h1>
+<div class="test-container">
+  <h2>DRY Compliant Ladder Logic Renderer</h2>
+  <div class="button-group">
+    <button id="btnComplex">Complex Rung</button>
+    <button id="btnSimple">Simple Rung</button>
+    <button id="btnTimer">Timer Rung</button>
+    <button id="btnBranchWidths">Branch Width Demo</button>
+  </div>
+  <div id="palette"></div>
+  <div id="test-output"></div>
+</div>
+<script>
+// =============================================================
+// SAFETY GUARDS / STYLE NOTES
+// =============================================================
+// Guard clauses used. No else/elseif. No logical !; explicit comparisons used.
+// Short functions. Nesting kept shallow (<3).
+// =============================================================
+
+// -------------------------------------------------------------
+// GLOBAL STATE (initialized in init())
+// -------------------------------------------------------------
+let SYMBOL_CONFIG;          // sizing + colors
+let SYMBOL_LIBRARY = [];    // parsed from RAW_SYMBOL_TEXT
+let CURRENT_RUNG_DEF = [];  // user-editable rung from palette
+
+// -------------------------------------------------------------
+// CONFIG FACTORY (defer until DOM + CSS ready)
+// -------------------------------------------------------------
+function makeConfig(){
+  const css = v=>getComputedStyle(document.documentElement).getPropertyValue(v).trim() || '#000';
+  return {
+    CONTACT_WIDTH:35,
+    CONTACT_HEIGHT:25,
+    COIL_RADIUS:18,
+    TIMER_WIDTH:80,
+    TIMER_HEIGHT:60,
+    BLOCK_WIDTH:70,
+    BLOCK_HEIGHT:40,
+    SYMBOL_SPACING:80,
+    BRANCH_OFFSET:40,
+    RAIL_PADDING:40,
+    WIRE_THICK:3,
+    RAIL_THICK:6,
+    FONT_SYM:'bold 12px "Courier New", monospace',
+    FONT_LBL:'10px "Courier New", monospace',
+    FONT_PARAM:'9px "Courier New", monospace',
+    COLOR_RAIL:css('--canvas-rail'),
+    COLOR_WIRE:css('--canvas-wire'),
+    COLOR_CONTACT:css('--canvas-contact'),
+    COLOR_OUTPUT:css('--canvas-output'),
+    COLOR_BLOCK:css('--canvas-block')
+  };
+}
+
+// -------------------------------------------------------------
+// RAW SYMBOL LIST (as pasted)
+// -------------------------------------------------------------
+const RAW_SYMBOL_TEXT = `Absolute Value (ABS)
+Add (ADD)
+Alarm (ALM)
+Analog Alarm (ALMA)
+Always False (AFI)
+Arc Cosine (ACOS / ACS)
+Arc Sine (ASIN / ASN)
+Arc Tangent (ATAN / ATN)
+ASCII Chars in Buffer (ACB)
+ASCII Clear Buffer (ACL)
+ASCII Handshake Lines (AHL)
+ASCII Read (ARD)
+ASCII Read Line (ARL)
+ASCII Test for Buffer Line (ABL)
+ASCII Write (AWT)
+ASCII Write Append (AWA)
+Attach to Equipment Phase (PATT)
+Attach to Equipment Sequence (SATT)
+Bit Field Distribute (BTD)
+Bit Field Distribute with Target (BTDT)
+Bit Shift Left (BSL)
+Bit Shift Right (BSR)
+Bitwise And (AND)
+Bitwise Not (NOT)
+Bitwise Or (OR)
+Bitwise Exclusive OR (XOR)
+Boolean AND (BAND)
+Boolean Exclusive OR (BXOR)
+Boolean NOT (BNOT)
+Boolean OR (BOR)
+Break (BRK)
+Breakpoints (BPT)
+Clear (CLR)
+Compare (CMP)
+Compute (CPT)
+Convert to BCD (TO_BCD)
+Convert to Integer from BCD (BCD_TO)
+Copy File (COP) / Synchronous Copy File (CPS)
+Cosine (COS)
+Coordinated Control (CC)
+Count Down (CTD)
+Count Up (CTU)
+Count Up/Down (CTUD)
+D Flip-Flop (DFF)
+Data Transition (DTR)
+Deadtime (DEDT)
+Degrees (DEG)
+Derivative (DERV)
+Diagnostic Detect (DDT)
+Digital Alarm (ALMD)
+Discrete 2-State Device (D2SD)
+Discrete 3-State Device (D3SD)
+Divide (DIV)
+End of Transition (EOT)
+Enhanced PID (PIDE)
+Enhanced Select (ESEL)
+Equal To (EQ / EQU)
+Equipment Phase Clear Failure (PCLF)
+Equipment Phase Command (PCMD)
+Equipment Phase External Request (PXRQ)
+Equipment Phase Failure (PFL)
+Equipment Phase New Parameters (PRNP)
+Equipment Phase Override Command (POVR)
+Equipment Phase Paused (PPD)
+Equipment Sequence Assign Sequence Identifier (SASI)
+Equipment Sequence Clear Failure (SCLF)
+Equipment Sequence Command (SCMD)
+Equipment Sequence Override (SOVR)
+Examine If Closed (XIC)
+Examine If Open (XIO)
+Exponential / X to the Power of Y (EXPT / XPY)
+File Arithmetic (FAL)
+File Average (AVE)
+File Bit Comparison (FBC)
+File Fill (FLL)
+File Search and Compare (FSC)
+File Sort (SRT)
+File Standard Deviation (STD)
+FIFO Load (FFL)
+FIFO Unload (FFU)
+Find String (FIND)
+For (FOR)
+Function Generator (FGEN)
+Get System Value (GSV)
+Set System Value (SSV)
+Greater Than (GT / GRT)
+Greater Than or Equal To (GE / GEQ)
+High Pass Filter (HPF)
+High/Low Limit (HLL)
+HMI Button Control (HMIBC)
+Immediate Output (IOT)
+Insert String (INSERT)
+Integrator (INTG)
+Internal Model Control (IMC)
+Is Infinity (IsINF)
+Is Not a Number (IsNAN)
+JK Flip-Flop (JKFF)
+Jump to External Routine (JXR)
+Jump to Label (JMP)
+Label (LBL)
+Jump to Subroutine (JSR)
+Subroutine (SBR)
+Return (RET)
+Lead-Lag (LDLG)
+Limit (LIMIT / LIM)
+License Validation (LV)
+Log Base (LOG)
+Low Pass Filter (LPF)
+Lower Case (LOWER)
+Masked Equal To (MEQ)
+Masked Move (MVM)
+Masked Move with Target (MVMT)
+Master Control Reset (MCR)
+Message (MSG)
+Middle String (MID)
+Modulo (MOD)
+Move (MOVE / MOV)
+Multiply (MUL)
+Natural Log (LN)
+Negate (NEG)
+Not Equal To (NE / NEQ)
+Notch Filter (NTCH)
+No Operation (NOP)
+One Shot (ONS)
+One Shot Falling (OSF)
+One Shot Falling with Input (OSFI)
+One Shot Rising (OSR)
+One Shot Rising with Input (OSRI)
+Output Energize (OTE)
+Output Latch (OTL)
+Output Unlatch (OTU)
+Pause SFC (SFP)
+PID (PID)
+Phase State Complete (PSC)
+Position Proportional (POSP)
+Process Analog HART (PAH)
+Process Analog Input (PAI)
+Process Dual Sensor Analog Input (PAID)
+Process Multi Sensor Analog Input (PAIM)
+Process Analog Output (PAO)
+Process Analog Fanout (PFO)
+Process Boolean Logic (PBL)
+Process Command Source (PCMDSRC)
+Process Deadband Controller (PDBC)
+Process Discrete 2-, 3-, or 4-State Device (PD4SD)
+Process Discrete Input (PDI)
+Process Discrete Output (PDO)
+Process Dosing (PDOSE)
+Process High or Low Selector (PHLS)
+Process Interlocks (PINTLK)
+Process Lead Lag Standby Motor Group (PLLS)
+Process Motor (PMTR)
+Process Permissives (PPERM)
+Process Proportional + Integral + Derivative (PPID)
+Process Pressure/Temperature Compensated Flow (PPTC)
+Process Restart Inhibit (PRI)
+Process Run Time and Start Counter (PRT)
+Process Tank Strapping Table (PTST)
+Process Valve (PVLV)
+Process Valve Statistics (PVLVS)
+Proportional + Integral (PI)
+Pulse Multiplier (PMUL)
+Ramp/Soak (RMPS)
+Radian (RAD)
+Rate Limiter (RLIM)
+Real to String (RTOS)
+Reset (RES)
+Reset Dominant (RESD)
+Reset SFC (SFR)
+Retentive Timer On (RTO)
+Retentive Timer On with Reset (RTOR)
+S-Curve (SCRV)
+Scale (SCL)
+Second-Order Controller (SOC)
+Second-Order Lead Lag (LDL2)
+Select (SEL)
+Selected Negate (SNEG)
+Selected Summer (SSUM)
+Set Dominant (SETD)
+Size In Elements (SIZE)
+Sine (SIN)
+Split Range Time Proportional (SRTP)
+Square Root (SQRT / SQR)
+String Concatenate (CONCAT)
+String Delete (DELETE)
+String to DINT (STOD)
+String to REAL (STOR)
+Subtract (SUB)
+Swap Byte (SWPB)
+Tangent (TAN)
+Temporary End (TND)
+Timer Off Delay (TOF)
+Timer Off Delay with Reset (TOFR)
+Timer On Delay (TON)
+Timer On Delay with Reset (TONR)
+Totalizer (TOT)
+Tracepoints (TPT)
+Trigger Event Task (EVENT)
+Truncate (TRUNC / TRN)
+Unknown Instruction (UNK)
+Upper Case (UPPER)
+User Interrupt Disable (UID)
+User Interrupt Enable (UIE)
+Up/Down Accumulator (UPDN)
+Master Driven Coordinated Control (MDCC)
+Motion Apply Axis Tuning (MAAT)
+Motion Apply Hookup Diagnostics (MAHD)
+Motion Arm Output Cam (MAOC)
+Motion Arm Registration (MAR)
+Motion Arm Watch (MAW)
+Motion Axis Fault Reset (MAFR)
+Motion Axis Gear (MAG)
+Motion Axis Home (MAH)
+Motion Axis Jog (MAJ)
+Motion Axis Move (MAM)
+Motion Axis Position Cam (MAPC)
+Motion Axis Stop (MAS)
+Motion Axis Time Cam (MATC)
+Motion Axis Shutdown (MASD)
+Motion Axis Shutdown Reset (MASR)
+Motion Calculate Cam Profile (MCCP)
+Motion Calculate Slave Values (MCSV)
+Motion Calculate Transform Position (MCTP)
+Motion Calculate Transform Position w/ Orientation (MCTPO)
+Motion Change Dynamics (MCD)
+Motion Coordinated Change Dynamics (MCCD)
+Motion Coordinated Circular Move (MCCM)
+Motion Coordinated Linear Move (MCLM)
+Motion Coordinated Path Move (MCPM)
+Motion Coordinated Shutdown (MCSD)
+Motion Coordinated Shutdown Reset (MCSR)
+Motion Coordinated Stop (MCS)
+Motion Coordinated Transform (MCT)
+Motion Coordinated Transform w/ Orientation (MCTO)
+Motion Direct Drive Off (MDF)
+Motion Direct Drive On (MDO)
+Motion Direct Start (MDS)
+Motion Disarm Output Cam (MDOC)
+Motion Disarm Registration (MDR)
+Motion Disarm Watch (MDW)
+Motion Group Shutdown (MGSD)
+Motion Group Shutdown Reset (MGSR)
+Motion Group Stop (MGS)
+Motion Group Strobe Position (MGSP)
+Motion Redefine Position (MRP)
+Motion Run Axis Tuning (MRAT)
+Motion Run Hookup Diagnostics (MRHD)
+Motion Servo Off (MSF)
+Motion Servo On (MSO)`;
+
+// -------------------------------------------------------------
+// SYMBOL LIBRARY PARSER
+// -------------------------------------------------------------
+function buildSymbolLibrary(raw){
+  const rows=[];
+  if(raw===undefined) return rows;
+  const txt=raw.trim();
+  if(txt==='') return rows;
+  const lines=txt.split(/\n+/);
+  lines.forEach(line=>{
+    const t=line.trim();
+    if(t==='') return;
+    const m=/(.*)\((.*)\)/.exec(t);
+    if(m!==null){
+      const name=m[1].trim();
+      const inside=m[2].trim();
+      const mns=inside.split('/').map(s=>s.trim());
+      const primary=mns[0].replace(/\s+/g,'');
+      const cats=inferCategory(primary,name);
+      rows.push({mn:primary,name:name,cat:cats});
+      if(mns.length>1){
+        for(let i=1;i<mns.length;i++){
+          const alt=mns[i].trim().replace(/\s+/g,'');
+          if(alt==='') continue;
+          rows.push({mn:alt,name:name+' (alias)',cat:cats,aliasOf:primary});
+        }
+      }
+      return;
+    }
+    rows.push({mn:t.toUpperCase().replace(/\s+/g,'_'),name:t,cat:['other']});
+  });
+  rows.sort((a,b)=>a.mn.localeCompare(b.mn));
+  return rows;
+}
+
+function inferCategory(mn,name){
+  const u=mn.toUpperCase();
+  if(u==='XIC') return ['contact','input','BOOL'];
+  if(u==='XIO') return ['contact','input','BOOL'];
+  if(u==='OTE'||u==='OTL'||u==='OTU') return ['coil','output','BOOL'];
+  if(u==='TON'||u==='TOF'||u==='RTO'||u==='TONR'||u==='TOFR'||u==='RTOR') return ['timer'];
+  if(u==='CTU'||u==='CTD'||u==='CTUD'||u==='UPDN') return ['counter'];
+  if(u==='PID'||u==='PIDE') return ['block','pid'];
+  if(u==='ADD'||u==='SUB'||u==='MUL'||u==='DIV'||u==='MOD'||u==='NEG'||u==='ABS') return ['math'];
+  if(u==='GRT'||u==='GEQ'||u==='EQU'||u==='NEQ'||u==='LEQ'||u==='LES'||u==='LIM') return ['compare'];
+  return ['block'];
+}
+
+// -------------------------------------------------------------
+// PALETTE UI
+// -------------------------------------------------------------
+function buildPalette(){
+  const wrap=document.getElementById('palette');
+  if(wrap===null) return;
+  wrap.innerHTML='';
+  const inp=document.createElement('input');
+  inp.type='text';
+  inp.placeholder='Filter symbols...';
+  inp.oninput=function(){renderPaletteList(wrap,inp.value);};
+  wrap.appendChild(inp);
+  renderPaletteList(wrap,'');
+}
+function renderPaletteList(wrap,filter){
+  const f=filter.trim().toLowerCase();
+  const list=document.createElement('div');
+  SYMBOL_LIBRARY.forEach(row=>{
+    const hit=f==='' || row.mn.toLowerCase().includes(f) || row.name.toLowerCase().includes(f);
+    if(hit!==true) return;
+    const r=document.createElement('div');r.className='sym-row';
+    const n=document.createElement('span');n.className='sym-name';n.textContent=row.name;
+    const m=document.createElement('span');m.className='sym-mn';m.textContent=row.mn;
+    const b=document.createElement('button');b.textContent='Add';b.onclick=function(){addSymbolToCurrentRung(row.mn);};
+    r.appendChild(n);r.appendChild(m);r.appendChild(b);list.appendChild(r);
+  });
+  const old=wrap.querySelector('.sym-list');
+  if(old!==null) wrap.removeChild(old);
+  list.className='sym-list';wrap.appendChild(list);
+}
+
+// -------------------------------------------------------------
+// CANVAS FACTORY + RAILS
+// -------------------------------------------------------------
+function createLadderCanvas(height=300){
+  const c=document.createElement('canvas');
+  c.width=1600;c.height=height;c.style.border='2px solid green';
+  const ctx=c.getContext('2d');
+  ctx.fillStyle='#ffffff';ctx.fillRect(0,0,c.width,c.height);
+  return {canvas:c,ctx:ctx};
+}
+function drawPowerRails(ctx,canvas){
+  const leftRailX=50;const rightRailX=canvas.width-50;
+  ctx.strokeStyle=SYMBOL_CONFIG.COLOR_RAIL;ctx.lineWidth=SYMBOL_CONFIG.RAIL_THICK;
+  ctx.beginPath();ctx.moveTo(leftRailX,20);ctx.lineTo(leftRailX,canvas.height-20);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(rightRailX,20);ctx.lineTo(rightRailX,canvas.height-20);ctx.stroke();
+  return {leftRailX,rightRailX};
+}
+
+// -------------------------------------------------------------
+// MEASUREMENT HELPERS
+// -------------------------------------------------------------
+function measureElement(el){
+  if(el.type==='NO_CONTACT'||el.type==='NC_CONTACT') return SYMBOL_CONFIG.CONTACT_WIDTH;
+  if(el.type==='OUTPUT_COIL'||el.type==='LATCH_COIL') return SYMBOL_CONFIG.COIL_RADIUS*2;
+  if(el.type==='TON'||el.type==='TOF'||el.type==='RTO'||el.type==='TONR'||el.type==='TOFR'||el.type==='RTOR') return SYMBOL_CONFIG.TIMER_WIDTH;
+  if(el.type==='BRANCH') return measureBranch(el);
+  return SYMBOL_CONFIG.BLOCK_WIDTH;
+}
+function measureBranch(br){
+  let maxLen=0;
+  const ps=br.paths; if(ps===undefined) return SYMBOL_CONFIG.SYMBOL_SPACING;
+  ps.forEach(p=>{
+    let len=0;const es=p.elements; if(es===undefined){if(len>maxLen)maxLen=len;return;}
+    es.forEach((e,i)=>{len+=measureElement(e);if(i<es.length-1)len+=SYMBOL_CONFIG.SYMBOL_SPACING;});
+    if(len>maxLen)maxLen=len;
+  });
+  if(maxLen===0)maxLen=SYMBOL_CONFIG.SYMBOL_SPACING;
+  br._measuredWidth=maxLen;return maxLen;
+}
+
+// -------------------------------------------------------------
+// RUNG LAYOUT PASS
+// -------------------------------------------------------------
+function layoutRung(rungDef,leftRailX,rightRailX,rungY){
+  const layout=[];let curX=leftRailX+SYMBOL_CONFIG.RAIL_PADDING;
+  rungDef.forEach(el=>{
+    const w=measureElement(el);const centerX=curX+w/2;const lo={def:el,type:el.type,x:centerX,y:rungY,width:w};
+    if(el.type==='BRANCH'){
+      const bStart=curX;const bEnd=curX+w;lo.left=bStart;lo.right=bEnd;lo.startX=bStart;lo.endX=bEnd;lo.paths=[];const paths=el.paths||[];const n=paths.length;paths.forEach((p,idx)=>{
+        const offset=(idx-(n-1)/2)*SYMBOL_CONFIG.BRANCH_OFFSET;const pathY=rungY+offset;let pathCurX=bStart;const pathLayout={y:pathY,elements:[],left:bStart,right:bEnd};const pEls=p.elements||[];pEls.forEach((pe,i)=>{const pw=measureElement(pe);const pcx=pathCurX+pw/2;pathLayout.elements.push({def:pe,type:pe.type,x:pcx,y:pathY,width:pw,left:pathCurX,right:pathCurX+pw});pathCurX+=pw;if(i<pEls.length-1)pathCurX+=SYMBOL_CONFIG.SYMBOL_SPACING;});lo.paths.push(pathLayout);});
+    } else {
+      lo.left=centerX-w/2;lo.right=centerX+w/2;
+    }
+    layout.push(lo);curX+=w+SYMBOL_CONFIG.SYMBOL_SPACING;
+  });
+  return layout;
+}
+
+// -------------------------------------------------------------
+// DRAW PRIMITIVES
+// -------------------------------------------------------------
+function drawContact(ctx,x,y,label,type){
+  const w=SYMBOL_CONFIG.CONTACT_WIDTH;const h=SYMBOL_CONFIG.CONTACT_HEIGHT;
+  ctx.strokeStyle=SYMBOL_CONFIG.COLOR_CONTACT;ctx.lineWidth=2;ctx.fillStyle='#ffffff';ctx.fillRect(x-w/2,y-h/2,w,h);ctx.strokeRect(x-w/2,y-h/2,w,h);
+  ctx.font=SYMBOL_CONFIG.FONT_SYM;ctx.fillStyle='#1f2937';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(type==='NC'?'|/|':'| |',x,y);
+  drawLabel(ctx,label,x,y+h/2+20);
+  return {left:x-w/2,right:x+w/2};
+}
+function drawCoil(ctx,x,y,label,sub){
+  const r=SYMBOL_CONFIG.COIL_RADIUS;ctx.strokeStyle=SYMBOL_CONFIG.COLOR_OUTPUT;ctx.lineWidth=2;ctx.fillStyle='#ffffff';ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fill();ctx.stroke();
+  ctx.font=SYMBOL_CONFIG.FONT_SYM;ctx.fillStyle='#1f2937';ctx.textAlign='center';ctx.textBaseline='middle';const sym=sub==='LATCH'?'(L)':sub==='UNLATCH'?'(U)':'( )';ctx.fillText(sym,x,y);
+  drawLabel(ctx,label,x,y+r+20);
+  return {left:x-r,right:x+r};
+}
+function drawTimerBlock(ctx,x,y,label,preset,accum,code){
+  const w=SYMBOL_CONFIG.TIMER_WIDTH;const h=SYMBOL_CONFIG.TIMER_HEIGHT;ctx.strokeStyle=SYMBOL_CONFIG.COLOR_BLOCK;ctx.lineWidth=2;ctx.fillStyle='#ffffff';ctx.fillRect(x-w/2,y-h/2,w,h);ctx.strokeRect(x-w/2,y-h/2,w,h);
+  ctx.font=SYMBOL_CONFIG.FONT_SYM;ctx.fillStyle='#1f2937';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(code,x,y-h/2+15);
+  ctx.font=SYMBOL_CONFIG.FONT_PARAM;ctx.textAlign='left';ctx.fillText('Timer: '+label,x-w/2+5,y-5);ctx.fillText('Preset: '+preset,x-w/2+5,y+8);ctx.fillText('Accum: '+accum,x-w/2+5,y+21);
+  return {left:x-w/2,right:x+w/2};
+}
+function drawBlock(ctx,x,y,label,code){
+  const w=SYMBOL_CONFIG.BLOCK_WIDTH;const h=SYMBOL_CONFIG.BLOCK_HEIGHT;ctx.strokeStyle=SYMBOL_CONFIG.COLOR_BLOCK;ctx.lineWidth=2;ctx.fillStyle='#ffffff';ctx.fillRect(x-w/2,y-h/2,w,h);ctx.strokeRect(x-w/2,y-h/2,w,h);
+  ctx.font=SYMBOL_CONFIG.FONT_SYM;ctx.fillStyle='#1f2937';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(code,x,y);
+  drawLabel(ctx,label,x,y+h/2+20);
+  return {left:x-w/2,right:x+w/2};
+}
+function drawLabel(ctx,text,x,y,maxWidth=70){
+  if(text===undefined) return;const txt=text.trim();if(txt==='') return;ctx.font=SYMBOL_CONFIG.FONT_LBL;ctx.fillStyle='#6b7280';ctx.textAlign='center';ctx.textBaseline='top';const words=txt.split('_');const lines=[];let cur=words[0];for(let i=1;i<words.length;i++){const w=cur+'_'+words[i];if(ctx.measureText(w).width<=maxWidth){cur=w;continue;}lines.push(cur);cur=words[i];}lines.push(cur);lines.forEach((ln,idx)=>ctx.fillText(ln,x,y+idx*12));
+}
+
+// -------------------------------------------------------------
+// DRAW DISPATCH
+// -------------------------------------------------------------
+function drawElement(ctx,lo){
+  const d=lo.def;const ty=d.type;let pts; // guard: we assign only once
+  if(ty==='NO_CONTACT') pts=drawContact(ctx,lo.x,lo.y,d.label,'NO');
+  if(ty==='NC_CONTACT') pts=drawContact(ctx,lo.x,lo.y,d.label,'NC');
+  if(ty==='OUTPUT_COIL') pts=drawCoil(ctx,lo.x,lo.y,d.label,'OUTPUT');
+  if(ty==='LATCH_COIL') pts=drawCoil(ctx,lo.x,lo.y,d.label,'LATCH');
+  if(ty==='TON'||ty==='TOF'||ty==='RTO'||ty==='TONR'||ty==='TOFR'||ty==='RTOR') pts=drawTimerBlock(ctx,lo.x,lo.y,d.label||ty,d.preset||'0',d.accum||'0',ty);
+  if(ty==='BRANCH') pts=drawBranch(ctx,lo);
+  if(pts===undefined) pts=drawBlock(ctx,lo.x,lo.y,d.label||ty,ty);
+  lo.left=pts.left;lo.right=pts.right;return lo;
+}
+
+// -------------------------------------------------------------
+// BRANCH DRAWING (uneven path lengths extended to common end)
+// -------------------------------------------------------------
+function drawBranch(ctx,lo){
+  const startX=lo.startX;const endX=lo.endX;const rungY=lo.y;ctx.strokeStyle=SYMBOL_CONFIG.COLOR_WIRE;ctx.lineWidth=SYMBOL_CONFIG.WIRE_THICK;
+  const paths=lo.paths||[];paths.forEach(p=>{
+    ctx.beginPath();ctx.moveTo(startX,rungY);ctx.lineTo(startX,p.y);ctx.stroke();
+    // draw series elements within path
+    let prevX=startX;const es=p.elements||[];
+    if(es.length===0){ctx.beginPath();ctx.moveTo(startX,p.y);ctx.lineTo(endX,p.y);ctx.stroke();}
+    es.forEach((pe,idx)=>{
+      ctx.beginPath();ctx.moveTo(prevX,p.y);ctx.lineTo(pe.left,p.y);ctx.stroke();
+      const ty=pe.type;let pts;
+      if(ty==='NO_CONTACT') pts=drawContact(ctx,pe.x,p.y,pe.def.label,'NO');
+      if(ty==='NC_CONTACT') pts=drawContact(ctx,pe.x,p.y,pe.def.label,'NC');
+      if(ty==='OUTPUT_COIL') pts=drawCoil(ctx,pe.x,p.y,pe.def.label,'OUTPUT');
+      if(ty==='LATCH_COIL') pts=drawCoil(ctx,pe.x,p.y,pe.def.label,'LATCH');
+      if(ty==='TON'||ty==='TOF'||ty==='RTO'||ty==='TONR'||ty==='TOFR'||ty==='RTOR') pts=drawTimerBlock(ctx,pe.x,p.y,pe.def.label||ty,pe.def.preset||'0',pe.def.accum||'0',ty);
+      if(pts===undefined) pts=drawBlock(ctx,pe.x,p.y,pe.def.label||ty,ty);
+      pe.left=pts.left;pe.right=pts.right;prevX=pe.right; // update
+      if(idx<es.length-1){ /* spacing handled in layout by pe.left/pe.right gap; wire drawn next loop */ }
+    });
+    // extension to branch end
+    ctx.beginPath();ctx.moveTo(prevX,p.y);ctx.lineTo(endX,p.y);ctx.stroke();
+    // return up to rung
+    ctx.beginPath();ctx.moveTo(endX,p.y);ctx.lineTo(endX,rungY);ctx.stroke();
+  });
+  return {left:startX,right:endX};
+}
+
+// -------------------------------------------------------------
+// TOP-LEVEL SERIES CONNECTIONS + RAIL TIES
+// -------------------------------------------------------------
+function drawConnectionsTop(ctx,layout,leftRailX,rightRailX){
+  ctx.strokeStyle=SYMBOL_CONFIG.COLOR_WIRE;ctx.lineWidth=SYMBOL_CONFIG.WIRE_THICK;
+  if(layout.length===0) return;
+  // left rail to first
+  const first=layout[0];ctx.beginPath();ctx.moveTo(leftRailX,first.y);ctx.lineTo(first.left,first.y);ctx.stroke();
+  // between elements
+  for(let i=0;i<layout.length-1;i++){
+    const cur=layout[i];const nxt=layout[i+1];const curRight=cur.right!==undefined?cur.right:cur.x+cur.width/2;const nxtLeft=nxt.left!==undefined?nxt.left:nxt.x-nxt.width/2;ctx.beginPath();ctx.moveTo(curRight,cur.y);ctx.lineTo(nxtLeft,cur.y);ctx.stroke();
+  }
+  // last to right rail
+  const last=layout[layout.length-1];ctx.beginPath();ctx.moveTo(last.right,last.y);ctx.lineTo(rightRailX,last.y);ctx.stroke();
+}
+
+// -------------------------------------------------------------
+// RUNG RENDER PIPELINE
+// -------------------------------------------------------------
+function drawRung(ctx,rungDef,rungY,leftRailX,rightRailX){
+  const layout=layoutRung(rungDef,leftRailX,rightRailX,rungY);
+  layout.forEach(lo=>drawElement(ctx,lo));
+  drawConnectionsTop(ctx,layout,leftRailX,rightRailX);
+  return layout;
+}
+
+// -------------------------------------------------------------
+// DEMO DEFINITIONS
+// -------------------------------------------------------------
+function testComplexRung(){
+  const container=document.getElementById('test-output');if(container===null) return;container.innerHTML='';
+  const {canvas,ctx}=createLadderCanvas(420);const rungY=150;const {leftRailX,rightRailX}=drawPowerRails(ctx,canvas);
+  const rungDefinition=[
+    {type:'NO_CONTACT',label:'Start_Button',category:'input'},
+    {type:'NO_CONTACT',label:'Stop_Button',category:'input'},
+    {type:'BRANCH',category:'branch',paths:[{elements:[{type:'NO_CONTACT',label:'Limit_Switch'},{type:'NO_CONTACT',label:'Guard_Switch'}]},{elements:[{type:'NO_CONTACT',label:'Pressure_Switch'}]}]},
+    {type:'NO_CONTACT',label:'Emergency_Stop',category:'input'},
+    {type:'NO_CONTACT',label:'Safety_Interlock',category:'input'},
+    {type:'BRANCH',category:'branch',paths:[{elements:[{type:'NO_CONTACT',label:'Proximity_Sensor'},{type:'NO_CONTACT',label:'Photo_Sensor'}]},{elements:[{type:'NO_CONTACT',label:'Temperature_Sensor'}]},{elements:[]}]},
+    {type:'OUTPUT_COIL',label:'Light_Output',category:'output'},
+    {type:'OUTPUT_COIL',label:'Motor_Output',category:'output'}
+  ];
+  drawRung(ctx,rungDefinition,rungY,leftRailX,rightRailX);
+  const cc=document.createElement('div');cc.className='canvas-container';cc.appendChild(canvas);container.appendChild(cc);
+}
+function testSimpleRung(){
+  const container=document.getElementById('test-output');if(container===null) return;container.innerHTML='';
+  const {canvas,ctx}=createLadderCanvas(300);const rungY=100;const {leftRailX,rightRailX}=drawPowerRails(ctx,canvas);
+  const rungDefinition=[{type:'NO_CONTACT',label:'Start_Button',category:'input'},{type:'OUTPUT_COIL',label:'Motor_Output',category:'output'}];
+  drawRung(ctx,rungDefinition,rungY,leftRailX,rightRailX);
+  const cc=document.createElement('div');cc.className='canvas-container';cc.appendChild(canvas);container.appendChild(cc);
+}
+function testTimerRung(){
+  const container=document.getElementById('test-output');if(container===null) return;container.innerHTML='';
+  const {canvas,ctx}=createLadderCanvas(350);const rungY=150;const {leftRailX,rightRailX}=drawPowerRails(ctx,canvas);
+  const rungDefinition=[{type:'NO_CONTACT',label:'Start_Btn',category:'input'},{type:'TON',label:'Timer_01',preset:'5000',accum:'0',category:'input'},{type:'OUTPUT_COIL',label:'Light_Output',category:'output'}];
+  drawRung(ctx,rungDefinition,rungY,leftRailX,rightRailX);
+  const cc=document.createElement('div');cc.className='canvas-container';cc.appendChild(canvas);container.appendChild(cc);
+}
+function testBranchWidths(){
+  const container=document.getElementById('test-output');if(container===null) return;container.innerHTML='';
+  const {canvas,ctx}=createLadderCanvas(420);const rungY=150;const {leftRailX,rightRailX}=drawPowerRails(ctx,canvas);
+  const rungDefinition=[{type:'NO_CONTACT',label:'Enable',category:'input'},{type:'BRANCH',category:'branch',paths:[{elements:[{type:'NO_CONTACT',label:'A'},{type:'NO_CONTACT',label:'B'},{type:'NO_CONTACT',label:'C'}]},{elements:[{type:'NO_CONTACT',label:'D'}]},{elements:[]}]},{type:'OUTPUT_COIL',label:'System_On',category:'output'}];
+  drawRung(ctx,rungDefinition,rungY,leftRailX,rightRailX);
+  const cc=document.createElement('div');cc.className='canvas-container';cc.appendChild(canvas);container.appendChild(cc);
+}
+
+// -------------------------------------------------------------
+// SIMPLE RUNG EDITOR HOOKS
+// -------------------------------------------------------------
+function addSymbolToCurrentRung(mn){
+  const ty=mnemonicToType(mn);
+  if(CURRENT_RUNG_DEF.length===0){CURRENT_RUNG_DEF.push({type:ty,label:mn,category:'input'});renderCurrentRung();return;}
+  const last=CURRENT_RUNG_DEF[CURRENT_RUNG_DEF.length-1];
+  if(last.type==='OUTPUT_COIL'||last.type==='LATCH_COIL'){CURRENT_RUNG_DEF.splice(CURRENT_RUNG_DEF.length-1,0,{type:ty,label:mn,category:'input'});renderCurrentRung();return;}
+  CURRENT_RUNG_DEF.push({type:ty,label:mn,category:'input'});renderCurrentRung();
+}
+function mnemonicToType(mn){
+  const u=mn.toUpperCase();
+  if(u==='XIC') return 'NO_CONTACT';
+  if(u==='XIO') return 'NC_CONTACT';
+  if(u==='OTE') return 'OUTPUT_COIL';
+  if(u==='OTL') return 'LATCH_COIL';
+  if(u==='OTU') return 'OUTPUT_COIL';
+  if(u==='TON') return 'TON';
+  if(u==='TOF') return 'TOF';
+  if(u==='RTO') return 'RTO';
+  return 'NO_CONTACT';
+}
+function renderCurrentRung(){
+  const container=document.getElementById('test-output');if(container===null) return;container.innerHTML='';
+  const {canvas,ctx}=createLadderCanvas(300);const rungY=120;const {leftRailX,rightRailX}=drawPowerRails(ctx,canvas);
+  drawRung(ctx,CURRENT_RUNG_DEF,rungY,leftRailX,rightRailX);
+  const cc=document.createElement('div');cc.className='canvas-container';cc.appendChild(canvas);container.appendChild(cc);
+}
+
+// -------------------------------------------------------------
+// INIT
+// -------------------------------------------------------------
+function init(){
+  SYMBOL_CONFIG=makeConfig();
+  SYMBOL_LIBRARY=buildSymbolLibrary(RAW_SYMBOL_TEXT);
+  buildPalette();
+  // wire buttons
+  const bc=document.getElementById('btnComplex');if(bc!==null)bc.onclick=testComplexRung;
+  const bs=document.getElementById('btnSimple');if(bs!==null)bs.onclick=testSimpleRung;
+  const bt=document.getElementById('btnTimer');if(bt!==null)bt.onclick=testTimerRung;
+  const bbw=document.getElementById('btnBranchWidths');if(bbw!==null)bbw.onclick=testBranchWidths;
+  testComplexRung();
+}
+window.addEventListener('DOMContentLoaded',init);
+</script>
+</body>
+</html>
