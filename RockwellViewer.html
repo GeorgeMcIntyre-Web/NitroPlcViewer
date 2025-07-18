@@ -3,3082 +3,667 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Studio 5000 Logix Designer Style PLC Viewer</title>
+    <title>Responsive Ladder Logic System</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        :root {
-            /* ISA-101 Compliant Color Scheme */
-            --primary-bg: #1e3a8a;
-            --secondary-bg: #f8fafc;
-            --content-bg: #ffffff;
-            --border-color: #e2e8f0;
-            --accent-color: #2563eb;
-            --text-color: #1f2937;
-            --light-text: #f1f5f9;
-            --muted-text: #6b7280;
-            --hover-bg: #f1f5f9;
-            --selected-bg: #dbeafe;
-            --error-color: #dc2626;
-            --warning-color: #f59e0b;
-            --success-color: #059669;
-            
-            /* Ladder Logic Colors */
-            --ladder-rail: #374151;
-            --contact-color: #2563eb;
-            --coil-color: #ea580c;
-            --function-color: #7c3aed;
-            --power-flow-active: #10b981;
-            --power-flow-inactive: #9ca3af;
-            
-            /* Zoom and scale */
-            --zoom-factor: 1;
-            --min-touch-target: 40px;
-        }
-
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
-
+        /* Custom styles for a more polished look and feel */
         body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-            background: var(--secondary-bg);
-            color: var(--text-color);
-            display: flex;
-            flex-direction: column;
-            height: 100vh;
-            overflow: hidden;
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6; /* A slightly lighter gray */
         }
-
-        /* Header */
-        .header {
-            background: var(--primary-bg);
-            color: var(--light-text);
-            padding: 8px 16px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            z-index: 1000;
-        }
-
-        .header h1 {
-            font-size: 1.25rem;
-            font-weight: 600;
-        }
-
-        /* Toolbar */
-        .toolbar {
-            background: var(--content-bg);
-            border-bottom: 1px solid var(--border-color);
-            padding: 8px 16px;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            flex-wrap: wrap;
-        }
-
         .btn {
-            background: var(--accent-color);
-            color: white;
-            border: none;
-            padding: 6px 12px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 0.875rem;
-            font-weight: 500;
-            transition: background-color 0.2s;
-            min-height: var(--min-touch-target);
-            display: flex;
-            align-items: center;
-            gap: 6px;
+            @apply font-semibold py-3 px-5 rounded-lg shadow-md hover:shadow-lg transition-all duration-200 ease-in-out transform hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-offset-2;
         }
-
-        .btn:hover {
-            background: #1d4ed8;
+        .btn-primary {
+            @apply bg-blue-600 hover:bg-blue-700 text-white focus:ring-blue-500;
         }
-
-        .btn:disabled {
-            background: var(--muted-text);
-            cursor: not-allowed;
-        }
-
         .btn-secondary {
-            background: var(--content-bg);
-            color: var(--text-color);
-            border: 1px solid var(--border-color);
+            @apply bg-gray-500 hover:bg-gray-600 text-white focus:ring-gray-400;
         }
-
-        .btn-secondary:hover {
-            background: var(--hover-bg);
+        .btn-active {
+            @apply bg-blue-700 ring-2 ring-offset-2 ring-blue-500 shadow-inner scale-105 -translate-y-0.5;
         }
-
-        .search-container {
-            flex-grow: 1;
-            max-width: 400px;
-            position: relative;
-        }
-
-        .search-input {
-            width: 100%;
-            padding: 6px 12px 6px 32px;
-            border: 1px solid var(--border-color);
-            border-radius: 4px;
-            background: var(--content-bg);
-        }
-
-        .search-icon {
-            position: absolute;
-            left: 10px;
-            top: 50%;
-            transform: translateY(-50%);
-            color: var(--muted-text);
-        }
-
-        /* Status Bar */
-        .status-bar {
-            background: var(--secondary-bg);
-            border-bottom: 1px solid var(--border-color);
-            padding: 4px 16px;
-            font-size: 0.8rem;
-            color: var(--muted-text);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        /* Main Layout */
-        .main-container {
-            display: flex;
-            flex-grow: 1;
-            overflow: hidden;
-        }
-
-        /* Controller Organizer Tree */
-        .organizer-panel {
-            width: 320px;
-            min-width: 250px;
-            max-width: 500px;
-            background: var(--content-bg);
-            border-right: 1px solid var(--border-color);
-            display: flex;
-            flex-direction: column;
-            resize: horizontal;
-            overflow: hidden;
-        }
-
-        .organizer-header {
-            background: var(--secondary-bg);
-            padding: 8px 12px;
-            border-bottom: 1px solid var(--border-color);
-            font-weight: 600;
-            font-size: 0.9rem;
-        }
-
-        .organizer-content {
-            flex-grow: 1;
-            overflow-y: auto;
-            padding: 8px 0;
-        }
-
-        .tree-node {
-            list-style: none;
-            margin: 0;
-            padding: 0;
-        }
-
-        .tree-item {
-            display: flex;
-            align-items: center;
-            padding: 4px 8px;
-            cursor: pointer;
-            font-size: 0.875rem;
-            transition: background-color 0.15s;
-            border-radius: 3px;
-            margin: 1px 8px;
-            min-height: 28px;
-        }
-
-        .tree-item:hover {
-            background: var(--hover-bg);
-        }
-
-        .tree-item.selected {
-            background: var(--selected-bg);
-            color: var(--accent-color);
-            font-weight: 500;
-        }
-
-        .tree-toggle {
-            width: 16px;
-            height: 16px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            color: var(--muted-text);
-            margin-right: 4px;
-            font-size: 0.75rem;
-        }
-
-        .tree-icon {
-            margin-right: 6px;
-            font-size: 0.875rem;
-        }
-
-        .tree-children {
-            margin-left: 20px;
-        }
-
-        .tree-children.collapsed {
-            display: none;
-        }
-
-        /* Content Area */
-        .content-panel {
-            flex-grow: 1;
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-        }
-
-        .content-header {
-            background: var(--content-bg);
-            padding: 12px 16px;
-            border-bottom: 1px solid var(--border-color);
-        }
-
-        .content-title {
-            font-size: 1.1rem;
-            font-weight: 600;
-            margin-bottom: 4px;
-        }
-
-        .content-meta {
-            display: flex;
-            gap: 16px;
-            font-size: 0.85rem;
-            color: var(--muted-text);
-        }
-
-        .view-tabs {
-            background: var(--secondary-bg);
-            border-bottom: 1px solid var(--border-color);
-            display: flex;
-            gap: 4px;
-            padding: 4px 16px;
-        }
-
-        .view-tab {
-            padding: 6px 12px;
-            background: transparent;
-            border: none;
-            border-radius: 4px 4px 0 0;
-            cursor: pointer;
-            font-size: 0.85rem;
-            transition: all 0.2s;
-        }
-
-        .view-tab.active {
-            background: var(--content-bg);
-            border-bottom: 2px solid var(--accent-color);
-        }
-
-        .content-body {
-            flex-grow: 1;
-            overflow: auto;
-            background: var(--content-bg);
-        }
-
-        /* Ladder Logic Styles */
-        .ladder-container {
-            padding: 16px;
-            min-height: 100%;
-        }
-
-        .rung {
-            border: 1px solid var(--border-color);
-            border-left: 4px solid transparent;
-            margin-bottom: 12px;
-            background: var(--content-bg);
-            border-radius: 4px;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
-            transition: all 0.2s;
-            transform: scale(var(--zoom-factor));
-            transform-origin: top left;
-        }
-
-        .rung:hover {
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-
-        .rung.selected {
-            border-left-color: var(--accent-color);
-            background: #eff6ff;
-        }
-
-        .rung.error {
-            border-left-color: var(--error-color);
-            background: #fef2f2;
-        }
-
-        .rung-header {
-            background: var(--secondary-bg);
-            padding: 6px 12px;
-            border-bottom: 1px solid var(--border-color);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            font-size: 0.8rem;
-        }
-
-        .rung-number {
-            font-weight: 600;
-            color: var(--accent-color);
-            cursor: pointer;
-        }
-
-        .rung-number:hover {
-            text-decoration: underline;
-        }
-
-        .rung-comment {
-            color: var(--success-color);
-            font-style: italic;
-            flex-grow: 1;
-            margin-left: 12px;
-        }
-
-        .rung-actions {
-            display: flex;
-            gap: 4px;
-        }
-
-        .rung-action {
-            background: none;
-            border: none;
-            color: var(--muted-text);
-            cursor: pointer;
-            padding: 2px 4px;
-            border-radius: 2px;
-            font-size: 0.75rem;
-        }
-
-        .rung-action:hover {
-            background: var(--hover-bg);
-            color: var(--text-color);
-        }
-
-        .rung-content {
-            padding: 16px;
-            display: flex;
-            align-items: center;
-            min-height: 80px;
-            overflow-x: auto;
-            background: var(--content-bg);
-        }
-
-        .rung-content:hover {
-            background: var(--hover-bg);
-        }
-
-        /* Canvas Ladder Elements */
-        .ladder-canvas {
-            display: block;
-            width: 800px;
-            height: 120px;
-            background: var(--content-bg);
-            border: 1px solid var(--border-color);
-            border-radius: 4px;
-            image-rendering: -webkit-optimize-contrast;
-            image-rendering: -moz-crisp-edges;
-            image-rendering: crisp-edges;
-            image-rendering: pixelated;
-            margin: 10px 0;
-        }
-
-        .power-rail {
-            stroke: var(--ladder-rail);
-            stroke-width: 3;
-            fill: none;
-            stroke-linecap: round;
-        }
-
-        .power-rail.energized {
-            stroke: var(--power-flow-active);
-            stroke-width: 4;
-            animation: powerFlow 2s ease-in-out infinite;
-        }
-
-        @keyframes powerFlow {
-            0%, 100% { opacity: 0.7; }
-            50% { opacity: 1; }
-        }
-
-        .contact {
-            stroke: var(--contact-color);
-            stroke-width: 2;
-            fill: var(--content-bg);
-            transition: all 0.2s ease;
-            shape-rendering: crispEdges;
-        }
-
-        .contact:hover {
-            stroke-width: 3;
-            fill: rgba(37, 99, 235, 0.1);
-        }
-
-        .contact.energized {
-            stroke: var(--power-flow-active);
-            stroke-width: 3;
-            fill: rgba(16, 185, 129, 0.2);
-        }
-
-        .coil {
-            stroke: #ea580c !important;
-            stroke-width: 2;
-            fill: #ffffff !important;
-            transition: all 0.2s ease;
-            shape-rendering: crispEdges;
-            vector-effect: non-scaling-stroke;
-        }
-
-        .coil:hover {
-            stroke-width: 3;
-            fill: rgba(234, 88, 12, 0.1) !important;
-        }
-
-        .coil.energized {
-            stroke: #10b981 !important;
-            stroke-width: 3;
-            fill: rgba(16, 185, 129, 0.2) !important;
-        }
-
-        .function-block {
-            stroke: var(--function-color);
-            stroke-width: 2;
-            fill: var(--content-bg);
-            transition: all 0.2s ease;
-            shape-rendering: crispEdges;
-        }
-
-        .function-block:hover {
-            stroke-width: 3;
-            fill: rgba(124, 58, 237, 0.1);
-        }
-
-        .function-block.energized {
-            stroke: var(--power-flow-active);
-            stroke-width: 3;
-            fill: rgba(16, 185, 129, 0.2);
-        }
-
-
-
-        /* Branch connection styling */
-        .branch-connection {
-            stroke: var(--ladder-rail);
-            stroke-width: 3;
-            fill: none;
-            stroke-dasharray: 3,3;
-        }
-
-        /* Text View Styles */
-        .text-container {
-            background: #1f2937;
-            color: #e5e7eb;
-            font-family: 'Courier New', monospace;
-            font-size: 0.875rem;
-            line-height: 1.4;
-        }
-
-        .text-rung {
-            border-bottom: 1px solid #374151;
-            margin: 0;
-        }
-
-        .text-rung-header {
-            background: #111827;
-            color: #9ca3af;
-            padding: 6px 12px;
-            font-size: 0.8rem;
-        }
-
-        .text-rung-content {
-            padding: 12px 16px;
-            white-space: pre-wrap;
-        }
-
-        .text-instruction {
-            color: #60a5fa;
-        }
-
-        .text-tag {
-            color: #34d399;
-        }
-
-        .text-comment {
-            color: #6b7280;
-            font-style: italic;
-        }
-
-        /* Zoom Controls */
-        .zoom-controls {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            display: flex;
-            flex-direction: column;
-            gap: 4px;
-            background: var(--content-bg);
-            border: 1px solid var(--border-color);
-            border-radius: 6px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            z-index: 100;
-        }
-
-        .zoom-btn {
-            background: var(--content-bg);
-            border: none;
-            padding: 8px 12px;
-            cursor: pointer;
-            font-size: 0.9rem;
-            color: var(--text-color);
-            transition: background-color 0.2s;
-        }
-
-        .zoom-btn:hover {
-            background: var(--hover-bg);
-        }
-
-        .zoom-btn:first-child {
-            border-radius: 6px 6px 0 0;
-        }
-
-        .zoom-btn:last-child {
-            border-radius: 0 0 6px 6px;
-        }
-
-        .zoom-level {
-            padding: 4px 8px;
-            font-size: 0.8rem;
-            color: var(--muted-text);
-            text-align: center;
-            border-top: 1px solid var(--border-color);
-            border-bottom: 1px solid var(--border-color);
-        }
-
-        /* Modal Dialogs */
-        .modal-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0,0,0,0.5);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 2000;
-        }
-
-        .modal {
-            background: var(--content-bg);
-            border-radius: 8px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
-            max-width: 90vw;
-            max-height: 90vh;
-            overflow: hidden;
-        }
-
-        .modal-header {
-            background: var(--secondary-bg);
-            padding: 12px 16px;
-            border-bottom: 1px solid var(--border-color);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .modal-title {
-            font-weight: 600;
-        }
-
-        .modal-close {
-            background: none;
-            border: none;
-            font-size: 1.2rem;
-            cursor: pointer;
-            color: var(--muted-text);
-            padding: 4px;
-        }
-
-        .modal-body {
-            padding: 16px;
-        }
-
-        .modal-footer {
-            background: var(--secondary-bg);
-            padding: 12px 16px;
-            border-top: 1px solid var(--border-color);
-            display: flex;
-            gap: 8px;
-            justify-content: flex-end;
-        }
-
-        /* Cross Reference Styles */
-        .cross-ref-list {
-            max-height: 300px;
-            overflow-y: auto;
-        }
-
-        .cross-ref-item {
-            padding: 8px 12px;
-            border-bottom: 1px solid var(--border-color);
-            cursor: pointer;
-            transition: background-color 0.2s;
-        }
-
-        .cross-ref-item:hover {
-            background: var(--hover-bg);
-        }
-
-        .cross-ref-location {
-            font-weight: 500;
-            color: var(--accent-color);
-        }
-
-        .cross-ref-context {
-            font-size: 0.8rem;
-            color: var(--muted-text);
-            margin-top: 2px;
-        }
-
-        /* Responsive Design */
-        @media (max-width: 768px) {
-            :root {
-                --min-touch-target: 44px;
-            }
-            
-            .organizer-panel {
-                width: 280px;
-                min-width: 250px;
-            }
-            
-            .toolbar {
-                flex-wrap: wrap;
-                gap: 8px;
-            }
-            
-            .btn {
-                padding: 8px 12px;
-            }
-        }
-
-        /* High Contrast Mode */
-        @media (prefers-contrast: high) {
-            :root {
-                --border-color: #000000;
-                --text-color: #000000;
-                --muted-text: #333333;
-            }
-        }
-
-        /* Accessibility */
-        .sr-only {
-            position: absolute;
-            width: 1px;
-            height: 1px;
-            padding: 0;
-            margin: -1px;
-            overflow: hidden;
-            clip: rect(0, 0, 0, 0);
-            white-space: nowrap;
-            border: 0;
-        }
-
-        /* Focus styles for keyboard navigation */
-        .tree-item:focus,
-        .btn:focus,
-        .search-input:focus,
-        .rung:focus {
-            outline: 2px solid var(--accent-color);
-            outline-offset: 2px;
-        }
-
-        /* Animation */
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
-        }
-
-        .loading {
-            animation: pulse 1.5s infinite;
-        }
-
-        /* Ladder logic enhancements */
-        .ladder-container {
-            padding: 16px;
-            min-height: 100%;
-        }
-
-        .ladder-container .rung {
-            margin-bottom: 16px;
-            transition: all 0.2s ease;
-        }
-
-        .ladder-container .rung:last-child {
-            margin-bottom: 0;
-        }
-
-        /* Tooltip for ladder elements */
-        .ladder-element-tooltip {
-            position: absolute;
-            background: var(--text-color);
-            color: var(--light-text);
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-size: 0.75rem;
-            pointer-events: none;
-            z-index: 1000;
-            opacity: 0;
-            transition: opacity 0.2s ease;
-        }
-
-        .ladder-element-tooltip.show {
-            opacity: 1;
-        }
-
-        /* Responsive ladder logic */
-        @media (max-width: 768px) {
-            .ladder-svg {
-                min-height: 80px;
-            }
-            
-            .element-text {
-                font-size: 10px;
-            }
-            
-            .element-tag {
-                font-size: 8px;
-            }
-        }
-
-        /* Welcome Screen */
-        .welcome-screen {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 100%;
-            text-align: center;
-            color: var(--muted-text);
-        }
-
-        .welcome-icon {
-            font-size: 4rem;
-            margin-bottom: 1rem;
-            color: var(--accent-color);
+        #canvas-container {
+            min-height: 300px; /* Adjust min height */
+            transition: height 0.3s ease-in-out;
         }
     </style>
 </head>
-<body>
-    <!-- Header -->
-    <header class="header">
-        <h1>Studio 5000 Logix Designer Style PLC Viewer</h1>
-    </header>
+<body class="bg-gray-100">
 
-    <!-- Toolbar -->
-    <div class="toolbar">
-        <input type="file" id="fileInput" accept=".l5x,.xml" style="display: none;" aria-label="Select L5X project file">
-        <button class="btn" onclick="openFile()" aria-label="Load L5X project file">
-            📁 Open Project
-        </button>
-        <div class="search-container">
-            <span class="search-icon" aria-hidden="true">🔍</span>
-            <input type="text" class="search-input" placeholder="Search project tree..." id="searchInput" aria-label="Search project tree">
-        </div>
-        <button class="btn btn-secondary" onclick="showGoToDialog()" aria-label="Go to specific location">
-            🎯 Go To (Ctrl+G)
-        </button>
-        <button class="btn btn-secondary" onclick="showCrossReference()" aria-label="Show cross references" disabled id="crossRefBtn">
-            🔗 Cross Reference (Ctrl+E)
-        </button>
-        <button class="btn btn-secondary" onclick="showRoutineOverview()" aria-label="Show routine overview" disabled id="overviewBtn">
-            🗺️ Overview (Ctrl+B)
-        </button>
-        <button class="btn btn-secondary" onclick="testSymbolRendering()" title="Test Symbols">🧪 Test Symbols</button>
-    </div>
+    <div class="container mx-auto p-4 md:p-8 max-w-7xl">
+        <header class="text-center mb-8 p-6 bg-white rounded-xl shadow-lg">
+            <h1 class="text-4xl md:text-5xl font-bold text-gray-800">Responsive Ladder Logic System</h1>
+            <p class="text-gray-500 mt-2">A modern, responsive ladder logic renderer with a completely rebuilt and corrected wiring engine.</p>
+        </header>
 
-    <!-- Status Bar -->
-    <div class="status-bar">
-        <span id="statusText">Ready to load L5X project file</span>
-        <span id="statusInfo"></span>
-    </div>
-
-    <!-- Main Container -->
-    <main class="main-container">
-        <!-- Controller Organizer Panel -->
-        <aside class="organizer-panel" role="navigation" aria-label="Project organizer">
-            <div class="organizer-header">Controller Organizer</div>
-            <div class="organizer-content" id="organizerContent">
-                <div class="welcome-screen">
-                    <div class="welcome-icon">🏭</div>
-                    <h3>No Project Loaded</h3>
-                    <p>Open an L5X file to begin exploring</p>
+        <main class="bg-white rounded-xl shadow-lg">
+            <div class="panel-header bg-gray-800 text-white p-5 rounded-t-xl flex justify-between items-center">
+                <h2 class="text-xl font-semibold">Ladder Logic Canvas</h2>
+            </div>
+            <div class="panel-content p-6">
+                <div id="button-container" class="button-group flex flex-wrap gap-4 mb-6">
+                    <button class="btn btn-primary" data-testid="simple" onclick="app.runTest('simple')">Simple Rung</button>
+                    <button class="btn btn-primary" data-testid="complex" onclick="app.runTest('complex')">Standard Branch</button>
+                    <button class="btn btn-primary" data-testid="longRung" onclick="app.runTest('longRung')">Long Rung Wrap</button>
+                    <button class="btn btn-primary" data-testid="gsvMeqComplex" onclick="app.runTest('gsvMeqComplex')">Complex Branch (GSV/MEQ)</button>
+                    <button class="btn btn-primary" data-testid="complexWrap" onclick="app.runTest('complexWrap')">Complex Wrap</button>
+                    <button class="btn btn-secondary" onclick="app.clear()">Clear</button>
+                </div>
+                
+                <div id="canvas-container" class="w-full bg-gray-50 border-2 border-gray-200 rounded-lg p-4 overflow-hidden flex items-center justify-center">
+                    <!-- Canvas will be inserted here by JavaScript -->
                 </div>
             </div>
-        </aside>
-
-        <!-- Content Panel -->
-        <section class="content-panel" role="main">
-            <div class="content-header" id="contentHeader" style="display: none;">
-                <div class="content-title" id="contentTitle">Select an item to view</div>
-                <div class="content-meta" id="contentMeta"></div>
-            </div>
-
-            <div class="view-tabs" id="viewTabs" style="display: none;">
-                <button class="view-tab active" data-view="ladder" onclick="switchView('ladder')">
-                    📊 Ladder Diagram
-                </button>
-                <button class="view-tab" data-view="text" onclick="switchView('text')">
-                    📝 Neutral Text
-                </button>
-            </div>
-
-            <div class="content-body" id="contentBody">
-                <div class="welcome-screen">
-                    <div class="welcome-icon">⚙️</div>
-                    <h2>Professional PLC Viewer</h2>
-                    <p>Load an L5X project file to begin viewing ladder logic, structured text, and project organization.</p>
-                    <p style="margin-top: 1rem; font-size: 0.9rem;">
-                        Features: Cross-references • Go To navigation • Routine overview • Zoom controls • Search functionality
-                    </p>
-                </div>
-            </div>
-        </section>
-    </main>
-
-    <!-- Zoom Controls -->
-    <div class="zoom-controls" id="zoomControls" style="display: none;">
-        <button class="zoom-btn" onclick="zoomIn()" aria-label="Zoom in">+</button>
-        <div class="zoom-level" id="zoomLevel">100%</div>
-        <button class="zoom-btn" onclick="zoomOut()" aria-label="Zoom out">-</button>
-        <button class="zoom-btn" onclick="resetZoom()" aria-label="Reset zoom">↻</button>
-    </div>
-
-    <!-- Modal Template -->
-    <div class="modal-overlay" id="modalOverlay" style="display: none;" onclick="closeModal()">
-        <div class="modal" onclick="event.stopPropagation()">
-            <div class="modal-header">
-                <div class="modal-title" id="modalTitle">Dialog</div>
-                <button class="modal-close" onclick="closeModal()" aria-label="Close dialog">×</button>
-            </div>
-            <div class="modal-body" id="modalBody">
-                <!-- Modal content goes here -->
-            </div>
-            <div class="modal-footer" id="modalFooter">
-                <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
-                <button class="btn" id="modalAction">OK</button>
-            </div>
-        </div>
+        </main>
     </div>
 
     <script>
-        // Application State
-        let projectData = null;
-        let selectedItem = null;
-        let currentView = 'ladder';
-        let currentZoom = 1;
-        let searchTimeout = null;
+        // --- CONFIGURATION ---
+        const CONFIG = {
+            RUNG_V_SPACING: 100,      // Vertical spacing for wrapped lines
+            RUNG_TOP_PADDING: 50,
+            POWER_RAIL_WIDTH: 8,
+            WIRE_WIDTH: 3,
+            CONTACT_WIDTH: 40,
+            CONTACT_HEIGHT: 30,
+            INSTRUCTION_BOX_WIDTH: 280,
+            INSTRUCTION_BOX_HEIGHT: 120,
+            COMPARISON_WIDTH: 60,
+            COIL_RADIUS: 20,
+            ELEMENT_SPACING: 40,      // Horizontal spacing between elements
+            BRANCH_V_SPACING: 60,     // Vertical spacing for paths within a branch
+            RAIL_PADDING: 40,         // Horizontal padding from power rails
+            SYMBOL_FONT: 'bold 14px "Courier New", monospace',
+            LABEL_FONT: '12px "Courier New", monospace',
+            COLORS: {
+                RAIL: '#10b981',      // Green for power rails
+                WIRE: '#374151',      // Dark gray for wires
+                CONTACT_NO: '#1f2937',
+                CONTACT_NC: '#1f2937',
+                COIL: '#ea580c',      // Orange for coils
+                TEXT: '#1f2937',
+                TEXT_BG: 'rgba(255, 255, 255, 0.85)' // Slightly transparent white for label backgrounds
+            }
+        };
 
-        // DOM References
-        const fileInput = document.getElementById('fileInput');
-        const searchInput = document.getElementById('searchInput');
-        const statusText = document.getElementById('statusText');
-        const statusInfo = document.getElementById('statusInfo');
-        const organizerContent = document.getElementById('organizerContent');
-        const contentHeader = document.getElementById('contentHeader');
-        const contentTitle = document.getElementById('contentTitle');
-        const contentMeta = document.getElementById('contentMeta');
-        const viewTabs = document.getElementById('viewTabs');
-        const contentBody = document.getElementById('contentBody');
-        const zoomControls = document.getElementById('zoomControls');
-        const zoomLevel = document.getElementById('zoomLevel');
-        const crossRefBtn = document.getElementById('crossRefBtn');
-        const overviewBtn = document.getElementById('overviewBtn');
+        // --- LADDER RENDERER CLASS ---
+        class LadderRenderer {
+            constructor(containerId) {
+                this.container = document.getElementById(containerId);
+                if (!this.container) throw new Error(`Container with id "${containerId}" not found.`);
+                this.canvas = null;
+                this.ctx = null;
+                this.rungDefinition = null;
+                this.resizeObserver = null;
+            }
 
-        // Event Listeners
-        fileInput.addEventListener('change', handleFileSelect);
-        searchInput.addEventListener('input', handleSearch);
-        document.addEventListener('keydown', handleKeyboardShortcuts);
-
-        // File handling
-        function openFile() {
-            fileInput.click();
-        }
-
-        function handleFileSelect(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-
-            updateStatus(`Loading ${file.name}...`, 'loading');
-            showLoadingState();
-
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                try {
-                    const parser = new DOMParser();
-                    const xmlDoc = parser.parseFromString(e.target.result, "text/xml");
-                    
-                    // Check for XML parsing errors
-                    const parseError = xmlDoc.querySelector('parsererror');
-                    if (parseError) {
-                        throw new Error("Invalid L5X file format - XML parsing failed");
-                    }
-
-                    // Check if this is a valid L5X file
-                    const controller = xmlDoc.querySelector('Controller');
-                    if (!controller) {
-                        throw new Error("Invalid L5X file - No Controller element found");
-                    }
-
-                    projectData = parseL5X(xmlDoc);
-                    if (!projectData || !projectData.controller) {
-                        throw new Error("Failed to parse L5X file structure");
-                    }
-
-                    renderControllerOrganizer(projectData);
-                    updateStatus(`✅ ${projectData.controller.name} loaded successfully`);
-                    enableFeatures();
-                } catch (error) {
-                    console.error("File Processing Error:", error);
-                    updateStatus(`❌ Error: ${error.message}`, 'error');
-                    showErrorState(error.message);
+            // Initializes canvas and sets up responsive resizing
+            initialize(rungDefinition) {
+                this.rungDefinition = rungDefinition;
+                this.container.innerHTML = '';
+                this.canvas = document.createElement('canvas');
+                this.container.appendChild(this.canvas);
+                this.ctx = this.canvas.getContext('2d');
+                
+                if (this.resizeObserver) {
+                    this.resizeObserver.disconnect();
                 }
-            };
-            
-            reader.onerror = () => {
-                updateStatus('❌ Failed to read file', 'error');
-                showErrorState('Could not read the selected file');
-            };
-            
-            reader.readAsText(file);
-        }
+                // The observer now only calls the robust redraw function
+                this.resizeObserver = new ResizeObserver(() => this.redraw());
+                this.resizeObserver.observe(this.container);
 
-        // L5X Parsing
-        function parseL5X(xmlDoc) {
-            try {
-                const controller = xmlDoc.querySelector('Controller');
-                if (!controller) {
-                    throw new Error("No Controller element found in L5X file");
+                this.redraw();
+            }
+            
+            // --- ROBUST REDRAW FUNCTION ---
+            // This function now handles resizing and drawing to prevent observer loops.
+            redraw() {
+                if (!this.rungDefinition || !this.container.offsetParent) return;
+                const { width } = this.container.getBoundingClientRect();
+                
+                // Always set the canvas width to match its container.
+                this.canvas.width = width;
+
+                // --- Phase 1: Calculate Layout & Required Height ---
+                const { leftRailX, rightRailX } = this.getRailPositions();
+                const tempRungDef = JSON.parse(JSON.stringify(this.rungDefinition));
+                const positionedLayout = this.layoutElements(tempRungDef, leftRailX, rightRailX);
+                const { rungTop, rungBottom } = this.getVerticalBounds(positionedLayout);
+                const requiredHeight = (rungBottom - rungTop) + (CONFIG.RUNG_TOP_PADDING * 2);
+                const finalHeight = Math.max(requiredHeight, 300); // Ensure a minimum height
+
+                // --- Phase 2: Check for Height Change ---
+                // If the required height is different from the current canvas height,
+                // update the height and stop. The ResizeObserver will automatically
+                // trigger a new, clean redraw on the correctly sized canvas.
+                if (this.canvas.height !== Math.round(finalHeight)) {
+                    this.canvas.height = Math.round(finalHeight);
+                    return; 
                 }
 
-                const getAttrs = (node, attrs) => {
-                    if (!node) return {};
-                    return attrs.reduce((acc, attr) => ({
-                        ...acc, 
-                        [attr.toLowerCase()]: node.getAttribute(attr) || ''
-                    }), {});
-                };
-
-                // Parse controller info
-                const controllerInfo = getAttrs(controller, ['Name', 'ProcessorType', 'MajorRev', 'MinorRev']);
-
-                // Parse tasks
-                const tasks = Array.from(xmlDoc.querySelectorAll('Tasks > Task')).map(task => ({
-                    ...getAttrs(task, ['Name', 'Type', 'Priority', 'Watchdog']),
-                    programs: Array.from(task.querySelectorAll('ScheduledPrograms > ScheduledProgram')).map(sp => 
-                        sp.getAttribute('Name') || '')
-                }));
-
-                // Parse programs
-                const programs = Array.from(xmlDoc.querySelectorAll('Programs > Program')).map(program => {
-                    const programInfo = getAttrs(program, ['Name', 'Type', 'TestEdits']);
-                    
-                    programInfo.tags = Array.from(program.querySelectorAll(':scope > Tags > Tag')).map(tag =>
-                        getAttrs(tag, ['Name', 'TagType', 'DataType', 'Usage', 'Constant']));
-                    
-                    programInfo.routines = Array.from(program.querySelectorAll(':scope > Routines > Routine')).map(routine => {
-                        const routineInfo = getAttrs(routine, ['Name', 'Type']);
-                        const descElement = routine.querySelector('Description');
-                        routineInfo.description = descElement ? descElement.textContent.trim() : '';
-                        
-                        // Parse RLL content
-                        const rllContent = routine.querySelector('RLLContent');
-                        if (rllContent) {
-                            routineInfo.logic = {
-                                type: 'RLL',
-                                content: Array.from(rllContent.querySelectorAll('Rung')).map((rung, i) => {
-                                    const textElement = rung.querySelector('Text');
-                                    const commentElement = rung.querySelector('Comment');
-                                    
-                                    return {
-                                        number: rung.getAttribute('Number') || i.toString(),
-                                        text: textElement ? textElement.textContent.trim() : '',
-                                        comment: commentElement ? commentElement.textContent.trim() : ''
-                                    };
-                                })
-                            };
-                        }
-                        
-                        // Parse ST content
-                        const stContent = routine.querySelector('STContent');
-                        if (stContent) {
-                            routineInfo.logic = {
-                                type: 'ST',
-                                content: stContent.textContent.trim()
-                            };
-                        }
-                        
-                        return routineInfo;
+                // --- Phase 3: Render if Dimensions are Stable ---
+                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+                this.ctx.imageSmoothingEnabled = true;
+                this.ctx.imageSmoothingQuality = 'high';
+                
+                // We already calculated the layout, so we can reuse it.
+                // Shift it to fit vertically within the padded area.
+                const yOffset = -rungTop + CONFIG.RUNG_TOP_PADDING;
+                this.shiftLayout(positionedLayout, yOffset);
+                
+                // Drawing logic (order is critical)
+                this.drawPowerRails(this.canvas.height);
+                this.drawWires(positionedLayout, leftRailX, rightRailX);
+                
+                positionedLayout.forEach((line, lineIndex) => {
+                    const isLastLine = lineIndex === positionedLayout.length - 1;
+                    line.elements.forEach((el, elIndex) => {
+                        const isLastElementInRung = isLastLine && (elIndex === line.elements.length - 1);
+                        this.drawElement(el, isLastElementInRung, rightRailX);
                     });
-                    
-                    return programInfo;
                 });
-
-                // Parse data types
-                const dataTypes = Array.from(xmlDoc.querySelectorAll('DataTypes > DataType')).map(dt => ({
-                    ...getAttrs(dt, ['Name', 'Family']),
-                    members: Array.from(dt.querySelectorAll('Members > Member')).map(member =>
-                        getAttrs(member, ['Name', 'DataType', 'Dimension', 'Radix']))
-                }));
-
-                // Parse controller tags
-                const controllerTags = Array.from(xmlDoc.querySelectorAll('Controller > Tags > Tag')).map(tag =>
-                    getAttrs(tag, ['Name', 'TagType', 'DataType', 'Usage', 'Constant']));
-
-                return {
-                    controller: controllerInfo,
-                    tasks: tasks,
-                    programs: programs,
-                    dataTypes: dataTypes,
-                    controllerTags: controllerTags
-                };
-            } catch (error) {
-                console.error("L5X parsing error:", error);
-                throw new Error(`Failed to parse L5X file: ${error.message}`);
             }
-        }
-
-        // Render Controller Organizer Tree
-        function renderControllerOrganizer(data) {
-            try {
-                if (!data || !data.controller) {
-                    throw new Error("Invalid project data");
-                }
-
-                const tree = createTreeNode(data.controller.name || 'Unknown Controller', '🧠', [
-                    createTreeNode('Controller Tags', '🏷️', 
-                        (data.controllerTags || []).map(tag => 
-                            createTreeNode(tag.name || 'Unknown Tag', getTagIcon(tag), null, {
-                                type: 'controller-tag',
-                                tagName: tag.name || '',
-                                dataType: tag.datatype || tag.DataType || ''
-                            })
-                        ), { type: 'controller-tags' }
-                    ),
-                    createTreeNode('Tasks', '📋', 
-                        (data.tasks || []).map(task => 
-                            createTreeNode(`${task.name || 'Unknown Task'} (${task.type || 'Unknown'})`, getTaskIcon(task.type), 
-                                (task.programs || []).map(progName => {
-                                    const program = (data.programs || []).find(p => p.name === progName);
-                                    return program ? createProgramNode(program) : null;
-                                }).filter(Boolean), 
-                                { type: 'task', taskName: task.name || '' }
-                            )
-                        ), 
-                        { type: 'tasks' }
-                    ),
-                    createTreeNode('Data Types', '📊', 
-                        (data.dataTypes || []).map(dt => 
-                            createTreeNode(dt.name || 'Unknown DataType', '📋', null, {
-                                type: 'datatype',
-                                datatypeName: dt.name || ''
-                            })
-                        ), 
-                        { type: 'datatypes' }
-                    )
-                ], { type: 'controller' });
-
-                organizerContent.innerHTML = '';
-                organizerContent.appendChild(tree);
-                
-                // Expand controller and tasks by default with null checks
-                setTimeout(() => {
-                    const controllerNode = tree.querySelector('[data-type="controller"]');
-                    const tasksNode = tree.querySelector('[data-type="tasks"]');
-                    
-                    if (controllerNode) {
-                        const controllerLi = controllerNode.closest('li');
-                        if (controllerLi) expandTreeNode(controllerLi);
-                    }
-                    if (tasksNode) {
-                        const tasksLi = tasksNode.closest('li');
-                        if (tasksLi) expandTreeNode(tasksLi);
-                    }
-                }, 100);
-            } catch (error) {
-                console.error("Error rendering organizer:", error);
-                showErrorState(`Failed to render project tree: ${error.message}`);
-            }
-        }
-
-        function createProgramNode(program) {
-            if (!program || !program.name) return null;
             
-            return createTreeNode(program.name, '💻', [
-                createTreeNode('Tags', '🏷️', 
-                    (program.tags || []).map(tag => 
-                        createTreeNode(tag.name || 'Unknown Tag', getTagIcon(tag), null, {
-                            type: 'program-tag',
-                            programName: program.name,
-                            tagName: tag.name || ''
-                        })
-                    ), 
-                    { type: 'program-tags', programName: program.name }
-                ),
-                createTreeNode('Routines', '📁', 
-                    (program.routines || []).map(routine => 
-                        createTreeNode(routine.name || 'Unknown Routine', getRoutineIcon(routine.type), null, {
-                            type: 'routine',
-                            programName: program.name,
-                            routineName: routine.name || ''
-                        })
-                    ), 
-                    { type: 'routines', programName: program.name }
-                )
-            ], { type: 'program', programName: program.name });
-        }
-
-        function createTreeNode(text, icon, children, data) {
-            const li = document.createElement('li');
-            li.className = 'tree-node';
-            if (data) {
-                Object.keys(data).forEach(key => li.dataset[key] = data[key]);
+            drawElement(el, isLastElementInRung = false, rightRailX = 0) {
+                switch (el.type) {
+                    case 'NO_CONTACT': this.drawContact(el.x, el.y, el.label, 'NO', el); break;
+                    case 'NC_CONTACT': this.drawContact(el.x, el.y, el.label, 'NC', el); break;
+                    case 'OUTPUT_COIL': this.drawCoil(el.x, el.y, el.label, el); break;
+                    case 'BRANCH': this.drawBranch(el, isLastElementInRung, rightRailX); break;
+                    case 'INSTRUCTION_BOX': this.drawInstructionBox(el.x, el.y, el.label, el.instruction, el.params, el); break;
+                    case 'COMPARISON': this.drawComparison(el.x, el.y, el.label, el.instruction, el); break;
+                }
             }
+            
+            // --- CORRECTED LAYOUT ENGINE ---
+            layoutElements(rungDefinition, leftRailX, rightRailX) {
+                const lines = [];
+                let currentLineElements = [];
+                let xCursor = leftRailX + CONFIG.RAIL_PADDING;
+                let currentY = 0; // Start at 0, will be shifted later
 
-            const hasChildren = children && children.length > 0;
-            const toggleIcon = hasChildren ? '▶' : '';
-
-            li.innerHTML = `
-                <div class="tree-item" tabindex="0" role="treeitem" ${hasChildren ? 'aria-expanded="false"' : ''}>
-                    <span class="tree-toggle" aria-hidden="true">${toggleIcon}</span>
-                    <span class="tree-icon" aria-hidden="true">${icon}</span>
-                    <span>${text}</span>
-                </div>
-            `;
-
-            if (hasChildren) {
-                const childContainer = document.createElement('ul');
-                childContainer.className = 'tree-children collapsed';
-                childContainer.setAttribute('role', 'group');
-                children.forEach(child => {
-                    if (child) childContainer.appendChild(child);
+                rungDefinition.forEach(el => this.calculateElementDimensions(el));
+                
+                // This loop now correctly calculates when to wrap.
+                rungDefinition.forEach(el => {
+                    const elementEndPos = xCursor + el.elWidth;
+                    
+                    if (currentLineElements.length > 0 && elementEndPos > (rightRailX - CONFIG.RAIL_PADDING)) {
+                        lines.push({ elements: currentLineElements, y: currentY });
+                        currentLineElements = [];
+                        currentY += CONFIG.RUNG_V_SPACING;
+                        xCursor = leftRailX + CONFIG.RAIL_PADDING;
+                    }
+                    
+                    currentLineElements.push(el);
+                    xCursor += el.elWidth + CONFIG.ELEMENT_SPACING;
                 });
-                li.appendChild(childContainer);
-
-                // Add click handler for expand/collapse
-                const toggle = li.querySelector('.tree-toggle');
-                const item = li.querySelector('.tree-item');
                 
-                const toggleHandler = (e) => {
-                    e.stopPropagation();
-                    toggleTreeNode(li);
-                };
-                
-                toggle.addEventListener('click', toggleHandler);
-                item.addEventListener('dblclick', toggleHandler);
-            }
-
-            // Add click handler for selection
-            li.querySelector('.tree-item').addEventListener('click', (e) => {
-                if (e.target.closest('.tree-toggle')) return;
-                selectTreeItem(li);
-            });
-
-            // Add keyboard navigation
-            li.querySelector('.tree-item').addEventListener('keydown', (e) => {
-                handleTreeKeyboard(e, li);
-            });
-
-            return li;
-        }
-
-        function getTagIcon(tag) {
-            const type = tag.datatype || tag.DataType || '';
-            if (type.includes('BOOL')) return '🔘';
-            if (type.includes('INT') || type.includes('REAL')) return '🔢';
-            if (type.includes('STRING')) return '📝';
-            if (type.includes('TIMER')) return '⏱️';
-            if (type.includes('COUNTER')) return '🔢';
-            return '🏷️';
-        }
-
-        function getTaskIcon(type) {
-            switch (type) {
-                case 'CONTINUOUS': return '🔄';
-                case 'PERIODIC': return '⏰';
-                case 'EVENT': return '⚡';
-                default: return '📋';
-            }
-        }
-
-        function getRoutineIcon(type) {
-            switch (type) {
-                case 'RLL': return '📊';
-                case 'ST': return '📝';
-                case 'FBD': return '🔲';
-                case 'SFC': return '🔀';
-                default: return '📄';
-            }
-        }
-
-        function toggleTreeNode(node) {
-            const children = node.querySelector('.tree-children');
-            const toggle = node.querySelector('.tree-toggle');
-            const item = node.querySelector('.tree-item');
-            
-            if (children) {
-                const isExpanded = !children.classList.contains('collapsed');
-                children.classList.toggle('collapsed');
-                toggle.textContent = isExpanded ? '▶' : '▼';
-                item.setAttribute('aria-expanded', isExpanded ? 'false' : 'true');
-            }
-        }
-
-        function expandTreeNode(node) {
-            if (!node) return;
-            
-            const listItem = node.closest ? node.closest('li') : node;
-            if (!listItem) return;
-            
-            const children = listItem.querySelector('.tree-children');
-            const toggle = listItem.querySelector('.tree-toggle');
-            const item = listItem.querySelector('.tree-item');
-            
-            if (children && toggle && item) {
-                children.classList.remove('collapsed');
-                toggle.textContent = '▼';
-                item.setAttribute('aria-expanded', 'true');
-            }
-        }
-
-        function selectTreeItem(node) {
-            // Remove previous selection
-            document.querySelectorAll('.tree-item.selected').forEach(item => {
-                item.classList.remove('selected');
-            });
-
-            // Add selection to current item
-            const item = node.querySelector('.tree-item');
-            item.classList.add('selected');
-            selectedItem = node;
-
-            // Display content based on selection
-            displaySelectedContent(node);
-        }
-
-        function displaySelectedContent(node) {
-            const data = node.dataset;
-            
-            if (data.type === 'routine') {
-                displayRoutine(data.programName, data.routineName);
-            } else if (data.type === 'controller') {
-                displayControllerInfo();
-            } else if (data.type === 'program') {
-                displayProgramInfo(data.programName);
-            } else if (data.type === 'datatype') {
-                displayDataType(data.datatypeName);
-            } else {
-                displayGenericInfo(data);
-            }
-        }
-
-        function displaySelectedContent(node) {
-            const data = node.dataset;
-            console.log('Displaying selected content:', data); // Debug log
-            
-            if (data.type === 'routine') {
-                console.log('Routine selected:', data.programName, data.routineName); // Debug log
-                displayRoutine(data.programName, data.routineName);
-            } else if (data.type === 'controller') {
-                displayControllerInfo();
-            } else if (data.type === 'program') {
-                displayProgramInfo(data.programName);
-            } else if (data.type === 'datatype') {
-                displayDataType(data.datatypeName);
-            } else {
-                displayGenericInfo(data);
-            }
-        }
-
-        function displayRoutine(programName, routineName) {
-            console.log('Displaying routine:', programName, routineName); // Debug log
-            
-            const program = projectData.programs.find(p => p.name === programName);
-            console.log('Found program:', program); // Debug log
-            
-            const routine = program?.routines.find(r => r.name === routineName);
-            console.log('Found routine:', routine); // Debug log
-            
-            if (!routine) {
-                console.error('Routine not found:', programName, routineName); // Debug log
-                showErrorState('Routine not found');
-                return;
-            }
-
-            // Show header
-            contentHeader.style.display = 'block';
-            contentTitle.textContent = `Routine: ${routine.name}`;
-            contentMeta.innerHTML = `
-                <span><strong>Type:</strong> ${routine.type}</span>
-                <span><strong>Program:</strong> ${programName}</span>
-                ${routine.description ? `<span><strong>Description:</strong> ${routine.description}</span>` : ''}
-            `;
-
-            console.log('Routine logic:', routine.logic); // Debug log
-
-            // Show view tabs for RLL routines
-            if (routine.logic?.type === 'RLL') {
-                console.log('Rendering RLL logic with content:', routine.logic.content); // Debug log
-                viewTabs.style.display = 'flex';
-                renderLadderLogic(routine.logic.content);
-            } else if (routine.logic?.type === 'ST') {
-                viewTabs.style.display = 'none';
-                renderStructuredText(routine.logic.content);
-            } else {
-                console.warn('No logic content found for routine:', routine); // Debug log
-                viewTabs.style.display = 'none';
-                showErrorState('No logic content found for this routine');
-            }
-
-            // Enable features
-            crossRefBtn.disabled = false;
-            overviewBtn.disabled = routine.logic?.type !== 'RLL';
-            zoomControls.style.display = 'block';
-        }
-
-        function renderLadderLogic(rungs) {
-            console.log('renderLadderLogic called with rungs:', rungs); // Debug log
-            
-            if (currentView === 'text') {
-                renderNeutralText(rungs);
-                return;
-            }
-
-            const container = document.createElement('div');
-            container.className = 'ladder-container';
-            container.setAttribute('role', 'main');
-            container.setAttribute('aria-label', 'Ladder logic diagram');
-
-            console.log('Creating rung elements for', rungs.length, 'rungs'); // Debug log
-            
-            rungs.forEach((rung, index) => {
-                console.log('Processing rung', index, ':', rung); // Debug log
-                const rungElement = createRungElement(rung, index);
-                container.appendChild(rungElement);
-            });
-
-            console.log('Container created with', container.children.length, 'children'); // Debug log
-            console.log('Container HTML:', container.innerHTML.substring(0, 500) + '...'); // Debug log
-
-            contentBody.innerHTML = '';
-            contentBody.appendChild(container);
-            
-            console.log('Content body now contains', contentBody.children.length, 'children'); // Debug log
-            
-            // Check for canvases in the final DOM
-            const canvases = contentBody.querySelectorAll('canvas');
-            console.log('Found', canvases.length, 'canvas elements in content body'); // Debug log
-            canvases.forEach((canvas, index) => {
-                console.log('Canvas', index, ':', canvas.width, 'x', canvas.height, 'style:', canvas.style.cssText); // Debug log
-                
-                // Check if canvas is visible
-                const rect = canvas.getBoundingClientRect();
-                console.log('Canvas', index, 'bounding rect:', rect); // Debug log
-                console.log('Canvas', index, 'computed style:', window.getComputedStyle(canvas)); // Debug log
-                
-                // Test if canvas context is working
-                const ctx = canvas.getContext('2d');
-                if (ctx) {
-                    console.log('Canvas', index, 'context is available'); // Debug log
-                    // Draw a test pattern to verify it's working
-                    ctx.fillStyle = '#00ff00';
-                    ctx.fillRect(5, 5, 20, 20);
-                    console.log('Canvas', index, 'test pattern drawn'); // Debug log
-                } else {
-                    console.error('Canvas', index, 'context is NOT available'); // Debug log
+                if (currentLineElements.length > 0 || lines.length === 0) {
+                    lines.push({ elements: currentLineElements, y: currentY });
                 }
-            });
-        }
 
-        function createRungElement(rung, index) {
-            console.log('Creating rung element for rung:', rung.number, 'with text:', rung.text);
-            
-            const rungDiv = document.createElement('div');
-            rungDiv.className = 'rung';
-            rungDiv.setAttribute('tabindex', '0');
-            rungDiv.setAttribute('role', 'button');
-            rungDiv.setAttribute('aria-label', `Rung ${rung.number}`);
-            rungDiv.dataset.rungNumber = rung.number;
+                // Position all elements within their lines, handling final coil justification
+                lines.forEach((line, lineIndex) => {
+                    const isLastLine = lineIndex === lines.length - 1;
+                    const lastElement = line.elements[line.elements.length - 1];
+                    let coilToJustify = null;
 
-            // Create header
-            const headerDiv = document.createElement('div');
-            headerDiv.className = 'rung-header';
-            headerDiv.innerHTML = `
-                <span class="rung-number" title="Click to select rung">${rung.number}</span>
-                <span class="rung-comment">${rung.comment}</span>
-                <div class="rung-actions">
-                    <button class="rung-action" data-action="copy" data-text="${encodeURIComponent(rung.text)}" title="Copy Neutral Text">📋</button>
-                    <button class="rung-action" data-action="crossref" data-rung="${rung.number}" title="Cross Reference">🔗</button>
-                </div>
-            `;
-
-            // Create content container
-            const contentDiv = document.createElement('div');
-            contentDiv.className = 'rung-content';
-
-            // Get canvas element from renderRungLogic
-            const canvas = renderRungLogic(rung.text);
-            console.log('Canvas returned for rung', rung.number, ':', canvas);
-            
-            if (canvas) {
-                contentDiv.appendChild(canvas);
-                console.log('Canvas appended to content div');
-            }
-
-            // Assemble rung
-            rungDiv.appendChild(headerDiv);
-            rungDiv.appendChild(contentDiv);
-
-            // Check if canvas was created
-            const canvasInRung = rungDiv.querySelector('canvas');
-            console.log('Canvas found in rung', rung.number, ':', canvasInRung);
-            if (canvasInRung) {
-                console.log('Canvas dimensions:', canvasInRung.width, 'x', canvasInRung.height);
-                console.log('Canvas style:', canvasInRung.style.cssText);
-            }
-
-            // Add event listeners for rung actions
-            const copyBtn = rungDiv.querySelector('[data-action="copy"]');
-            const crossRefBtn = rungDiv.querySelector('[data-action="crossref"]');
-            
-            copyBtn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                copyNeutralText(decodeURIComponent(copyBtn.dataset.text));
-            });
-            
-            crossRefBtn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                showRungCrossRef(crossRefBtn.dataset.rung);
-            });
-
-            // Add click handler for rung selection
-            rungDiv.addEventListener('click', () => selectRung(rungDiv));
-            rungDiv.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    selectRung(rungDiv);
-                }
-            });
-
-            return rungDiv;
-        }
-
-        function renderRungLogic(rungText) {
-            console.log('renderRungLogic called with:', rungText);
-            
-            if (!rungText || rungText.trim() === '') {
-                console.log('Empty rung text, creating basic canvas');
-                const canvas = document.createElement('canvas');
-                canvas.className = 'ladder-canvas';
-                canvas.width = 400;
-                canvas.height = 60;
-                canvas.style.border = '2px solid red'; // Debug border
-                
-                // Test basic drawing
-                const ctx = canvas.getContext('2d');
-                ctx.fillStyle = '#ff0000';
-                ctx.fillRect(10, 10, 50, 30);
-                console.log('Basic canvas created with red rectangle');
-                
-                return canvas; // Return actual canvas element
-            }
-
-            // Use canvas for crisp rendering instead of SVG
-            const canvas = document.createElement('canvas');
-            canvas.className = 'ladder-canvas';
-            canvas.setAttribute('role', 'img');
-            canvas.setAttribute('aria-label', `Ladder logic: ${rungText}`);
-            canvas.style.border = '2px solid blue'; // Debug border
-
-            console.log('Canvas element created:', canvas);
-
-            try {
-                const elements = parseRungLogicAdvanced(rungText);
-                console.log('Parsed elements:', elements);
-                
-                if (elements.length === 0) {
-                    // No elements parsed, show empty rung
-                    console.log('No elements found, creating empty rung canvas');
-                    canvas.width = 400;
-                    canvas.height = 60;
-                    const ctx = canvas.getContext('2d');
-                    
-                    // Test drawing on empty rung
-                    ctx.fillStyle = '#00ff00';
-                    ctx.fillRect(10, 10, 50, 30);
-                    console.log('Empty rung canvas created with green rectangle');
-                    
-                    drawPowerRail(ctx, 20, 30, 380, 30);
-                } else {
-                    console.log('Rendering elements on canvas');
-                    renderLogicElementsCanvas(canvas, elements);
-                }
-            } catch (error) {
-                console.error('Error in renderRungLogic:', error);
-                // Fallback to simple power rail with error indication
-                canvas.width = 800;
-                canvas.height = 80;
-                const ctx = canvas.getContext('2d');
-                
-                // Test drawing on error canvas
-                ctx.fillStyle = '#ffff00';
-                ctx.fillRect(10, 10, 50, 30);
-                console.log('Error canvas created with yellow rectangle');
-                
-                drawPowerRail(ctx, 20, 40, 780, 40);
-                
-                // Add text representation
-                ctx.font = '12px "Courier New", monospace';
-                ctx.fillStyle = '#dc2626';
-                ctx.textAlign = 'center';
-                ctx.fillText('Parse Error: ' + rungText.substring(0, 40) + (rungText.length > 40 ? '...' : ''), 400, 25);
-            }
-
-            console.log('Returning canvas element:', canvas);
-            return canvas; // Return actual canvas element
-        }
-
-        function parseRungLogicAdvanced(rungText) {
-            console.log('=== PARSING RUNG LOGIC ADVANCED ===');
-            console.log('Rung text:', rungText);
-            
-            if (!rungText || rungText.trim() === '') {
-                console.log('Empty rung text, returning empty array');
-                return [];
-            }
-
-            // Parse with branch support
-            const elements = [];
-            let currentBranchLevel = 0;
-            let currentX = 0;
-            
-            // Find all instructions and their positions
-            const instructionRegex = /([A-Z]{2,4})\(([^)]+)\)/g;
-            let match;
-            let lastIndex = 0;
-            
-            while ((match = instructionRegex.exec(rungText)) !== null) {
-                const instruction = match[1];
-                const tag = match[2];
-                const matchIndex = match.index;
-                
-                // Check for branch markers before this instruction
-                const textBefore = rungText.substring(lastIndex, matchIndex);
-                const openBrackets = (textBefore.match(/\[/g) || []).length;
-                const closeBrackets = (textBefore.match(/\]/g) || []).length;
-                
-                currentBranchLevel += openBrackets - closeBrackets;
-                
-                console.log('Found instruction:', instruction, 'with tag:', tag, 'at branch level:', currentBranchLevel);
-                
-                const element = {
-                    type: getElementType(instruction),
-                    instruction: instruction,
-                    tag: tag,
-                    x: 0, // Will be positioned by renderLogicElementsCanvas
-                    y: 0, // Will be positioned by renderLogicElementsCanvas
-                    width: getElementWidth(instruction),
-                    branchLevel: currentBranchLevel
-                };
-                
-                elements.push(element);
-                lastIndex = matchIndex + match[0].length;
-            }
-            
-            console.log('Parsed elements with branches:', elements);
-            console.log('=== PARSING COMPLETE ===');
-            return elements;
-        }
-
-        function parseRungStructure(rungText) {
-            // This function parses the rung into a tree structure representing series/parallel relationships
-            const tokens = tokenizeRungLogicAdvanced(rungText);
-            const structure = {
-                type: 'series',
-                elements: [],
-                branches: []
-            };
-            
-            let currentSeries = structure;
-            let branchStack = [];
-            
-            tokens.forEach(token => {
-                if (token.type === 'BRANCH_START') {
-                    // Start a new parallel branch
-                    const newBranch = {
-                        type: 'series',
-                        elements: [],
-                        branches: [],
-                        parent: currentSeries
-                    };
-                    currentSeries.branches.push(newBranch);
-                    branchStack.push(currentSeries);
-                    currentSeries = newBranch;
-                } else if (token.type === 'BRANCH_END') {
-                    // End current branch, return to parent
-                    if (branchStack.length > 0) {
-                        currentSeries = branchStack.pop();
+                    if (isLastLine && lastElement && lastElement.type === 'OUTPUT_COIL') {
+                        coilToJustify = line.elements.pop();
                     }
-                } else if (token.type === 'INSTRUCTION') {
-                    // Add instruction to current series
-                    currentSeries.elements.push({
-                        type: getElementType(token.instruction),
-                        instruction: token.instruction,
-                        tag: token.tag,
-                        width: getElementWidth(token.instruction)
+
+                    let xPos = leftRailX + CONFIG.RAIL_PADDING;
+                    line.elements.forEach(el => {
+                        el.x = xPos + el.elWidth / 2;
+                        el.y = line.y;
+                        xPos += el.elWidth + CONFIG.ELEMENT_SPACING;
                     });
-                }
-            });
-            
-            return structure;
-        }
 
-        function flattenRungStructure(structure, x = 50, y = 40, branchLevel = 0) {
-            const elements = [];
-            let currentX = x;
-            
-            // Process series elements first
-            structure.elements.forEach(element => {
-                elements.push({
-                    ...element,
-                    x: currentX,
-                    y: y + (branchLevel * 25),
-                    branchLevel: branchLevel
+                    if (coilToJustify) {
+                        coilToJustify.x = rightRailX - CONFIG.RAIL_PADDING - (coilToJustify.elWidth / 2);
+                        coilToJustify.y = line.y;
+                        line.elements.push(coilToJustify);
+                    }
                 });
-                currentX += element.width + 30;
-            });
-            
-            // Process parallel branches
-            structure.branches.forEach((branch, index) => {
-                const branchElements = flattenRungStructure(branch, x + 20, y, branchLevel + 1);
-                elements.push(...branchElements);
-            });
-            
-            return elements;
-        }
 
-        function tokenizeRungLogicAdvanced(rungText) {
-            const tokens = [];
-            let current = 0;
-            
-            console.log('=== PARSING RUNG TEXT ===');
-            console.log('Rung text:', rungText);
-            
-            while (current < rungText.length) {
-                const char = rungText[current];
-                
-                if (char === '(') {
-                    // Look for instruction pattern: XIC(tag), OTE(tag), etc.
-                    const instructionMatch = rungText.substring(Math.max(0, current - 4), current + 1).match(/([A-Z]{2,4})\(/);
-                    if (instructionMatch) {
-                        const instruction = instructionMatch[1];
-                        const tagStart = current + 1;
-                        const tagEnd = rungText.indexOf(')', tagStart);
+                return lines;
+            }
+
+            calculateElementDimensions(el) {
+                el.elHeight = CONFIG.CONTACT_HEIGHT; // Default height
+                switch(el.type) {
+                    case 'NO_CONTACT': case 'NC_CONTACT': el.elWidth = CONFIG.CONTACT_WIDTH; break;
+                    case 'COMPARISON': el.elWidth = CONFIG.COMPARISON_WIDTH; break;
+                    case 'OUTPUT_COIL': el.elWidth = CONFIG.COIL_RADIUS * 2; el.elHeight = CONFIG.COIL_RADIUS * 2; break;
+                    case 'INSTRUCTION_BOX': el.elWidth = CONFIG.INSTRUCTION_BOX_WIDTH; el.elHeight = CONFIG.INSTRUCTION_BOX_HEIGHT; break;
+                    case 'BRANCH':
+                        let maxWidth = 0;
+                        let totalHeight = 0;
                         
-                        if (tagEnd !== -1) {
-                            const tag = rungText.substring(tagStart, tagEnd);
-                            console.log('Found instruction:', instruction, 'with tag:', tag);
-                            tokens.push({
-                                type: 'INSTRUCTION',
-                                instruction: instruction,
-                                tag: tag
+                        el.paths.forEach(path => {
+                            let pathWidth = 0;
+                            let pathMaxHeight = 0;
+                            path.elements.forEach(subEl => {
+                                this.calculateElementDimensions(subEl);
+                                pathWidth += subEl.elWidth;
+                                if(subEl.elHeight > pathMaxHeight) pathMaxHeight = subEl.elHeight;
                             });
-                            current = tagEnd + 1;
-                            continue;
-                        }
-                    }
-                } else if (char === '[') {
-                    console.log('Found branch start');
-                    tokens.push({ type: 'BRANCH_START' });
-                } else if (char === ']') {
-                    console.log('Found branch end');
-                    tokens.push({ type: 'BRANCH_END' });
-                }
-                
-                current++;
-            }
-            
-            console.log('Parsed tokens:', tokens);
-            console.log('=== PARSING COMPLETE ===');
-            return tokens;
-        }
-
-        function renderLogicElementsCanvas(canvas, elements) {
-            console.log('=== RENDER LOGIC ELEMENTS CANVAS ===');
-            console.log('Canvas element:', canvas);
-            console.log('Rendering elements:', elements);
-            
-            const canvasWidth = 800;
-            const canvasHeight = 160; // Increased height for branches
-            
-            console.log('Canvas dimensions:', canvasWidth, 'x', canvasHeight);
-            
-            // Set canvas size
-            canvas.width = canvasWidth;
-            canvas.height = canvasHeight;
-            canvas.style.width = canvasWidth + 'px';
-            canvas.style.height = canvasHeight + 'px';
-            
-            console.log('Canvas dimensions after:', canvas.width, 'x', canvas.height);
-            
-            const ctx = canvas.getContext('2d');
-            console.log('Canvas context:', ctx);
-            
-            // Clear canvas with white background
-            ctx.fillStyle = '#ffffff';
-            ctx.fillRect(0, 0, canvasWidth, canvasHeight);
-            console.log('Canvas cleared with white background');
-            
-            // Draw left and right power rails (thick green lines)
-            ctx.strokeStyle = '#10b981'; // Green color for power rails
-            ctx.lineWidth = 6;
-            ctx.beginPath();
-            ctx.moveTo(20, 20);
-            ctx.lineTo(20, canvasHeight - 20);
-            ctx.stroke();
-            ctx.beginPath();
-            ctx.moveTo(canvasWidth - 20, 20);
-            ctx.lineTo(canvasWidth - 20, canvasHeight - 20);
-            ctx.stroke();
-            console.log('Power rails drawn');
-
-            // Draw main horizontal connection line (grey like Studio 5000)
-            ctx.strokeStyle = '#6b7280'; // Grey color for main connection line
-            ctx.lineWidth = 3;
-            ctx.beginPath();
-            ctx.moveTo(40, 80);
-            ctx.lineTo(canvasWidth - 40, 80);
-            ctx.stroke();
-            console.log('Main connection line drawn');
-
-            // Group elements by branch level
-            const elementsByBranch = {};
-            elements.forEach(element => {
-                if (!elementsByBranch[element.branchLevel]) {
-                    elementsByBranch[element.branchLevel] = [];
-                }
-                elementsByBranch[element.branchLevel].push(element);
-            });
-
-            // Separate inputs and outputs for each branch level
-            const inputsByBranch = {};
-            const outputsByBranch = {};
-            
-            Object.keys(elementsByBranch).forEach(branchLevel => {
-                const branchElements = elementsByBranch[branchLevel];
-                inputsByBranch[branchLevel] = branchElements.filter(e => e.type === 'contact' || e.type === 'function');
-                outputsByBranch[branchLevel] = branchElements.filter(e => e.type === 'coil');
-            });
-
-            // Position and draw elements for each branch level
-            Object.keys(elementsByBranch).forEach(branchLevel => {
-                const level = parseInt(branchLevel);
-                const branchY = 80 + (level * 30); // Each branch level is 30px apart
-                
-                // Draw branch power rail if not main level
-                if (level > 0) {
-                    ctx.strokeStyle = '#6b7280';
-                    ctx.lineWidth = 3;
-                    ctx.beginPath();
-                    ctx.moveTo(40, branchY);
-                    ctx.lineTo(canvasWidth - 40, branchY);
-                    ctx.stroke();
-                    console.log('Branch power rail drawn at level', level, 'y=', branchY);
-                }
-
-                // Position input elements for this branch
-                const inputs = inputsByBranch[branchLevel] || [];
-                let currentX = 80;
-                
-                inputs.forEach((element, index) => {
-                    element.x = currentX;
-                    element.y = branchY;
-                    
-                    console.log('Drawing input element', index, 'at branch level', level, ':', element);
-                    if (element.type === 'contact') {
-                        drawContactCanvas(ctx, element);
-                    } else {
-                        drawFunctionBlockCanvas(ctx, element);
-                    }
-                    
-                    currentX += element.width + 40;
-                });
-
-                // Position output elements for this branch (on the right)
-                const outputs = outputsByBranch[branchLevel] || [];
-                const outputStartX = canvasWidth - 200;
-                currentX = outputStartX;
-                
-                outputs.forEach((element, index) => {
-                    element.x = currentX;
-                    element.y = branchY;
-                    
-                    console.log('Drawing output element', index, 'at branch level', level, ':', element);
-                    drawCoilCanvas(ctx, element);
-                    
-                    currentX += element.width + 40;
-                });
-
-                // Draw connections between input elements in this branch
-                for (let i = 0; i < inputs.length - 1; i++) {
-                    const current = inputs[i];
-                    const next = inputs[i + 1];
-                    
-                    ctx.strokeStyle = '#6b7280';
-                    ctx.lineWidth = 3;
-                    ctx.setLineDash([]);
-                    
-                    const startX = Math.round(current.x + current.width / 2);
-                    const endX = Math.round(next.x - next.width / 2);
-                    const y = Math.round(branchY);
-                    
-                    ctx.beginPath();
-                    ctx.moveTo(startX, y);
-                    ctx.lineTo(endX, y);
-                    ctx.stroke();
-                    console.log('Input connection drawn at branch level', level, 'from', startX, 'to', endX);
-                }
-
-                // Draw connections between output elements in this branch
-                for (let i = 0; i < outputs.length - 1; i++) {
-                    const current = outputs[i];
-                    const next = outputs[i + 1];
-                    
-                    ctx.strokeStyle = '#6b7280';
-                    ctx.lineWidth = 3;
-                    ctx.setLineDash([]);
-                    
-                    const startX = Math.round(current.x + current.width / 2);
-                    const endX = Math.round(next.x - next.width / 2);
-                    const y = Math.round(branchY);
-                    
-                    ctx.beginPath();
-                    ctx.moveTo(startX, y);
-                    ctx.lineTo(endX, y);
-                    ctx.stroke();
-                    console.log('Output connection drawn at branch level', level, 'from', startX, 'to', endX);
-                }
-
-                // Draw connection from last input to first output in this branch
-                if (inputs.length > 0 && outputs.length > 0) {
-                    const lastInput = inputs[inputs.length - 1];
-                    const firstOutput = outputs[0];
-                    
-                    ctx.strokeStyle = '#6b7280';
-                    ctx.lineWidth = 3;
-                    ctx.setLineDash([]);
-                    
-                    const startX = Math.round(lastInput.x + lastInput.width / 2);
-                    const endX = Math.round(firstOutput.x - firstOutput.width / 2);
-                    const y = Math.round(branchY);
-                    
-                    ctx.beginPath();
-                    ctx.moveTo(startX, y);
-                    ctx.lineTo(endX, y);
-                    ctx.stroke();
-                    console.log('Input to output connection drawn at branch level', level, 'from', startX, 'to', endX);
-                }
-
-                // Draw vertical branch connections if not main level
-                if (level > 0) {
-                    // Find elements to connect to main line
-                    const branchElements = elementsByBranch[branchLevel];
-                    if (branchElements.length > 0) {
-                        const firstElement = branchElements[0];
-                        const lastElement = branchElements[branchElements.length - 1];
-                        
-                        // Draw vertical line from main line to first element
-                        ctx.strokeStyle = '#6b7280';
-                        ctx.lineWidth = 2; // 2px for branch connections as per spec
-                        ctx.setLineDash([3, 3]); // Dashed line for branches
-                        
-                        const mainY = 80;
-                        const branchY = 80 + (level * 30);
-                        
-                        ctx.beginPath();
-                        ctx.moveTo(firstElement.x, mainY);
-                        ctx.lineTo(firstElement.x, branchY);
-                        ctx.stroke();
-                        
-                        // Draw vertical line from last element back to main line
-                        ctx.beginPath();
-                        ctx.moveTo(lastElement.x, branchY);
-                        ctx.lineTo(lastElement.x, mainY);
-                        ctx.stroke();
-                        
-                        // Reset line dash for other connections
-                        ctx.setLineDash([]);
-                        
-                        console.log('Branch connections drawn for level', level);
-                    }
-                }
-            });
-            
-            // Final verification marker
-            ctx.fillStyle = '#00ff00';
-            ctx.fillRect(canvasWidth - 30, canvasHeight - 30, 20, 20);
-            console.log('Final verification marker drawn at bottom-right');
-            
-            console.log('=== RENDER LOGIC ELEMENTS CANVAS COMPLETE ===');
-        }
-
-        function drawPowerRail(ctx, x1, y1, x2, y2) {
-            console.log('Drawing power rail from:', x1, y1, 'to:', x2, y2); // Debug log
-            
-            ctx.strokeStyle = '#374151';
-            ctx.lineWidth = 3;
-            ctx.lineCap = 'round';
-            ctx.beginPath();
-            ctx.moveTo(Math.round(x1), Math.round(y1));
-            ctx.lineTo(Math.round(x2), Math.round(y2));
-            ctx.stroke();
-            
-            console.log('Power rail drawn'); // Debug log
-        }
-
-        function drawContactCanvas(ctx, element) {
-            console.log('Drawing contact:', element); // Debug log
-            
-            const x = Math.round(element.x);
-            const y = Math.round(element.y);
-            const width = 35;
-            const height = 25;
-            
-            // Draw contact rectangle with crisp rendering
-            ctx.strokeStyle = '#2563eb';
-            ctx.lineWidth = 2;
-            ctx.fillStyle = '#ffffff';
-            
-            // Draw rectangle with pixel-perfect alignment
-            const rectX = Math.round(x - width/2);
-            const rectY = Math.round(y - height/2);
-            
-            console.log('Drawing contact rectangle at:', rectX, rectY, width, height); // Debug log
-            ctx.strokeRect(rectX, rectY, width, height);
-            ctx.fillRect(rectX, rectY, width, height);
-            ctx.strokeRect(rectX, rectY, width, height);
-
-            // Draw contact symbol with crisp text
-            const symbol = element.instruction === 'XIC' ? '| |' : '|/|';
-            ctx.font = 'bold 12px "Courier New", monospace';
-            ctx.fillStyle = '#1f2937';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            
-            console.log('Drawing contact text:', symbol, 'at:', x, y); // Debug log
-            ctx.fillText(symbol, x, y);
-
-            // Add tag label with better positioning and truncation
-            if (element.tag) {
-                ctx.font = '10px "Courier New", monospace';
-                ctx.fillStyle = '#6b7280';
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'top';
-                // Truncate long tags to prevent overlap
-                const displayTag = element.tag.length > 12 ? element.tag.substring(0, 10) + '...' : element.tag;
-                ctx.fillText(displayTag, x, y + 20);
-            }
-        }
-
-        function drawCoilCanvas(ctx, element) {
-            console.log('Drawing coil:', element); // Debug log
-            
-            const x = Math.round(element.x);
-            const y = Math.round(element.y);
-            const radius = 18;
-            
-            // Draw coil circle with crisp rendering
-            ctx.strokeStyle = '#ea580c';
-            ctx.lineWidth = 2;
-            ctx.fillStyle = '#ffffff';
-            ctx.beginPath();
-            ctx.arc(x, y, radius, 0, 2 * Math.PI);
-            ctx.fill();
-            ctx.stroke();
-            
-            console.log('Drew coil circle at:', x, y, 'radius:', radius); // Debug log
-
-            // Draw coil symbol with crisp text
-            let symbol = '( )';
-            if (element.instruction === 'OTL') symbol = '(L)';
-            else if (element.instruction === 'OTU') symbol = '(U)';
-            
-            ctx.font = 'bold 12px "Courier New", monospace';
-            ctx.fillStyle = '#1f2937';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            
-            console.log('Drawing coil text:', symbol, 'at:', x, y); // Debug log
-            ctx.fillText(symbol, x, y);
-
-            // Add tag label with better positioning and truncation
-            if (element.tag) {
-                ctx.font = '10px "Courier New", monospace';
-                ctx.fillStyle = '#6b7280';
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'top';
-                // Truncate long tags to prevent overlap
-                const displayTag = element.tag.length > 12 ? element.tag.substring(0, 10) + '...' : element.tag;
-                ctx.fillText(displayTag, x, y + 25);
-            }
-        }
-
-        function drawFunctionBlockCanvas(ctx, element) {
-            const x = Math.round(element.x);
-            const y = Math.round(element.y);
-            const width = element.width || 60;
-            const height = 30;
-            
-            // Draw function block rectangle with crisp rendering
-            ctx.strokeStyle = '#7c3aed';
-            ctx.lineWidth = 2;
-            ctx.fillStyle = '#ffffff';
-            
-            // Draw rectangle with pixel-perfect alignment
-            const rectX = Math.round(x - width/2);
-            const rectY = Math.round(y - height/2);
-            ctx.strokeRect(rectX, rectY, width, height);
-            ctx.fillRect(rectX, rectY, width, height);
-            ctx.strokeRect(rectX, rectY, width, height);
-
-            // Draw instruction text with crisp rendering
-            ctx.font = 'bold 12px "Courier New", monospace';
-            ctx.fillStyle = '#1f2937';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillText(element.instruction, x, y);
-
-            // Add tag label with better positioning and truncation
-            if (element.tag) {
-                ctx.font = '10px "Courier New", monospace';
-                ctx.fillStyle = '#6b7280';
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'top';
-                // Truncate long tags to prevent overlap
-                const displayTag = element.tag.length > 15 ? element.tag.substring(0, 13) + '...' : element.tag;
-                ctx.fillText(displayTag, x, y + 20);
-            }
-        }
-
-        function drawBranchConnectionsCanvas(ctx, elements) {
-            if (elements.length === 0) return;
-            
-            // Group elements by branch level
-            const elementsByLevel = {};
-            elements.forEach(element => {
-                if (!elementsByLevel[element.branchLevel]) {
-                    elementsByLevel[element.branchLevel] = [];
-                }
-                elementsByLevel[element.branchLevel].push(element);
-            });
-            
-            // Draw connections for each branch level
-            Object.keys(elementsByLevel).forEach(level => {
-                const levelElements = elementsByLevel[level];
-                const branchY = 40 + (parseInt(level) * 25);
-                
-                if (level === '0') {
-                    // Main power rail - draw horizontal connections between elements
-                    for (let i = 0; i < levelElements.length - 1; i++) {
-                        const current = levelElements[i];
-                        const next = levelElements[i + 1];
-                        
-                        ctx.strokeStyle = '#374151';
-                        ctx.lineWidth = 3;
-                        ctx.setLineDash([]);
-                        
-                        const startX = Math.round(current.x + current.width / 2);
-                        const endX = Math.round(next.x - next.width / 2);
-                        const y = Math.round(current.y);
-                        
-                        ctx.beginPath();
-                        ctx.moveTo(startX, y);
-                        ctx.lineTo(endX, y);
-                        ctx.stroke();
-                    }
-                } else {
-                    // Branch level - draw vertical connections and horizontal power rails
-                    ctx.strokeStyle = '#374151';
-                    ctx.lineWidth = 3;
-                    ctx.setLineDash([3, 3]);
-                    
-                    // Draw vertical connections from main rail to branch elements
-                    levelElements.forEach(element => {
-                        const x = Math.round(element.x);
-                        const y = Math.round(element.y);
-                        const mainY = 40; // Main power rail Y position
-                        
-                        ctx.beginPath();
-                        ctx.moveTo(x, mainY);
-                        ctx.lineTo(x, branchY);
-                        ctx.stroke();
-                    });
-                    
-                    // Draw horizontal power rail for this branch level
-                    ctx.setLineDash([]);
-                    const minX = Math.min(...levelElements.map(e => e.x - e.width / 2));
-                    const maxX = Math.max(...levelElements.map(e => e.x + e.width / 2));
-                    
-                    ctx.beginPath();
-                    ctx.moveTo(20, branchY);
-                    ctx.lineTo(minX - 10, branchY);
-                    ctx.stroke();
-                    
-                    ctx.beginPath();
-                    ctx.moveTo(maxX + 10, branchY);
-                    ctx.lineTo(780, branchY);
-                    ctx.stroke();
-                    
-                    // Draw horizontal connections between branch elements
-                    for (let i = 0; i < levelElements.length - 1; i++) {
-                        const current = levelElements[i];
-                        const next = levelElements[i + 1];
-                        
-                        const startX = Math.round(current.x + current.width / 2);
-                        const endX = Math.round(next.x - next.width / 2);
-                        const y = Math.round(branchY);
-                        
-                        ctx.beginPath();
-                        ctx.moveTo(startX, y);
-                        ctx.lineTo(endX, y);
-                        ctx.stroke();
-                    }
-                }
-            });
-        }
-
-        function getElementWidth(instruction) {
-            console.log('Getting element width for instruction:', instruction);
-            let width;
-            // Return appropriate width based on instruction type
-            if (['XIC', 'XIO'].includes(instruction)) {
-                width = 50;
-            } else if (['OTE', 'OTL', 'OTU'].includes(instruction)) {
-                width = 60;
-            } else if (['TON', 'TOF', 'TONR'].includes(instruction)) {
-                width = 90;
-            } else if (['CTU', 'CTD', 'CTUD'].includes(instruction)) {
-                width = 70;
-            } else if (['MOV', 'COP', 'CPS', 'FLL'].includes(instruction)) {
-                width = 80;
-            } else {
-                width = 70; // Default width
-            }
-            console.log('Element width determined:', width);
-            return width;
-        }
-
-        function getElementType(instruction) {
-            console.log('Getting element type for instruction:', instruction);
-            let type;
-            if (['XIC', 'XIO'].includes(instruction)) {
-                type = 'contact';
-            } else if (['OTE', 'OTL', 'OTU'].includes(instruction)) {
-                type = 'coil';
-            } else if (['TON', 'TOF', 'TONR', 'CTU', 'CTD', 'CTUD', 'MOV', 'COP', 'CPS'].includes(instruction)) {
-                type = 'function';
-            } else {
-                type = 'function';
-            }
-            console.log('Element type determined:', type);
-            return type;
-        }
-
-        function renderNeutralText(rungs) {
-            const container = document.createElement('div');
-            container.className = 'text-container';
-            container.setAttribute('role', 'main');
-            container.setAttribute('aria-label', 'Neutral text representation');
-
-            rungs.forEach(rung => {
-                const rungDiv = document.createElement('div');
-                rungDiv.className = 'text-rung';
-
-                let formattedText = rung.text;
-                // Highlight instructions and tags
-                formattedText = formattedText.replace(/\b([A-Z]{2,4})\b/g, '<span class="text-instruction">$1</span>');
-                formattedText = formattedText.replace(/\(([^)]+)\)/g, '(<span class="text-tag">$1</span>)');
-
-                rungDiv.innerHTML = `
-                    <div class="text-rung-header">Rung ${rung.number} ${rung.comment ? `- ${rung.comment}` : ''}</div>
-                    <pre class="text-rung-content">${formattedText || 'Empty Rung'}</pre>
-                `;
-
-                container.appendChild(rungDiv);
-            });
-
-            contentBody.innerHTML = '';
-            contentBody.appendChild(container);
-        }
-
-        function renderStructuredText(content) {
-            viewTabs.style.display = 'none';
-            
-            const container = document.createElement('div');
-            container.className = 'text-container';
-            container.innerHTML = `<pre class="text-rung-content">${content.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</pre>`;
-            
-            contentBody.innerHTML = '';
-            contentBody.appendChild(container);
-        }
-
-        function displayControllerInfo() {
-            contentHeader.style.display = 'block';
-            contentTitle.textContent = `Controller: ${projectData.controller.name}`;
-            contentMeta.innerHTML = `
-                <span><strong>Processor:</strong> ${projectData.controller.processortype}</span>
-                <span><strong>Revision:</strong> ${projectData.controller.majorrev}.${projectData.controller.minorrev}</span>
-                <span><strong>Programs:</strong> ${projectData.programs.length}</span>
-                <span><strong>Tasks:</strong> ${projectData.tasks.length}</span>
-            `;
-            
-            viewTabs.style.display = 'none';
-            contentBody.innerHTML = `
-                <div style="padding: 24px;">
-                    <h3>Project Overview</h3>
-                    <p>This controller contains ${projectData.programs.length} programs across ${projectData.tasks.length} tasks.</p>
-                    <p>Controller tags: ${projectData.controllerTags.length}</p>
-                    <p>Data types: ${projectData.dataTypes.length}</p>
-                </div>
-            `;
-            
-            crossRefBtn.disabled = true;
-            overviewBtn.disabled = true;
-            zoomControls.style.display = 'none';
-        }
-
-        function displayProgramInfo(programName) {
-            const program = projectData.programs.find(p => p.name === programName);
-            if (!program) return;
-
-            contentHeader.style.display = 'block';
-            contentTitle.textContent = `Program: ${program.name}`;
-            contentMeta.innerHTML = `
-                <span><strong>Type:</strong> ${program.type}</span>
-                <span><strong>Routines:</strong> ${program.routines.length}</span>
-                <span><strong>Tags:</strong> ${program.tags.length}</span>
-            `;
-            
-            viewTabs.style.display = 'none';
-            contentBody.innerHTML = `
-                <div style="padding: 24px;">
-                    <h3>Program Information</h3>
-                    <p>This program contains ${program.routines.length} routines and ${program.tags.length} tags.</p>
-                    <h4>Routines:</h4>
-                    <ul>
-                        ${program.routines.map(r => `<li>${r.name} (${r.type})</li>`).join('')}
-                    </ul>
-                </div>
-            `;
-            
-            crossRefBtn.disabled = true;
-            overviewBtn.disabled = true;
-            zoomControls.style.display = 'none';
-        }
-
-        function displayDataType(datatypeName) {
-            const datatype = projectData.dataTypes.find(dt => dt.name === datatypeName);
-            if (!datatype) return;
-
-            contentHeader.style.display = 'block';
-            contentTitle.textContent = `Data Type: ${datatype.name}`;
-            contentMeta.innerHTML = `
-                <span><strong>Family:</strong> ${datatype.family || 'None'}</span>
-                <span><strong>Members:</strong> ${datatype.members.length}</span>
-            `;
-            
-            viewTabs.style.display = 'none';
-            
-            const membersHtml = datatype.members.length > 0 
-                ? `<table style="width: 100%; border-collapse: collapse; margin-top: 16px;">
-                    <thead>
-                        <tr style="background: var(--secondary-bg);">
-                            <th style="padding: 8px; text-align: left; border: 1px solid var(--border-color);">Name</th>
-                            <th style="padding: 8px; text-align: left; border: 1px solid var(--border-color);">Data Type</th>
-                            <th style="padding: 8px; text-align: left; border: 1px solid var(--border-color);">Dimension</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${datatype.members.map(m => `
-                            <tr>
-                                <td style="padding: 8px; border: 1px solid var(--border-color);">${m.name}</td>
-                                <td style="padding: 8px; border: 1px solid var(--border-color);">${m.datatype}</td>
-                                <td style="padding: 8px; border: 1px solid var(--border-color);">${m.dimension || '1'}</td>
-                            </tr>
-                        `).join('')}
-                    </tbody>
-                </table>`
-                : '<p>No members defined.</p>';
-            
-            contentBody.innerHTML = `
-                <div style="padding: 24px;">
-                    <h3>Data Type Members</h3>
-                    ${membersHtml}
-                </div>
-            `;
-            
-            crossRefBtn.disabled = true;
-            overviewBtn.disabled = true;
-            zoomControls.style.display = 'none';
-        }
-
-        function displayGenericInfo(data) {
-            contentHeader.style.display = 'block';
-            contentTitle.textContent = 'Information';
-            contentMeta.innerHTML = `<span><strong>Type:</strong> ${data.type}</span>`;
-            
-            viewTabs.style.display = 'none';
-            contentBody.innerHTML = `
-                <div style="padding: 24px;">
-                    <h3>Item Details</h3>
-                    <p>Selected item type: ${data.type}</p>
-                    <pre>${JSON.stringify(data, null, 2)}</pre>
-                </div>
-            `;
-            
-            crossRefBtn.disabled = true;
-            overviewBtn.disabled = true;
-            zoomControls.style.display = 'none';
-        }
-
-        // View Management
-        function switchView(view) {
-            currentView = view;
-            
-            // Update tab appearance
-            document.querySelectorAll('.view-tab').forEach(tab => {
-                tab.classList.remove('active');
-            });
-            document.querySelector(`[data-view="${view}"]`).classList.add('active');
-            
-            // Re-render current content
-            if (selectedItem && selectedItem.dataset.type === 'routine') {
-                displaySelectedContent(selectedItem);
-            }
-        }
-
-        // Search functionality
-        function handleSearch() {
-            clearTimeout(searchTimeout);
-            searchTimeout = setTimeout(() => {
-                const query = searchInput.value.toLowerCase();
-                filterTree(query);
-            }, 300);
-        }
-
-        function filterTree(query) {
-            const items = document.querySelectorAll('.tree-item');
-            
-            items.forEach(item => {
-                const text = item.textContent.toLowerCase();
-                const node = item.closest('li');
-                const matches = text.includes(query);
-                
-                node.style.display = matches || query === '' ? '' : 'none';
-                
-                if (matches && query !== '') {
-                    // Expand parents to show matching items
-                    let parent = node.parentElement;
-                    while (parent && parent.classList.contains('tree-children')) {
-                        parent.classList.remove('collapsed');
-                        const parentItem = parent.previousElementSibling;
-                        if (parentItem) {
-                            const toggle = parentItem.querySelector('.tree-toggle');
-                            if (toggle) toggle.textContent = '▼';
-                            parentItem.setAttribute('aria-expanded', 'true');
-                        }
-                        parent = parent.parentElement?.parentElement;
-                    }
-                }
-            });
-        }
-
-        // Keyboard shortcuts
-        function handleKeyboardShortcuts(e) {
-            if (e.ctrlKey || e.metaKey) {
-                switch (e.key) {
-                    case 'g':
-                        e.preventDefault();
-                        showGoToDialog();
-                        break;
-                    case 'e':
-                        e.preventDefault();
-                        if (!crossRefBtn.disabled) showCrossReference();
-                        break;
-                    case 'b':
-                        e.preventDefault();
-                        if (!overviewBtn.disabled) showRoutineOverview();
-                        break;
-                    case 'f':
-                        e.preventDefault();
-                        searchInput.focus();
-                        break;
-                    case '=':
-                    case '+':
-                        e.preventDefault();
-                        zoomIn();
-                        break;
-                    case '-':
-                        e.preventDefault();
-                        zoomOut();
-                        break;
-                    case '0':
-                        e.preventDefault();
-                        resetZoom();
-                        break;
-                }
-            }
-        }
-
-        function handleTreeKeyboard(e, node) {
-            switch (e.key) {
-                case 'ArrowUp':
-                    e.preventDefault();
-                    focusPreviousItem(node);
-                    break;
-                case 'ArrowDown':
-                    e.preventDefault();
-                    focusNextItem(node);
-                    break;
-                case 'ArrowRight':
-                    e.preventDefault();
-                    if (node.querySelector('.tree-children')) {
-                        expandTreeNode(node.querySelector('.tree-item'));
-                    }
-                    break;
-                case 'ArrowLeft':
-                    e.preventDefault();
-                    if (node.querySelector('.tree-children:not(.collapsed)')) {
-                        toggleTreeNode(node);
-                    } else {
-                        focusParentItem(node);
-                    }
-                    break;
-                case 'Enter':
-                case ' ':
-                    e.preventDefault();
-                    selectTreeItem(node);
-                    break;
-            }
-        }
-
-        function focusPreviousItem(currentNode) {
-            const items = Array.from(document.querySelectorAll('.tree-item'));
-            const currentIndex = items.indexOf(currentNode.querySelector('.tree-item'));
-            if (currentIndex > 0) {
-                items[currentIndex - 1].focus();
-            }
-        }
-
-        function focusNextItem(currentNode) {
-            const items = Array.from(document.querySelectorAll('.tree-item'));
-            const currentIndex = items.indexOf(currentNode.querySelector('.tree-item'));
-            if (currentIndex < items.length - 1) {
-                items[currentIndex + 1].focus();
-            }
-        }
-
-        function focusParentItem(currentNode) {
-            const parent = currentNode.parentElement?.parentElement;
-            if (parent && parent.classList.contains('tree-node')) {
-                parent.querySelector('.tree-item').focus();
-            }
-        }
-
-        // Zoom controls
-        function zoomIn() {
-            currentZoom = Math.min(currentZoom * 1.2, 4);
-            updateZoom();
-        }
-
-        function zoomOut() {
-            currentZoom = Math.max(currentZoom / 1.2, 0.25);
-            updateZoom();
-        }
-
-        function resetZoom() {
-            currentZoom = 1;
-            updateZoom();
-        }
-
-        function updateZoom() {
-            document.documentElement.style.setProperty('--zoom-factor', currentZoom);
-            zoomLevel.textContent = Math.round(currentZoom * 100) + '%';
-        }
-
-        // Rung operations
-        function selectRung(rungElement) {
-            // Remove previous selection
-            document.querySelectorAll('.rung.selected').forEach(rung => {
-                rung.classList.remove('selected');
-            });
-            
-            // Add selection to current rung
-            rungElement.classList.add('selected');
-            rungElement.focus();
-            
-            updateStatus(`Selected rung ${rungElement.dataset.rungNumber}`);
-        }
-
-        function copyNeutralText(text) {
-            navigator.clipboard.writeText(text).then(() => {
-                updateStatus('Neutral text copied to clipboard', 'success');
-            }).catch(() => {
-                updateStatus('Failed to copy neutral text', 'error');
-            });
-        }
-
-        function showRungCrossRef(rungNumber) {
-            showModal('Cross Reference', `
-                <div class="cross-ref-list">
-                    <div class="cross-ref-item">
-                        <div class="cross-ref-location">Rung ${rungNumber}</div>
-                        <div class="cross-ref-context">Current location</div>
-                    </div>
-                    <div style="padding: 16px; text-align: center; color: var(--muted-text);">
-                        Cross-reference analysis not yet implemented for individual rungs.
-                        This would show all locations where tags from this rung are used.
-                    </div>
-                </div>
-            `);
-        }
-
-        // Modal dialogs
-        function showModal(title, body, actionText = 'OK', actionCallback = null) {
-            const overlay = document.getElementById('modalOverlay');
-            const modalTitle = document.getElementById('modalTitle');
-            const modalBody = document.getElementById('modalBody');
-            const modalAction = document.getElementById('modalAction');
-            
-            modalTitle.textContent = title;
-            modalBody.innerHTML = body;
-            modalAction.textContent = actionText;
-            
-            if (actionCallback) {
-                modalAction.onclick = () => {
-                    actionCallback();
-                    closeModal();
-                };
-            } else {
-                modalAction.onclick = closeModal;
-            }
-            
-            overlay.style.display = 'flex';
-            
-            // Focus management
-            const firstFocusable = overlay.querySelector('button, input, select, textarea, [tabindex]:not([tabindex="-1"])');
-            if (firstFocusable) {
-                firstFocusable.focus();
-            }
-        }
-
-        function closeModal() {
-            document.getElementById('modalOverlay').style.display = 'none';
-        }
-
-        function showGoToDialog() {
-            if (!projectData) {
-                updateStatus('No project loaded', 'error');
-                return;
-            }
-            
-            const routineOptions = projectData.programs.flatMap(program => 
-                program.routines.map(routine => 
-                    `<option value="routine:${program.name}:${routine.name}">${program.name}/${routine.name}</option>`
-                )
-            ).join('');
-            
-            const programOptions = projectData.programs.map(program =>
-                `<option value="program:${program.name}">${program.name}</option>`
-            ).join('');
-            
-            showModal('Go To', `
-                <div style="margin-bottom: 16px;">
-                    <label for="goToSelect" style="display: block; margin-bottom: 8px; font-weight: 500;">Select destination:</label>
-                    <select id="goToSelect" style="width: 100%; padding: 8px; border: 1px solid var(--border-color); border-radius: 4px;">
-                        <optgroup label="Programs">
-                            ${programOptions}
-                        </optgroup>
-                        <optgroup label="Routines">
-                            ${routineOptions}
-                        </optgroup>
-                    </select>
-                </div>
-                <div>
-                    <label for="rungInput" style="display: block; margin-bottom: 8px; font-weight: 500;">Rung number (optional):</label>
-                    <input type="number" id="rungInput" placeholder="Enter rung number" style="width: 100%; padding: 8px; border: 1px solid var(--border-color); border-radius: 4px;">
-                </div>
-            `, 'Go', () => {
-                const select = document.getElementById('goToSelect');
-                const rungInput = document.getElementById('rungInput');
-                const [type, ...parts] = select.value.split(':');
-                
-                if (type === 'routine') {
-                    const [programName, routineName] = parts;
-                    const routineNode = document.querySelector(`[data-type="routine"][data-program-name="${programName}"][data-routine-name="${routineName}"]`);
-                    if (routineNode) {
-                        selectTreeItem(routineNode);
-                        
-                        // Scroll to specific rung if provided
-                        if (rungInput.value) {
-                            setTimeout(() => {
-                                const rungElement = document.querySelector(`[data-rung-number="${rungInput.value}"]`);
-                                if (rungElement) {
-                                    rungElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                                    selectRung(rungElement);
-                                }
-                            }, 100);
-                        }
-                    }
-                } else if (type === 'program') {
-                    const programName = parts[0];
-                    const programNode = document.querySelector(`[data-type="program"][data-program-name="${programName}"]`);
-                    if (programNode) {
-                        selectTreeItem(programNode);
-                    }
-                }
-            });
-        }
-
-        function showCrossReference() {
-            if (!selectedItem) {
-                updateStatus('No item selected', 'error');
-                return;
-            }
-            
-            const data = selectedItem.dataset;
-            let crossRefs = [];
-            
-            // Generate cross-references based on item type
-            if (data.type === 'routine') {
-                crossRefs = findRoutineCrossReferences(data.programName, data.routineName);
-            } else if (data.type === 'controller-tag' || data.type === 'program-tag') {
-                crossRefs = findTagCrossReferences(data.tagName, data.programName);
-            }
-            
-            const crossRefHtml = crossRefs.length > 0 
-                ? crossRefs.map(ref => `
-                    <div class="cross-ref-item" onclick="navigateToReference('${ref.location}')">
-                        <div class="cross-ref-location">${ref.location}</div>
-                        <div class="cross-ref-context">${ref.context}</div>
-                    </div>
-                `).join('')
-                : '<div style="padding: 16px; text-align: center; color: var(--muted-text);">No cross-references found.</div>';
-            
-            showModal('Cross Reference', `
-                <div class="cross-ref-list">
-                    ${crossRefHtml}
-                </div>
-            `);
-        }
-
-        function findRoutineCrossReferences(programName, routineName) {
-            const crossRefs = [];
-            
-            // Find JSR calls to this routine
-            projectData.programs.forEach(program => {
-                program.routines.forEach(routine => {
-                    if (routine.logic?.type === 'RLL') {
-                        routine.logic.content.forEach(rung => {
-                            if (rung.text.includes(`JSR(${routineName})`)) {
-                                crossRefs.push({
-                                    location: `${program.name}/${routine.name} - Rung ${rung.number}`,
-                                    context: `JSR call: ${rung.text.substring(0, 50)}...`
-                                });
+                            pathWidth += (path.elements.length > 1 ? (path.elements.length - 1) * CONFIG.ELEMENT_SPACING : 0);
+                            
+                            const lastInPath = path.elements[path.elements.length - 1];
+                            if(lastInPath && lastInPath.type === 'OUTPUT_COIL'){
+                                pathWidth += CONFIG.ELEMENT_SPACING * 2;
                             }
-                        });
-                    }
-                });
-            });
-            
-            return crossRefs;
-        }
 
-        function findTagCrossReferences(tagName, programName) {
-            const crossRefs = [];
-            
-            // Search in all routines
-            projectData.programs.forEach(program => {
-                program.routines.forEach(routine => {
-                    if (routine.logic?.type === 'RLL') {
-                        routine.logic.content.forEach(rung => {
-                            if (rung.text.includes(tagName)) {
-                                crossRefs.push({
-                                    location: `${program.name}/${routine.name} - Rung ${rung.number}`,
-                                    context: `Usage: ${rung.text.substring(0, 50)}...`
-                                });
-                            }
+                            if (pathWidth > maxWidth) maxWidth = pathWidth;
+                            path.pathHeight = pathMaxHeight;
+                            totalHeight += pathMaxHeight;
                         });
-                    }
-                });
-            });
-            
-            return crossRefs;
-        }
+                        
+                        totalHeight += (el.paths.length > 1 ? (el.paths.length - 1) * CONFIG.BRANCH_V_SPACING : 0);
+                        el.elWidth = maxWidth + CONFIG.ELEMENT_SPACING * 2; // Add padding for branch connectors
+                        el.elHeight = totalHeight;
+                        break;
+                    default: el.elWidth = 0; break;
+                }
+            }
 
-        function navigateToReference(location) {
-            closeModal();
-            
-            // Parse location string (e.g., "Program1/Routine1 - Rung 5")
-            const match = location.match(/(.+?)\/(.+?) - Rung (\d+)/);
-            if (match) {
-                const [, programName, routineName, rungNumber] = match;
-                const routineNode = document.querySelector(`[data-type="routine"][data-program-name="${programName}"][data-routine-name="${routineName}"]`);
+            getVerticalBounds(layout) {
+                let rungTop = Infinity, rungBottom = -Infinity;
+                if (layout.length === 0 || layout[0].elements.length === 0) return { rungTop: 0, rungBottom: 200 };
                 
-                if (routineNode) {
-                    selectTreeItem(routineNode);
-                    
-                    setTimeout(() => {
-                        const rungElement = document.querySelector(`[data-rung-number="${rungNumber}"]`);
-                        if (rungElement) {
-                            rungElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                            selectRung(rungElement);
+                layout.forEach(line => {
+                    line.elements.forEach(el => {
+                        const top = el.y - el.elHeight / 2 - 20; // Add buffer for labels
+                        const bottom = el.y + el.elHeight / 2 + 20;
+                        if (top < rungTop) rungTop = top;
+                        if (bottom > rungBottom) rungBottom = bottom;
+                    });
+                });
+                return { rungTop, rungBottom };
+            }
+
+            shiftLayout(layout, yOffset) {
+                layout.forEach(line => {
+                    line.y += yOffset;
+                    line.elements.forEach(el => {
+                        el.y += yOffset;
+                        if(el.type === 'BRANCH') {
+                           this.shiftBranch(el, yOffset);
                         }
-                    }, 100);
-                }
-            }
-        }
-
-        function showRoutineOverview() {
-            if (!selectedItem || selectedItem.dataset.type !== 'routine') {
-                updateStatus('No routine selected', 'error');
-                return;
-            }
-            
-            const data = selectedItem.dataset;
-            const program = projectData.programs.find(p => p.name === data.programName);
-            const routine = program?.routines.find(r => r.name === data.routineName);
-            
-            if (!routine || routine.logic?.type !== 'RLL') {
-                updateStatus('Routine overview only available for ladder logic', 'error');
-                return;
-            }
-            
-            const overviewSvg = generateRoutineOverview(routine.logic.content);
-            
-            showModal('Routine Overview', `
-                <div style="text-align: center; margin-bottom: 16px;">
-                    <strong>${routine.name}</strong> - ${routine.logic.content.length} rungs
-                </div>
-                <div style="max-height: 400px; overflow: auto; border: 1px solid var(--border-color); background: var(--secondary-bg);">
-                    ${overviewSvg}
-                </div>
-                <div style="margin-top: 12px; font-size: 0.85rem; color: var(--muted-text); text-align: center;">
-                    Click on a rung in the overview to navigate to it
-                </div>
-            `);
-        }
-
-        function generateRoutineOverview(rungs) {
-            const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-            svg.setAttribute('viewBox', `0 0 600 ${rungs.length * 30 + 40}`);
-            svg.setAttribute('style', 'width: 100%; height: auto; cursor: pointer;');
-            
-            rungs.forEach((rung, index) => {
-                const y = 20 + index * 30;
-                
-                // Rung background
-                const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-                rect.setAttribute('x', '10');
-                rect.setAttribute('y', y - 10);
-                rect.setAttribute('width', '580');
-                rect.setAttribute('height', '25');
-                rect.setAttribute('fill', rung.text ? '#f0f9ff' : '#f8f9fa');
-                rect.setAttribute('stroke', '#e2e8f0');
-                rect.setAttribute('rx', '3');
-                rect.style.cursor = 'pointer';
-                rect.onclick = () => navigateToRung(rung.number);
-                svg.appendChild(rect);
-                
-                // Rung number
-                const rungText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-                rungText.setAttribute('x', '20');
-                rungText.setAttribute('y', y + 3);
-                rungText.setAttribute('font-size', '10');
-                rungText.setAttribute('font-weight', 'bold');
-                rungText.setAttribute('fill', '#2563eb');
-                rungText.textContent = rung.number;
-                rungText.style.cursor = 'pointer';
-                rungText.onclick = () => navigateToRung(rung.number);
-                svg.appendChild(rungText);
-                
-                // Simplified logic representation
-                if (rung.text) {
-                    const logicLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-                    logicLine.setAttribute('x1', '60');
-                    logicLine.setAttribute('y1', y);
-                    logicLine.setAttribute('x2', '550');
-                    logicLine.setAttribute('y2', y);
-                    logicLine.setAttribute('stroke', '#374151');
-                    logicLine.setAttribute('stroke-width', '2');
-                    svg.appendChild(logicLine);
-                    
-                    // Simple element representation
-                    const instructions = rung.text.match(/([A-Z]{2,4})\(/g) || [];
-                    instructions.forEach((instr, i) => {
-                        const x = 100 + i * 50;
-                        const element = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-                        element.setAttribute('x', x - 8);
-                        element.setAttribute('y', y - 6);
-                        element.setAttribute('width', '16');
-                        element.setAttribute('height', '12');
-                        element.setAttribute('fill', getInstructionColor(instr.replace('(', '')));
-                        element.setAttribute('stroke', '#374151');
-                        svg.appendChild(element);
                     });
-                }
-                
-                // Comment indicator
-                if (rung.comment) {
-                    const commentIcon = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-                    commentIcon.setAttribute('x', '570');
-                    commentIcon.setAttribute('y', y + 3);
-                    commentIcon.setAttribute('font-size', '8');
-                    commentIcon.setAttribute('fill', '#059669');
-                    commentIcon.textContent = '💬';
-                    svg.appendChild(commentIcon);
-                }
-            });
-            
-            return svg.outerHTML;
-        }
-
-        function getInstructionColor(instruction) {
-            if (['XIC', 'XIO'].includes(instruction)) return '#2563eb';
-            if (['OTE', 'OTL', 'OTU'].includes(instruction)) return '#ea580c';
-            return '#7c3aed';
-        }
-
-        function navigateToRung(rungNumber) {
-            closeModal();
-            
-            setTimeout(() => {
-                const rungElement = document.querySelector(`[data-rung-number="${rungNumber}"]`);
-                if (rungElement) {
-                    rungElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    selectRung(rungElement);
-                }
-            }, 100);
-        }
-
-        // Utility functions
-        function updateStatus(message, type = 'info') {
-            statusText.textContent = message;
-            statusText.className = type === 'loading' ? 'loading' : '';
-            
-            if (type === 'success') {
-                setTimeout(() => updateStatus('Ready'), 3000);
+                });
             }
-        }
 
-        function showLoadingState() {
-            contentBody.innerHTML = `
-                <div class="welcome-screen">
-                    <div class="welcome-icon loading">⚙️</div>
-                    <h3>Loading Project...</h3>
-                    <p>Parsing L5X file and building project structure</p>
-                </div>
-            `;
-        }
-
-        function showErrorState(message) {
-            contentBody.innerHTML = `
-                <div class="welcome-screen">
-                    <div class="welcome-icon">❌</div>
-                    <h3>Error</h3>
-                    <p>${message}</p>
-                    <button class="btn" onclick="openFile()" style="margin-top: 16px;">Try Another File</button>
-                </div>
-            `;
-        }
-
-        function enableFeatures() {
-            crossRefBtn.disabled = false;
-            // Other feature buttons will be enabled based on selection
-        }
-
-        // Accessibility enhancements
-        function announceToScreenReader(message) {
-            const announcement = document.createElement('div');
-            announcement.setAttribute('aria-live', 'polite');
-            announcement.setAttribute('aria-atomic', 'true');
-            announcement.className = 'sr-only';
-            announcement.textContent = message;
-            document.body.appendChild(announcement);
+            shiftBranch(branchEl, yOffset){
+                branchEl.paths.forEach(path => {
+                    path.elements.forEach(el => {
+                        el.y += yOffset;
+                        if(el.type === 'BRANCH') this.shiftBranch(el, yOffset);
+                    });
+                });
+            }
             
-            setTimeout(() => {
-                document.body.removeChild(announcement);
-            }, 1000);
-        }
+            getRailPositions() {
+                const leftRailX = CONFIG.POWER_RAIL_WIDTH / 2 + 20;
+                const rightRailX = this.canvas.width - (CONFIG.POWER_RAIL_WIDTH / 2) - 20;
+                return { leftRailX, rightRailX };
+            }
 
-        // Initialize application
-        function initialize() {
-            updateStatus('Ready to load L5X project file');
-            
-            // Set up resize observer for responsive behavior
-            if (window.ResizeObserver) {
-                const resizeObserver = new ResizeObserver(() => {
-                    // Handle responsive adjustments
-                    if (window.innerWidth < 768) {
-                        document.documentElement.style.setProperty('--min-touch-target', '44px');
-                    } else {
-                        document.documentElement.style.setProperty('--min-touch-target', '40px');
+            drawPowerRails(height) {
+                const { leftRailX, rightRailX } = this.getRailPositions();
+                this.ctx.strokeStyle = CONFIG.COLORS.RAIL;
+                this.ctx.lineWidth = CONFIG.POWER_RAIL_WIDTH;
+                this.ctx.lineCap = 'round';
+                
+                this.ctx.beginPath();
+                this.ctx.moveTo(leftRailX, 0);
+                this.ctx.lineTo(leftRailX, height);
+                this.ctx.stroke();
+                
+                this.ctx.beginPath();
+                this.ctx.moveTo(rightRailX, 0);
+                this.ctx.lineTo(rightRailX, height);
+                this.ctx.stroke();
+            }
+
+            drawWires(lines, leftRailX, rightRailX) {
+                if (lines.length === 0 || lines[0].elements.length === 0) return;
+
+                this.ctx.strokeStyle = CONFIG.COLORS.WIRE;
+                this.ctx.lineWidth = CONFIG.WIRE_WIDTH;
+                this.ctx.lineCap = 'butt';
+
+                lines.forEach(line => {
+                    for (let i = 0; i < line.elements.length - 1; i++) {
+                        const currentEl = line.elements[i];
+                        const nextEl = line.elements[i + 1];
+                        this.ctx.beginPath();
+                        this.ctx.moveTo(currentEl.x + currentEl.elWidth / 2, currentEl.y);
+                        this.ctx.lineTo(nextEl.x - nextEl.elWidth / 2, nextEl.y);
+                        this.ctx.stroke();
                     }
                 });
-                resizeObserver.observe(document.body);
+
+                const firstEl = lines[0].elements[0];
+                this.ctx.beginPath();
+                this.ctx.moveTo(leftRailX, firstEl.y);
+                this.ctx.lineTo(firstEl.x - firstEl.elWidth / 2, firstEl.y);
+                this.ctx.stroke();
+                
+                const lastLine = lines[lines.length - 1];
+                const lastEl = lastLine.elements[lastLine.elements.length - 1];
+                if (lastEl.type !== 'BRANCH') {
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(lastEl.x + lastEl.elWidth / 2, lastEl.y);
+                    this.ctx.lineTo(rightRailX, lastEl.y);
+                    this.ctx.stroke();
+                }
+
+                for (let i = 0; i < lines.length - 1; i++) {
+                    const endOfCurrentLine = lines[i].elements[lines[i].elements.length - 1];
+                    const startOfNextLine = lines[i + 1].elements[0];
+                    if (!endOfCurrentLine || !startOfNextLine) continue;
+
+                    const transferY = endOfCurrentLine.y + (CONFIG.RUNG_V_SPACING / 2);
+
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(endOfCurrentLine.x + endOfCurrentLine.elWidth / 2, endOfCurrentLine.y);
+                    this.ctx.lineTo(rightRailX, endOfCurrentLine.y);
+                    this.ctx.lineTo(rightRailX, transferY);
+                    this.ctx.lineTo(leftRailX, transferY);
+                    this.ctx.lineTo(leftRailX, startOfNextLine.y);
+                    this.ctx.lineTo(startOfNextLine.x - startOfNextLine.elWidth / 2, startOfNextLine.y);
+                    this.ctx.stroke();
+                }
+            }
+
+            drawTextAboveSymbol(text, x, y, el) {
+                if (!text) return;
+                this.ctx.font = CONFIG.LABEL_FONT;
+                this.ctx.textAlign = 'center';
+                this.ctx.textBaseline = 'bottom';
+                const textMetrics = this.ctx.measureText(text);
+                const textHeight = 14; 
+                const textY = y - (el.elHeight / 2) - 8; 
+                
+                this.ctx.fillStyle = CONFIG.COLORS.TEXT_BG;
+                this.ctx.fillRect(x - textMetrics.width / 2 - 4, textY - textHeight, textMetrics.width + 8, textHeight + 4);
+                
+                this.ctx.fillStyle = CONFIG.COLORS.TEXT;
+                this.ctx.fillText(text, x, textY);
+            }
+
+            drawContact(x, y, label, type, el) {
+                this.drawTextAboveSymbol(label, x, y, el);
+                this.ctx.strokeStyle = type === 'NC' ? CONFIG.COLORS.CONTACT_NC : CONFIG.COLORS.CONTACT_NO;
+                this.ctx.lineWidth = 2.5;
+                this.ctx.font = CONFIG.SYMBOL_FONT;
+                this.ctx.fillStyle = CONFIG.COLORS.CONTACT_NO;
+                this.ctx.textAlign = 'center';
+                this.ctx.textBaseline = 'middle';
+                this.ctx.fillText(type === 'NC' ? '|/|' : '| |', x, y);
+            }
+
+            drawComparison(x, y, label, text, el) {
+                this.drawTextAboveSymbol(label, x, y, el);
+                this.ctx.strokeStyle = CONFIG.COLORS.CONTACT_NO;
+                this.ctx.lineWidth = 2.5;
+                this.ctx.font = CONFIG.SYMBOL_FONT;
+                this.ctx.fillStyle = CONFIG.COLORS.TEXT;
+                this.ctx.textAlign = 'center';
+                this.ctx.textBaseline = 'middle';
+                this.ctx.fillText(`[ ${text} ]`, x, y);
+            }
+
+            drawInstructionBox(x, y, label, instruction, params = {}, el) {
+                this.drawTextAboveSymbol(label, x, y, el);
+                const w = el.elWidth;
+                const h = el.elHeight;
+                
+                this.ctx.strokeStyle = CONFIG.COLORS.WIRE;
+                this.ctx.lineWidth = 2.5;
+                this.ctx.fillStyle = 'white';
+                this.ctx.strokeRect(x - w / 2, y - h / 2, w, h);
+                
+                this.ctx.fillStyle = CONFIG.COLORS.TEXT;
+                this.ctx.textAlign = 'center';
+                this.ctx.font = 'bold 14px "Courier New", monospace';
+                this.ctx.fillText(instruction, x, y - h/2 + 20);
+                
+                this.ctx.font = '12px "Courier New", monospace';
+                this.ctx.textAlign = 'left';
+                let paramY = y - h/2 + 45;
+                for (const [key, value] of Object.entries(params)) {
+                    this.ctx.fillText(`${key}: ${value}`, x - w/2 + 10, paramY);
+                    paramY += 20;
+                }
+            }
+
+            drawCoil(x, y, label, el) {
+                const r = CONFIG.COIL_RADIUS;
+                this.drawTextAboveSymbol(label, x, y, el);
+                this.ctx.strokeStyle = CONFIG.COLORS.COIL;
+                this.ctx.lineWidth = 2.5;
+                this.ctx.fillStyle = 'white';
+                
+                this.ctx.beginPath();
+                this.ctx.arc(x, y, r, 0, 2 * Math.PI);
+                this.ctx.stroke();
+                
+                this.ctx.font = CONFIG.SYMBOL_FONT;
+                this.ctx.fillStyle = CONFIG.COLORS.TEXT;
+                this.ctx.textAlign = 'center';
+                this.ctx.textBaseline = 'middle';
+                this.ctx.fillText('( )', x, y);
+            }
+
+            drawBranch(branchEl, isLastElementInRung = false, rightRailX = 0) {
+                const { x, y, elWidth, elHeight, paths } = branchEl;
+                const branchStartX = x - elWidth / 2;
+                const internalBranchEndX = x + elWidth / 2;
+                
+                let startY = y - elHeight / 2;
+
+                const topPathCenterY = startY + paths[0].pathHeight / 2;
+                const bottomPathCenterY = startY + elHeight - paths[paths.length-1].pathHeight / 2;
+
+                this.ctx.strokeStyle = CONFIG.COLORS.WIRE;
+                this.ctx.lineWidth = CONFIG.WIRE_WIDTH;
+                this.ctx.beginPath();
+                this.ctx.moveTo(branchStartX, topPathCenterY);
+                this.ctx.lineTo(branchStartX, bottomPathCenterY);
+                this.ctx.stroke();
+
+                if (!isLastElementInRung) {
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(internalBranchEndX, topPathCenterY);
+                    this.ctx.lineTo(internalBranchEndX, bottomPathCenterY);
+                    this.ctx.stroke();
+                }
+
+                paths.forEach(path => {
+                    const pathY = startY + path.pathHeight / 2;
+                    let currentXInPath = branchStartX;
+
+                    const lastInPath = path.elements[path.elements.length - 1];
+                    const hasCoilAtEnd = lastInPath && lastInPath.type === 'OUTPUT_COIL';
+                    const normalElements = hasCoilAtEnd ? path.elements.slice(0, -1) : path.elements;
+                    const coilToDraw = hasCoilAtEnd ? lastInPath : null;
+
+                    normalElements.forEach(element => {
+                        const elementX = currentXInPath + CONFIG.ELEMENT_SPACING + element.elWidth / 2;
+                        this.ctx.beginPath();
+                        this.ctx.moveTo(currentXInPath, pathY);
+                        this.ctx.lineTo(elementX - element.elWidth / 2, pathY);
+                        this.ctx.stroke();
+                        this.drawElement({ ...element, x: elementX, y: pathY });
+                        currentXInPath = elementX + element.elWidth / 2;
+                    });
+
+                    const finalEndX = isLastElementInRung ? rightRailX : internalBranchEndX;
+
+                    if (coilToDraw) {
+                        const justificationPadding = isLastElementInRung ? CONFIG.RAIL_PADDING : CONFIG.ELEMENT_SPACING;
+                        const coilX = finalEndX - justificationPadding - (coilToDraw.elWidth / 2);
+
+                        this.ctx.beginPath();
+                        this.ctx.moveTo(currentXInPath, pathY);
+                        this.ctx.lineTo(coilX - coilToDraw.elWidth / 2, pathY);
+                        this.ctx.stroke();
+                        
+                        this.drawElement({ ...coilToDraw, x: coilX, y: pathY });
+                        
+                        this.ctx.beginPath();
+                        this.ctx.moveTo(coilX + coilToDraw.elWidth / 2, pathY);
+                        this.ctx.lineTo(finalEndX, pathY);
+                        this.ctx.stroke();
+                    } else {
+                        this.ctx.beginPath();
+                        this.ctx.moveTo(currentXInPath, pathY);
+                        this.ctx.lineTo(finalEndX, pathY);
+                        this.ctx.stroke();
+                    }
+                    startY += path.pathHeight + CONFIG.BRANCH_V_SPACING;
+                });
             }
             
-            // Handle focus management for modals
-            document.addEventListener('keydown', (e) => {
-                const modal = document.getElementById('modalOverlay');
-                if (modal.style.display === 'flex' && e.key === 'Escape') {
-                    closeModal();
+            destroy() {
+                if (this.resizeObserver && this.container) {
+                    this.resizeObserver.disconnect();
+                    this.resizeObserver = null;
                 }
-            });
-            
-            // Announce app ready to screen readers
-            announceToScreenReader('Studio 5000 PLC Viewer ready. Load an L5X file to begin.');
+                if (this.container) this.container.innerHTML = '';
+            }
         }
 
-        // Start the application
-        initialize();
+        // --- APPLICATION LOGIC ---
+        const app = {
+            renderer: new LadderRenderer('canvas-container'),
+            activeTest: null,
+            
+            rungDefs: {
+                simple: [
+                    { type: 'NO_CONTACT', label: 'Start_Button' },
+                    { type: 'NC_CONTACT', label: 'Stop_Button' },
+                    { type: 'OUTPUT_COIL', label: 'Motor_Output' }
+                ],
+                complex: [
+                    { type: 'NO_CONTACT', label: 'Start_Button' },
+                    { type: 'NC_CONTACT', label: 'Stop_Button' },
+                    { 
+                        type: 'BRANCH', 
+                        paths: [
+                            { elements: [{ type: 'NO_CONTACT', label: 'Limit_Switch' }, { type: 'NO_CONTACT', label: 'Photo_Eye' }] },
+                            { elements: [{ type: 'NO_CONTACT', label: 'Pressure_Switch' }] }
+                        ]
+                    },
+                    { type: 'OUTPUT_COIL', label: 'Motor_Output' }
+                ],
+                longRung: [
+                    { type: 'NO_CONTACT', label: 'Input_A' }, { type: 'NO_CONTACT', label: 'Input_B' },
+                    { type: 'NC_CONTACT', label: 'Input_C' }, { type: 'NO_CONTACT', label: 'Input_D' },
+                    { type: 'NO_CONTACT', label: 'Input_E' }, { type: 'NC_CONTACT', label: 'Input_F' },
+                    { type: 'NO_CONTACT', label: 'Input_G' }, { type: 'NC_CONTACT', label: 'Input_H' },
+                    { type: 'OUTPUT_COIL', label: 'Long_Rung_Coil' }
+                ],
+                gsvMeqComplex: [
+                    {
+                        type: 'INSTRUCTION_BOX',
+                        instruction: 'GSV',
+                        params: {
+                            'Class': 'Module',
+                            'Instance': 'S100FX1PMN1',
+                            'Attribute': 'EntryStatus',
+                            'Dest': 'S100FX1PMN1.M.ObjectStatus'
+                        }
+                    },
+                    {
+                        type: 'BRANCH',
+                        paths: [
+                            {
+                                elements: [
+                                    {
+                                        type: 'INSTRUCTION_BOX', instruction: 'MEQ',
+                                        params: { 'Source': 'S100FX1PMN1.M.ObjectStatus', 'Mask': '16#F000', 'Compare': '16#6000' }
+                                    },
+                                    { type: 'OUTPUT_COIL', label: 'S100FX1PMN1.M.Inhibited' }
+                                ]
+                            },
+                            {
+                                elements: [
+                                    {
+                                        type: 'INSTRUCTION_BOX', instruction: 'MEQ',
+                                        params: { 'Source': 'S100FX1PMN1.M.ObjectStatus', 'Mask': '16#F000', 'Compare': '16#4000' }
+                                    },
+                                    { type: 'OUTPUT_COIL', label: 'S100FX1PMN1.M.CommOk' }
+                                ]
+                            }
+                        ]
+                    }
+                ],
+                complexWrap: [
+                    { type: 'NO_CONTACT', label: 'System_Enable' },
+                    { type: 'NO_CONTACT', label: 'Auto_Mode' },
+                    {
+                        type: 'BRANCH',
+                        paths: [
+                            { elements: [
+                                { type: 'NO_CONTACT', label: 'Path_A_Sensor_1' },
+                                { type: 'NC_CONTACT', label: 'Path_A_Sensor_2' },
+                                { type: 'NO_CONTACT', label: 'Path_A_Sensor_3' }
+                            ]},
+                            { elements: [
+                                { type: 'NO_CONTACT', label: 'Path_B_Sensor_1' },
+                                { type: 'NO_CONTACT', label: 'Path_B_Sensor_2' }
+                            ]}
+                        ]
+                    },
+                    { type: 'NO_CONTACT', label: 'Another_Condition' },
+                    { type: 'NC_CONTACT', label: 'Yet_Another_Condition' },
+                    { type: 'NO_CONTACT', label: 'Final_Input_Before_Coil'},
+                    { type: 'OUTPUT_COIL', label: 'Complex_Wrapped_Output' }
+                ]
+            },
 
-        // Test function to create sample ladder logic
-        function createTestLadderLogic() {
-            const testRungs = [
-                {
-                    number: 0,
-                    text: 'XIC(Start_Button) OTE(Run_Light)',
-                    comment: 'Start button controls run light'
-                },
-                {
-                    number: 1,
-                    text: 'XIC(Stop_Button) XIO(Run_Light) OTE(Stop_Light)',
-                    comment: 'Stop button with run light feedback'
-                },
-                {
-                    number: 2,
-                    text: 'XIC(Start_Button) [XIC(Proximity_Sensor) OTE(Conveyor_Motor)] OTE(Status_OK)',
-                    comment: 'Start with parallel branch for sensor'
-                },
-                {
-                    number: 3,
-                    text: 'XIC(Start_Button) [XIC(Proximity_Sensor) TON(Timer1, 5.0)] [XIC(Stop_Button) XIO(Run_Light)] OTE(Status_OK)',
-                    comment: 'Complex parallel branches example'
-                },
-                {
-                    number: 4,
-                    text: 'XIC(Reset_Button) OTL(Latch_Output)',
-                    comment: 'Latch output example'
+            runTest(testName) {
+                this.activeTest = testName;
+                if (this.rungDefs[testName]) {
+                    this.renderer.initialize(this.rungDefs[testName]);
                 }
-            ];
-            
-            return testRungs;
-        }
+                this.updateButtonStyles();
+            },
 
-        // Function to test symbol rendering
-        function testSymbolRendering() {
-            console.log('=== TEST SYMBOL RENDERING START ===');
-            
-            // First, test basic canvas functionality
-            const testCanvas = document.createElement('canvas');
-            testCanvas.width = 300;
-            testCanvas.height = 100;
-            testCanvas.style.border = '2px solid red';
-            testCanvas.style.margin = '10px';
-            
-            const ctx = testCanvas.getContext('2d');
-            ctx.fillStyle = '#ff0000';
-            ctx.fillRect(10, 10, 50, 30);
-            ctx.fillStyle = '#00ff00';
-            ctx.fillRect(70, 10, 50, 30);
-            ctx.fillStyle = '#0000ff';
-            ctx.fillRect(130, 10, 50, 30);
-            
-            ctx.fillStyle = '#000000';
-            ctx.font = '16px Arial';
-            ctx.fillText('CANVAS TEST', 10, 70);
-            
-            // Add to page temporarily
-            document.body.appendChild(testCanvas);
-            console.log('Basic canvas test added to page');
-            
-            const testRungs = createTestLadderLogic();
-            console.log('Testing symbol rendering with:', testRungs);
-            
-            // Display test routine directly
-            displayTestRoutine(testRungs);
-            
-            // Check if canvases are visible after rendering
-            setTimeout(() => {
-                const allCanvases = document.querySelectorAll('canvas');
-                console.log('Found', allCanvases.length, 'canvas elements in the page');
-                allCanvases.forEach((canvas, index) => {
-                    const rect = canvas.getBoundingClientRect();
-                    console.log('Canvas', index, ':', {
-                        width: canvas.width,
-                        height: canvas.height,
-                        styleWidth: canvas.style.width,
-                        styleHeight: canvas.style.height,
-                        visible: rect.width > 0 && rect.height > 0,
-                        rect: rect
-                    });
+            clear() {
+                this.activeTest = null;
+                this.renderer.destroy();
+                this.updateButtonStyles();
+            },
+
+            updateButtonStyles() {
+                const buttons = document.querySelectorAll('#button-container .btn-primary');
+                buttons.forEach(button => {
+                    if (button.dataset.testid === this.activeTest) {
+                        button.classList.add('btn-active');
+                    } else {
+                        button.classList.remove('btn-active');
+                    }
                 });
-            }, 100);
-            
-            // Remove test canvas after 3 seconds
-            setTimeout(() => {
-                if (testCanvas.parentNode) {
-                    testCanvas.parentNode.removeChild(testCanvas);
-                    console.log('Test canvas removed');
-                }
-            }, 3000);
-            
-            console.log('=== TEST SYMBOL RENDERING END ===');
-        }
+            },
 
-        // Function to display test routine directly
-        function displayTestRoutine(rungs) {
-            // Show header
-            contentHeader.style.display = 'block';
-            contentTitle.textContent = 'Test Routine: Sample Ladder Logic';
-            contentMeta.innerHTML = `
-                <span><strong>Type:</strong> RLL</span>
-                <span><strong>Program:</strong> Test</span>
-                <span><strong>Description:</strong> Sample ladder logic for testing symbols</span>
-            `;
+            init() {
+                // Set an initial test case to display on load
+                this.runTest('complexWrap'); 
+            }
+        };
 
-            // Show view tabs
-            viewTabs.style.display = 'flex';
-            
-            // Render the ladder logic
-            renderLadderLogic(rungs);
-            
-            // Enable features
-            crossRefBtn.disabled = false;
-            overviewBtn.disabled = false;
-            zoomControls.style.display = 'block';
-        }
+        document.addEventListener('DOMContentLoaded', () => {
+            app.init();
+        });
+
     </script>
 </body>
 </html>
