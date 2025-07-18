@@ -54,8 +54,20 @@ A professional, web-based PLC ladder logic viewer that mimics the look and feel 
 NitroPlcViewer/
 ├── RockwellViewer.html    # Main application file
 ├── README.md             # This file
+├── docs/                 # Documentation directory
+│   ├── implementation/   # Implementation guides
+│   ├── fixes/           # Bug fix documentation
+│   └── technical/       # Technical specifications
 └── .gitignore           # Git ignore file
 ```
+
+## 📚 Documentation
+
+For detailed technical documentation, implementation guides, and bug fix summaries, see the [`docs/`](./docs/) directory:
+
+- **[Documentation Index](./docs/README.md)** - Overview of all documentation
+- **[Implementation Guides](./docs/implementation/)** - Studio 5000 implementation details
+- **[Bug Fixes](./docs/fixes/)** - Issue resolution documentation
 
 ## 🔧 Technical Details
 
