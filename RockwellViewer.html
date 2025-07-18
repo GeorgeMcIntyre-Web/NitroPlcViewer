@@ -25,38 +25,42 @@
             @apply bg-blue-700 ring-2 ring-offset-2 ring-blue-500 shadow-inner scale-105 -translate-y-0.5;
         }
         #canvas-container {
-            min-height: 300px; /* Adjust min height */
             transition: height 0.3s ease-in-out;
+            max-height: calc(100vh - 200px); /* Prevent growing beyond viewport */
+            overflow: hidden;
         }
     </style>
 </head>
 <body class="bg-gray-100">
 
-    <div class="container mx-auto p-4 md:p-8 max-w-7xl">
-        <header class="text-center mb-8 p-6 bg-white rounded-xl shadow-lg">
-            <h1 class="text-4xl md:text-5xl font-bold text-gray-800">Responsive Ladder Logic System</h1>
-            <p class="text-gray-500 mt-2">A modern, responsive ladder logic renderer with a completely rebuilt and corrected wiring engine.</p>
+    <div class="min-h-screen flex flex-col">
+        <header class="text-center p-4 bg-white shadow-lg flex-shrink-0">
+            <h1 class="text-3xl md:text-4xl font-bold text-gray-800">Responsive Ladder Logic System</h1>
+            <p class="text-gray-500 mt-1">A modern, responsive ladder logic renderer with a completely rebuilt and corrected wiring engine.</p>
         </header>
 
-        <main class="bg-white rounded-xl shadow-lg">
-            <div class="panel-header bg-gray-800 text-white p-5 rounded-t-xl flex justify-between items-center">
-                <h2 class="text-xl font-semibold">Ladder Logic Canvas</h2>
-            </div>
-            <div class="panel-content p-6">
-                <div id="button-container" class="button-group flex flex-wrap gap-4 mb-6">
-                    <button class="btn btn-primary" data-testid="simple" onclick="app.runTest('simple')">Simple Rung</button>
-                    <button class="btn btn-primary" data-testid="complex" onclick="app.runTest('complex')">Standard Branch</button>
-                    <button class="btn btn-primary" data-testid="longRung" onclick="app.runTest('longRung')">Long Rung Wrap</button>
-                    <button class="btn btn-primary" data-testid="gsvMeqComplex" onclick="app.runTest('gsvMeqComplex')">Complex Branch (GSV/MEQ)</button>
-                    <button class="btn btn-primary" data-testid="complexWrap" onclick="app.runTest('complexWrap')">Complex Wrap</button>
-                    <button class="btn btn-secondary" onclick="app.clear()">Clear</button>
+        <div class="flex-1 flex flex-col">
+            <div class="bg-white shadow-lg flex-shrink-0">
+                <div class="panel-header bg-gray-800 text-white p-4 flex justify-between items-center">
+                    <h2 class="text-lg font-semibold">Ladder Logic Canvas</h2>
                 </div>
-                
-                <div id="canvas-container" class="w-full bg-gray-50 border-2 border-gray-200 rounded-lg p-4 overflow-hidden flex items-center justify-center">
-                    <!-- Canvas will be inserted here by JavaScript -->
+                <div class="panel-content p-4">
+                    <div id="button-container" class="button-group flex flex-wrap gap-3 mb-4">
+                        <button class="btn btn-primary" data-testid="simple" onclick="app.runTest('simple')">Simple Rung</button>
+                        <button class="btn btn-primary" data-testid="complex" onclick="app.runTest('complex')">Standard Branch</button>
+                        <button class="btn btn-primary" data-testid="longRung" onclick="app.runTest('longRung')">Long Rung Wrap</button>
+                        <button class="btn btn-primary" data-testid="gsvMeqComplex" onclick="app.runTest('gsvMeqComplex')">Complex Branch (GSV/MEQ)</button>
+                        <button class="btn btn-primary" data-testid="complexWrap" onclick="app.runTest('complexWrap')">Complex Wrap</button>
+                        <button class="btn btn-primary" data-testid="zoomTest" onclick="app.runTest('zoomTest')">Zoom Test</button>
+                        <button class="btn btn-secondary" onclick="app.clear()">Clear</button>
+                    </div>
                 </div>
             </div>
-        </main>
+            
+            <div id="canvas-container" class="flex-1 bg-gray-50 border-2 border-gray-200 overflow-hidden">
+                <!-- Canvas will be inserted here by JavaScript -->
+            </div>
+        </div>
     </div>
 
     <script>
@@ -110,51 +114,46 @@
                 if (this.resizeObserver) {
                     this.resizeObserver.disconnect();
                 }
-                // The observer now only calls the robust redraw function
-                this.resizeObserver = new ResizeObserver(() => this.redraw());
+                
+                // Add debounce to prevent rapid firing
+                let resizeTimeout;
+                this.resizeObserver = new ResizeObserver(() => {
+                    clearTimeout(resizeTimeout);
+                    resizeTimeout = setTimeout(() => this.redraw(), 10);
+                });
                 this.resizeObserver.observe(this.container);
 
-                this.redraw();
+                // Initial draw with a small delay to ensure container is stable
+                setTimeout(() => this.redraw(), 50);
             }
             
-            // --- ROBUST REDRAW FUNCTION ---
-            // This function now handles resizing and drawing to prevent observer loops.
+            // --- SIMPLIFIED REDRAW FUNCTION ---
             redraw() {
                 if (!this.rungDefinition || !this.container.offsetParent) return;
-                const { width } = this.container.getBoundingClientRect();
+                const { width, height } = this.container.getBoundingClientRect();
                 
-                // Always set the canvas width to match its container.
+                // Set canvas dimensions to match container
                 this.canvas.width = width;
+                this.canvas.height = height;
 
-                // --- Phase 1: Calculate Layout & Required Height ---
+                // Calculate layout
                 const { leftRailX, rightRailX } = this.getRailPositions();
                 const tempRungDef = JSON.parse(JSON.stringify(this.rungDefinition));
                 const positionedLayout = this.layoutElements(tempRungDef, leftRailX, rightRailX);
                 const { rungTop, rungBottom } = this.getVerticalBounds(positionedLayout);
-                const requiredHeight = (rungBottom - rungTop) + (CONFIG.RUNG_TOP_PADDING * 2);
-                const finalHeight = Math.max(requiredHeight, 300); // Ensure a minimum height
-
-                // --- Phase 2: Check for Height Change ---
-                // If the required height is different from the current canvas height,
-                // update the height and stop. The ResizeObserver will automatically
-                // trigger a new, clean redraw on the correctly sized canvas.
-                if (this.canvas.height !== Math.round(finalHeight)) {
-                    this.canvas.height = Math.round(finalHeight);
-                    return; 
-                }
-
-                // --- Phase 3: Render if Dimensions are Stable ---
+                
+                // Clear and prepare canvas
                 this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
                 this.ctx.imageSmoothingEnabled = true;
                 this.ctx.imageSmoothingQuality = 'high';
                 
-                // We already calculated the layout, so we can reuse it.
-                // Shift it to fit vertically within the padded area.
-                const yOffset = -rungTop + CONFIG.RUNG_TOP_PADDING;
+                // Center the content vertically in the available space
+                const contentHeight = rungBottom - rungTop;
+                const yOffset = -rungTop + (height - contentHeight) / 2;
                 this.shiftLayout(positionedLayout, yOffset);
                 
                 // Drawing logic (order is critical)
-                this.drawPowerRails(this.canvas.height);
+                this.drawPowerRails(rungTop + yOffset, rungBottom + yOffset);
                 this.drawWires(positionedLayout, leftRailX, rightRailX);
                 
                 positionedLayout.forEach((line, lineIndex) => {
@@ -186,15 +185,22 @@
 
                 rungDefinition.forEach(el => this.calculateElementDimensions(el));
                 
+                // Calculate the effective left rail position for layout purposes
+                const leftRailConnectionX = leftRailX + CONFIG.POWER_RAIL_WIDTH / 2 + 5;
+                const effectiveLeftRailX = leftRailConnectionX + CONFIG.ELEMENT_SPACING;
+                
                 // This loop now correctly calculates when to wrap.
                 rungDefinition.forEach(el => {
                     const elementEndPos = xCursor + el.elWidth;
                     
-                    if (currentLineElements.length > 0 && elementEndPos > (rightRailX - CONFIG.RAIL_PADDING)) {
+                    // Check if we need to wrap due to right rail proximity OR left rail proximity
+                    if (currentLineElements.length > 0 && 
+                        (elementEndPos > (rightRailX - CONFIG.RAIL_PADDING) || 
+                         xCursor < effectiveLeftRailX)) {
                         lines.push({ elements: currentLineElements, y: currentY });
                         currentLineElements = [];
                         currentY += CONFIG.RUNG_V_SPACING;
-                        xCursor = leftRailX + CONFIG.RAIL_PADDING;
+                        xCursor = effectiveLeftRailX;
                     }
                     
                     currentLineElements.push(el);
@@ -215,7 +221,11 @@
                         coilToJustify = line.elements.pop();
                     }
 
-                    let xPos = leftRailX + CONFIG.RAIL_PADDING;
+                    // Use the same effective left rail position for consistent spacing
+                    const leftRailConnectionX = leftRailX + CONFIG.POWER_RAIL_WIDTH / 2 + 5;
+                    const effectiveLeftRailX = leftRailConnectionX + CONFIG.ELEMENT_SPACING;
+                    let xPos = effectiveLeftRailX;
+                    
                     line.elements.forEach(el => {
                         el.x = xPos + el.elWidth / 2;
                         el.y = line.y;
@@ -313,20 +323,24 @@
                 return { leftRailX, rightRailX };
             }
 
-            drawPowerRails(height) {
+            drawPowerRails(contentTop, contentBottom) {
                 const { leftRailX, rightRailX } = this.getRailPositions();
                 this.ctx.strokeStyle = CONFIG.COLORS.RAIL;
                 this.ctx.lineWidth = CONFIG.POWER_RAIL_WIDTH;
                 this.ctx.lineCap = 'round';
                 
+                // Add some padding above and below the content for the rails
+                const railTop = Math.max(0, contentTop - 20);
+                const railBottom = Math.min(this.canvas.height, contentBottom + 20);
+                
                 this.ctx.beginPath();
-                this.ctx.moveTo(leftRailX, 0);
-                this.ctx.lineTo(leftRailX, height);
+                this.ctx.moveTo(leftRailX, railTop);
+                this.ctx.lineTo(leftRailX, railBottom);
                 this.ctx.stroke();
                 
                 this.ctx.beginPath();
-                this.ctx.moveTo(rightRailX, 0);
-                this.ctx.lineTo(rightRailX, height);
+                this.ctx.moveTo(rightRailX, railTop);
+                this.ctx.lineTo(rightRailX, railBottom);
                 this.ctx.stroke();
             }
 
@@ -348,9 +362,11 @@
                     }
                 });
 
+                // Draw left rail connection with proper spacing consideration
                 const firstEl = lines[0].elements[0];
+                const leftRailConnectionX = leftRailX + CONFIG.POWER_RAIL_WIDTH / 2 + 5; // Add small gap from rail
                 this.ctx.beginPath();
-                this.ctx.moveTo(leftRailX, firstEl.y);
+                this.ctx.moveTo(leftRailConnectionX, firstEl.y);
                 this.ctx.lineTo(firstEl.x - firstEl.elWidth / 2, firstEl.y);
                 this.ctx.stroke();
                 
@@ -501,6 +517,8 @@
                         this.ctx.lineTo(elementX - element.elWidth / 2, pathY);
                         this.ctx.stroke();
                         this.drawElement({ ...element, x: elementX, y: pathY });
+                        // Reset stroke style to wire color after drawing element
+                        this.ctx.strokeStyle = CONFIG.COLORS.WIRE;
                         currentXInPath = elementX + element.elWidth / 2;
                     });
 
@@ -516,6 +534,8 @@
                         this.ctx.stroke();
                         
                         this.drawElement({ ...coilToDraw, x: coilX, y: pathY });
+                        // Reset stroke style to wire color after drawing coil
+                        this.ctx.strokeStyle = CONFIG.COLORS.WIRE;
                         
                         this.ctx.beginPath();
                         this.ctx.moveTo(coilX + coilToDraw.elWidth / 2, pathY);
@@ -626,6 +646,25 @@
                     { type: 'NC_CONTACT', label: 'Yet_Another_Condition' },
                     { type: 'NO_CONTACT', label: 'Final_Input_Before_Coil'},
                     { type: 'OUTPUT_COIL', label: 'Complex_Wrapped_Output' }
+                ],
+                zoomTest: [
+                    { type: 'NO_CONTACT', label: 'A' },
+                    { type: 'NO_CONTACT', label: 'B' },
+                    { type: 'NO_CONTACT', label: 'C' },
+                    { type: 'NO_CONTACT', label: 'D' },
+                    { type: 'NO_CONTACT', label: 'E' },
+                    { type: 'NO_CONTACT', label: 'F' },
+                    { type: 'NO_CONTACT', label: 'G' },
+                    { type: 'NO_CONTACT', label: 'H' },
+                    { type: 'NO_CONTACT', label: 'I' },
+                    { type: 'NO_CONTACT', label: 'J' },
+                    { type: 'NO_CONTACT', label: 'K' },
+                    { type: 'NO_CONTACT', label: 'L' },
+                    { type: 'NO_CONTACT', label: 'M' },
+                    { type: 'NO_CONTACT', label: 'N' },
+                    { type: 'NO_CONTACT', label: 'O' },
+                    { type: 'NO_CONTACT', label: 'P' },
+                    { type: 'OUTPUT_COIL', label: 'Zoom_Test_Coil' }
                 ]
             },
 
@@ -656,7 +695,7 @@
 
             init() {
                 // Set an initial test case to display on load
-                this.runTest('complexWrap'); 
+                this.runTest('zoomTest'); 
             }
         };
 
