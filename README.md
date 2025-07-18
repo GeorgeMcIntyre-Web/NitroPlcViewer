@@ -23,6 +23,7 @@ A professional, web-based PLC ladder logic viewer that mimics the look and feel 
 - **Studio 5000 Styling**: Authentic look and feel matching the original software
 - **ISA-101 Compliant Colors**: Professional color scheme for industrial applications
 - **Responsive Design**: Works on desktop, tablet, and mobile devices
+- **Resizable Panels**: Drag to resize the tree panel and content area divider
 - **Accessibility**: ARIA labels, screen reader support, and keyboard navigation
 - **High Contrast Mode**: Support for high contrast display preferences
 
@@ -105,6 +106,13 @@ NitroPlcViewer/
 2. View the ladder logic in the main panel
 3. Switch between "Ladder Diagram" and "Neutral Text" views
 4. Use zoom controls to adjust the view
+5. Drag the divider between tree and content panels to resize
+
+### **Resizing Panels**
+1. Hover over the divider between the tree panel and content area
+2. Click and drag the divider left or right to resize
+3. The tree panel can be resized between 200px and 600px width
+4. Release to set the new size
 
 ### **Cross-Reference Analysis**
 1. Select a routine or tag

@@ -49,7 +49,8 @@ function setupElements() {
         contentHeader: 'contentHeader',
         contentTitle: 'contentTitle',
         contentMeta: 'contentMeta',
-        rungContainer: 'rungContainer'
+        rungContainer: 'rungContainer',
+        resizer: 'resizer'
     };
 
     elements = initializeElements(elementIds);
@@ -67,6 +68,9 @@ function setupEventListeners() {
             elements.searchInput.addEventListener('input', debouncedSearch);
             elements.searchInput.addEventListener('keydown', handleSearchKeyboard);
         }
+
+        // Setup resizer functionality
+        setupResizer();
 
         // Global error handler
         window.addEventListener('error', (event) => {
@@ -257,9 +261,12 @@ function renderProjectTree(data) {
             }, 50);
         }
 
-        // Show tree panel
+        // Show tree panel and resizer
         if (elements.treePanel) {
             elements.treePanel.style.display = 'flex';
+        }
+        if (elements.resizer) {
+            elements.resizer.style.display = 'block';
         }
 
         // Reset tree state
@@ -441,29 +448,29 @@ function renderTasks(controllerNode, data) {
                 meta: getTaskMeta(task)
             });
 
-            // Add Programs subsection
-            if (data.programs && data.programs.length > 0) {
+            // Add Programs subsection WITHIN this task
+            if (task.programs && task.programs.length > 0) {
                 const programsNode = createTreeNode({
                     id: `task-${task.name}-programs`,
                     name: 'Programs',
                     type: 'programs-section',
-                    icon: '📋',
-                    meta: `${data.programs.length} programs`
+                    icon: '📁',
+                    meta: `${task.programs.length} programs`
                 });
 
-                data.programs.forEach(program => {
+                task.programs.forEach(program => {
                     const programNode = createTreeNode({
-                        id: `program-${program.name}`,
+                        id: `program-${task.name}-${program.name}`,
                         name: program.name,
                         type: 'program',
                         icon: '📋',
-                        meta: `Main Routine: ${program.mainroutinename || 'None'}`
+                        meta: `Main Routine: ${program.mainroutinename || 'MainRoutine'}`
                     });
 
                     // Add Program Tags subsection
                     if (program.tags && program.tags.length > 0) {
                         const programTagsNode = createTreeNode({
-                            id: `program-${program.name}-tags`,
+                            id: `program-${task.name}-${program.name}-tags`,
                             name: 'Program Tags',
                             type: 'program-tags',
                             icon: '🏷️',
@@ -473,7 +480,7 @@ function renderTasks(controllerNode, data) {
                         const tagNodes = [];
                         program.tags.forEach(tag => {
                             const tagNode = createTreeNode({
-                                id: `program-tag-${program.name}-${tag.name}`,
+                                id: `program-tag-${task.name}-${program.name}-${tag.name}`,
                                 name: tag.name,
                                 type: `tag-${tag.datatype?.toLowerCase() || 'unknown'}`,
                                 icon: getTagIcon(tag.datatype),
@@ -488,7 +495,7 @@ function renderTasks(controllerNode, data) {
                     // Add Routines subsection
                     if (program.routines && program.routines.length > 0) {
                         const routinesNode = createTreeNode({
-                            id: `program-${program.name}-routines`,
+                            id: `program-${task.name}-${program.name}-routines`,
                             name: 'Routines',
                             type: 'routines-section',
                             icon: '🪜',
@@ -498,7 +505,7 @@ function renderTasks(controllerNode, data) {
                         const routineNodes = [];
                         program.routines.forEach(routine => {
                             const routineNode = createTreeNode({
-                                id: `routine-${program.name}-${routine.name}`,
+                                id: `routine-${task.name}-${program.name}-${routine.name}`,
                                 name: routine.name,
                                 type: `routine-${routine.type?.toLowerCase() || 'rll'}`,
                                 icon: getRoutineIcon(routine.type),
@@ -513,7 +520,7 @@ function renderTasks(controllerNode, data) {
                     // Add Parameters & Local Tags subsection
                     if (program.parameters && program.parameters.length > 0) {
                         const parametersNode = createTreeNode({
-                            id: `program-${program.name}-parameters`,
+                            id: `program-${task.name}-${program.name}-parameters`,
                             name: 'Parameters & Local Tags',
                             type: 'parameters-section',
                             icon: '⚙️',
@@ -523,7 +530,7 @@ function renderTasks(controllerNode, data) {
                         const parameterNodes = [];
                         program.parameters.forEach(param => {
                             const paramNode = createTreeNode({
-                                id: `parameter-${program.name}-${param.name}`,
+                                id: `parameter-${task.name}-${program.name}-${param.name}`,
                                 name: param.name,
                                 type: 'parameter',
                                 icon: '⚙️',
@@ -998,9 +1005,9 @@ function getTaskIcon(taskType) {
 
 function getTaskMeta(task) {
     const parts = [];
-    if (task.type) parts.push(task.type);
-    if (task.rate) parts.push(`${task.rate}ms`);
+    if (task.type) parts.push(task.type.toUpperCase());
     if (task.priority) parts.push(`Priority: ${task.priority}`);
+    if (task.rate && task.type?.toLowerCase() === 'periodic') parts.push(`${task.rate}ms`);
     return parts.join(' - ');
 }
 
@@ -1053,6 +1060,86 @@ function showError(message) {
         }
     } catch (error) {
         console.error('Error display failed:', error);
+    }
+}
+
+// Resizer functionality
+function setupResizer() {
+    try {
+        const resizer = elements.resizer;
+        const treePanel = elements.treePanel;
+        
+        if (!resizer || !treePanel) {
+            console.warn('Resizer elements not found');
+            return;
+        }
+
+        let isResizing = false;
+        let startX = 0;
+        let startWidth = 0;
+
+        const startResize = (e) => {
+            isResizing = true;
+            startX = e.clientX;
+            startWidth = treePanel.offsetWidth;
+            
+            resizer.classList.add('dragging');
+            document.body.classList.add('resizing');
+            document.body.style.cursor = 'col-resize';
+            
+            // Show resizer when tree panel is visible
+            resizer.style.display = 'block';
+        };
+
+        const doResize = (e) => {
+            if (!isResizing) return;
+            
+            const deltaX = e.clientX - startX;
+            const newWidth = Math.max(200, Math.min(600, startWidth + deltaX));
+            
+            treePanel.style.width = `${newWidth}px`;
+        };
+
+        const stopResize = () => {
+            if (!isResizing) return;
+            
+            isResizing = false;
+            resizer.classList.remove('dragging');
+            document.body.classList.remove('resizing');
+            document.body.style.cursor = '';
+        };
+
+        // Mouse events
+        resizer.addEventListener('mousedown', startResize);
+        document.addEventListener('mousemove', doResize);
+        document.addEventListener('mouseup', stopResize);
+
+        // Touch events for mobile
+        resizer.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            startResize(e.touches[0]);
+        });
+        
+        document.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            doResize(e.touches[0]);
+        });
+        
+        document.addEventListener('touchend', stopResize);
+
+        // Show/hide resizer based on tree panel visibility
+        const observer = new MutationObserver(() => {
+            if (treePanel.style.display === 'flex' || treePanel.style.display === 'block') {
+                resizer.style.display = 'block';
+            } else {
+                resizer.style.display = 'none';
+            }
+        });
+
+        observer.observe(treePanel, { attributes: true, attributeFilter: ['style'] });
+
+    } catch (error) {
+        console.error('Resizer setup failed:', error);
     }
 }
 

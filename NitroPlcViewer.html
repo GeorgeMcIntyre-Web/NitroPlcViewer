@@ -1,0 +1,1518 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NitroPlcViewer - Studio 5000 Logix Designer Style</title>
+    <style>
+        /* ============================================================================
+        STUDIO 5000 LOGIX DESIGNER STYLE CSS
+        ============================================================================ */
+
+        :root {
+            /* Studio 5000 Color Scheme */
+            --primary-bg: #1e3a8a;
+            --secondary-bg: #f8fafc;
+            --content-bg: #ffffff;
+            --border-color: #e2e8f0;
+            --accent-color: #2563eb;
+            --text-color: #1f2937;
+            --light-text: #f1f5f9;
+            --muted-text: #6b7280;
+            --hover-bg: #f1f5f9;
+            --selected-bg: #dbeafe;
+            --error-color: #dc2626;
+            --warning-color: #f59e0b;
+            --success-color: #059669;
+            
+            /* Tree-specific colors */
+            --tree-bg: #ffffff;
+            --tree-border: #e2e8f0;
+            --tree-hover: #f8fafc;
+            --tree-selected: #eff6ff;
+            --tree-selected-border: #2563eb;
+            
+            /* Element type colors */
+            --task-continuous: #059669;
+            --task-periodic: #f59e0b;
+            --task-event: #dc2626;
+            --routine-rll: #2563eb;
+            --routine-st: #7c3aed;
+            --routine-fbd: #ea580c;
+            --tag-bool: #059669;
+            --tag-int: #2563eb;
+            --tag-real: #7c3aed;
+            --tag-timer: #f59e0b;
+            --tag-counter: #dc2626;
+            --tag-string: #0891b2;
+            --tag-group: #059669;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: var(--secondary-bg);
+            color: var(--text-color);
+            line-height: 1.6;
+            overflow: hidden;
+        }
+
+        /* Header */
+        .header {
+            background: var(--primary-bg);
+            color: var(--light-text);
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .header h1 {
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .header-controls {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .btn {
+            background: var(--accent-color);
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: background-color 0.2s;
+        }
+
+        .btn:hover {
+            background: #1d4ed8;
+        }
+
+        .btn-secondary {
+            background: transparent;
+            border: 1px solid var(--light-text);
+            color: var(--light-text);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255,255,255,0.1);
+        }
+
+        /* Main Layout */
+        .main-container {
+            display: flex;
+            height: calc(100vh - 80px);
+        }
+
+        /* Tree Panel */
+        .tree-panel {
+            width: 350px;
+            background: var(--tree-bg);
+            border-right: 1px solid var(--tree-border);
+            display: none;
+            flex-direction: column;
+            min-width: 200px;
+            max-width: 600px;
+        }
+
+        /* Resizable Divider */
+        .resizer {
+            width: 8px;
+            background: var(--border-color);
+            border-left: 1px solid var(--border-color);
+            border-right: 1px solid var(--border-color);
+            cursor: col-resize;
+            position: relative;
+            transition: background-color 0.2s;
+            display: none;
+            z-index: 10;
+            margin: 0 -1px;
+        }
+
+        .resizer:hover {
+            background: var(--accent-color);
+        }
+
+        .resizer::before {
+            content: '';
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            width: 2px;
+            height: 30px;
+            background: var(--muted-text);
+            border-radius: 1px;
+        }
+
+        .resizer::after {
+            content: '';
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            width: 2px;
+            height: 30px;
+            background: var(--muted-text);
+            border-radius: 1px;
+            margin-left: 4px;
+        }
+
+        .resizer.dragging {
+            background: var(--accent-color);
+        }
+
+        .resizer.dragging::before,
+        .resizer.dragging::after {
+            background: var(--light-text);
+        }
+
+        /* Prevent text selection during resize */
+        .resizing {
+            user-select: none;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+        }
+
+        .tree-header {
+            padding: 1rem;
+            border-bottom: 1px solid var(--tree-border);
+            background: var(--secondary-bg);
+        }
+
+        .search-container {
+            position: relative;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 0.5rem 2rem 0.5rem 0.5rem;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            font-size: 0.9rem;
+        }
+
+        .search-clear {
+            position: absolute;
+            right: 0.5rem;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: var(--muted-text);
+            font-size: 1.2rem;
+        }
+
+        .tree-controls {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+        }
+
+        .tree-controls .btn {
+            flex: 1;
+            font-size: 0.8rem;
+            padding: 0.25rem 0.5rem;
+        }
+
+        .tree-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 0.5rem;
+        }
+
+        /* Tree Structure */
+        .tree {
+            list-style: none;
+            padding: 0;
+        }
+
+        .tree-node {
+            margin: 0;
+        }
+
+        .tree-item {
+            display: flex;
+            align-items: center;
+            padding: 0.5rem;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: background-color 0.2s;
+            user-select: none;
+        }
+
+        .tree-item:hover {
+            background: var(--tree-hover);
+        }
+
+        .tree-item.selected {
+            background: var(--tree-selected);
+            border: 1px solid var(--tree-selected-border);
+        }
+
+        .tree-toggle {
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            margin-right: 0.5rem;
+            font-size: 0.8rem;
+            transition: transform 0.2s;
+        }
+
+        .tree-toggle.expanded {
+            transform: rotate(90deg);
+        }
+
+        .tree-icon {
+            margin-right: 0.5rem;
+            font-size: 1.1rem;
+            width: 20px;
+            text-align: center;
+        }
+
+        .tree-text {
+            flex: 1;
+            font-size: 0.9rem;
+        }
+
+        .tree-meta {
+            font-size: 0.8rem;
+            color: var(--muted-text);
+            margin-left: 0.5rem;
+        }
+
+        .tree-children {
+            list-style: none;
+            padding-left: 1.5rem;
+            margin: 0;
+        }
+
+        .tree-children.collapsed {
+            display: none;
+        }
+
+        /* Content Panel */
+        .content-panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: var(--content-bg);
+        }
+
+        .content-header {
+            padding: 1rem 2rem;
+            border-bottom: 1px solid var(--border-color);
+            background: var(--secondary-bg);
+            display: none;
+        }
+
+        .content-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .content-meta {
+            display: flex;
+            gap: 1rem;
+            font-size: 0.9rem;
+            color: var(--muted-text);
+        }
+
+        .content-meta span {
+            background: var(--content-bg);
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            border: 1px solid var(--border-color);
+        }
+
+        .content-body {
+            flex: 1;
+            overflow-y: auto;
+            padding: 2rem;
+        }
+
+        /* Welcome Screen */
+        .welcome {
+            text-align: center;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .welcome-icon {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+        }
+
+        .welcome h2 {
+            font-size: 2rem;
+            margin-bottom: 1rem;
+            color: var(--primary-bg);
+        }
+
+        .welcome p {
+            font-size: 1.1rem;
+            margin-bottom: 1rem;
+            color: var(--muted-text);
+        }
+
+        .welcome ul {
+            text-align: left;
+            margin: 1rem 0;
+            padding-left: 2rem;
+        }
+
+        .welcome li {
+            margin-bottom: 0.5rem;
+        }
+
+        /* Rung Display */
+        .rung {
+            background: var(--content-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            overflow: hidden;
+        }
+
+        .rung-header {
+            background: var(--secondary-bg);
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .rung-number {
+            font-weight: 600;
+            color: var(--primary-bg);
+        }
+
+        .rung-comment {
+            font-style: italic;
+            color: var(--muted-text);
+            font-size: 0.9rem;
+        }
+
+        .rung-content {
+            padding: 1rem;
+            font-family: 'Courier New', monospace;
+            background: #f8f9fa;
+            border-radius: 0 0 8px 8px;
+            white-space: pre-wrap;
+            font-size: 0.9rem;
+            line-height: 1.4;
+        }
+
+        /* Status Bar */
+        .status-bar {
+            background: var(--primary-bg);
+            color: var(--light-text);
+            padding: 0.5rem 2rem;
+            font-size: 0.9rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .status-text {
+            flex: 1;
+        }
+
+        .status-details {
+            font-size: 0.8rem;
+            opacity: 0.8;
+        }
+
+        /* Loading and Error States */
+        .loading, .error {
+            text-align: center;
+            padding: 2rem;
+        }
+
+        .loading .welcome-icon, .error .error-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+
+        .error .error-icon {
+            color: var(--error-color);
+        }
+
+        /* Accessibility */
+        .sr-only {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border: 0;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .main-container {
+                flex-direction: column;
+            }
+            
+            .tree-panel {
+                width: 100%;
+                height: 300px;
+            }
+            
+            .header {
+                padding: 1rem;
+            }
+            
+            .header h1 {
+                font-size: 1.2rem;
+            }
+            
+            .content-body {
+                padding: 1rem;
+            }
+        }
+
+        /* Scrollbar Styling */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--secondary-bg);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--border-color);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--muted-text);
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <h1>🏭 NitroPlcViewer</h1>
+        <div class="header-controls">
+            <button class="btn" onclick="openFile()">📁 Open L5X File</button>
+            <button class="btn btn-secondary" onclick="expandAll()">📂 Expand All</button>
+            <button class="btn btn-secondary" onclick="collapseAll()">📁 Collapse All</button>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <div class="main-container">
+        <!-- Tree Panel -->
+        <aside class="tree-panel" id="treePanel">
+            <div class="tree-header">
+                <div class="search-container">
+                    <input type="text" class="search-input" id="searchInput" placeholder="Search tree...">
+                    <button class="search-clear" onclick="clearSearch()">×</button>
+                </div>
+                <div class="tree-controls">
+                    <button class="btn" onclick="expandAll()">Expand</button>
+                    <button class="btn" onclick="collapseAll()">Collapse</button>
+                </div>
+            </div>
+            <div class="tree-content" id="treeContent">
+                <!-- Tree will be populated here -->
+            </div>
+        </aside>
+
+        <!-- Resizable Divider -->
+        <div class="resizer" id="resizer"></div>
+
+        <!-- Content Panel -->
+        <main class="content-panel">
+            <div class="content-header" id="contentHeader">
+                <h2 class="content-title" id="contentTitle">Project Information</h2>
+                <div class="content-meta" id="contentMeta">
+                    <span>Type: Controller</span>
+                    <span>Status: Ready</span>
+                </div>
+            </div>
+            <div class="content-body">
+                <div id="rungContainer">
+                    <div class="welcome">
+                        <div class="welcome-icon">🏭</div>
+                        <h2>NitroPlcViewer</h2>
+                        <p>Studio 5000 Logix Designer Style PLC Project Viewer</p>
+                        <p>Load an L5X file to explore your PLC project with the complete Studio 5000 structure.</p>
+                        <button class="btn" onclick="openFile()" style="margin-top: 1rem;">📁 Open L5X File</button>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Status Bar -->
+    <footer class="status-bar">
+        <div class="status-text" id="statusText">Ready to load L5X project file</div>
+        <div class="status-details" id="statusDetails">Studio 5000 Style</div>
+    </footer>
+
+    <!-- Hidden File Input -->
+    <input type="file" id="fileInput" accept=".l5x,.xml" style="display: none;">
+
+    <script>
+        // ============================================================================
+        // SINGLE FILE NITRO PLC VIEWER
+        // ============================================================================
+
+        // Configuration
+        const VALIDATION = {
+            MAX_FILE_SIZE: 50 * 1024 * 1024, // 50MB limit
+            ALLOWED_FILE_TYPES: ['.l5x', '.xml'],
+            MAX_TREE_DEPTH: 10,
+            MAX_SEARCH_LENGTH: 100,
+            SANITIZE_REGEX: /[<>\"'&]/g,
+            XML_ENTITIES: {
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#x27;'
+            }
+        };
+
+        // Application state
+        let projectData = null;
+        let selectedItem = null;
+        let searchQuery = '';
+        let treeState = new Map();
+        let securityViolations = 0;
+
+        // DOM elements
+        let elements = {};
+
+        // Initialize DOM elements
+        function setupElements() {
+            elements = {
+                fileInput: document.getElementById('fileInput'),
+                searchInput: document.getElementById('searchInput'),
+                statusText: document.getElementById('statusText'),
+                statusDetails: document.getElementById('statusDetails'),
+                treePanel: document.getElementById('treePanel'),
+                treeContent: document.getElementById('treeContent'),
+                contentHeader: document.getElementById('contentHeader'),
+                contentTitle: document.getElementById('contentTitle'),
+                contentMeta: document.getElementById('contentMeta'),
+                rungContainer: document.getElementById('rungContainer'),
+                resizer: document.getElementById('resizer')
+            };
+        }
+
+        // Setup event listeners
+        function setupEventListeners() {
+            try {
+                if (elements.fileInput) {
+                    elements.fileInput.addEventListener('change', handleFileSelect);
+                }
+                
+                if (elements.searchInput) {
+                    const debouncedSearch = debounce(handleSearch, 300);
+                    elements.searchInput.addEventListener('input', debouncedSearch);
+                    elements.searchInput.addEventListener('keydown', handleSearchKeyboard);
+                }
+
+                // Setup resizer functionality
+                setupResizer();
+
+                // Global error handler
+                window.addEventListener('error', (event) => {
+                    console.error('Global error:', event.error);
+                });
+
+                // Unhandled promise rejection handler
+                window.addEventListener('unhandledrejection', (event) => {
+                    console.error('Unhandled promise rejection:', event.reason);
+                });
+
+            } catch (error) {
+                console.error('Event listener setup failed:', error);
+            }
+        }
+
+        // Resizer functionality
+        function setupResizer() {
+            try {
+                const resizer = elements.resizer;
+                const treePanel = elements.treePanel;
+                
+                if (!resizer || !treePanel) {
+                    console.warn('Resizer elements not found');
+                    return;
+                }
+
+                let isResizing = false;
+                let startX = 0;
+                let startWidth = 0;
+
+                const startResize = (e) => {
+                    isResizing = true;
+                    startX = e.clientX;
+                    startWidth = treePanel.offsetWidth;
+                    
+                    resizer.classList.add('dragging');
+                    document.body.classList.add('resizing');
+                    document.body.style.cursor = 'col-resize';
+                    
+                    // Show resizer when tree panel is visible
+                    resizer.style.display = 'block';
+                };
+
+                const doResize = (e) => {
+                    if (!isResizing) return;
+                    
+                    const deltaX = e.clientX - startX;
+                    const newWidth = Math.max(200, Math.min(600, startWidth + deltaX));
+                    
+                    treePanel.style.width = `${newWidth}px`;
+                };
+
+                const stopResize = () => {
+                    if (!isResizing) return;
+                    
+                    isResizing = false;
+                    resizer.classList.remove('dragging');
+                    document.body.classList.remove('resizing');
+                    document.body.style.cursor = '';
+                };
+
+                // Mouse events
+                resizer.addEventListener('mousedown', startResize);
+                document.addEventListener('mousemove', doResize);
+                document.addEventListener('mouseup', stopResize);
+
+                // Touch events for mobile
+                resizer.addEventListener('touchstart', (e) => {
+                    e.preventDefault();
+                    startResize(e.touches[0]);
+                });
+                
+                document.addEventListener('touchmove', (e) => {
+                    e.preventDefault();
+                    doResize(e.touches[0]);
+                });
+                
+                document.addEventListener('touchend', stopResize);
+
+                // Show/hide resizer based on tree panel visibility
+                const observer = new MutationObserver(() => {
+                    if (treePanel.style.display === 'flex' || treePanel.style.display === 'block') {
+                        resizer.style.display = 'block';
+                    } else {
+                        resizer.style.display = 'none';
+                    }
+                });
+
+                observer.observe(treePanel, { attributes: true, attributeFilter: ['style'] });
+
+            } catch (error) {
+                console.error('Resizer setup failed:', error);
+            }
+        }
+
+        // Utility functions
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
+
+        function sanitizeInput(input) {
+            if (typeof input !== 'string') return '';
+            return input.replace(VALIDATION.SANITIZE_REGEX, (match) => {
+                return VALIDATION.XML_ENTITIES[match] || match;
+            });
+        }
+
+        function validateFile(file) {
+            if (!file) {
+                throw new Error('No file selected');
+            }
+            
+            if (file.size > VALIDATION.MAX_FILE_SIZE) {
+                throw new Error(`File too large. Maximum size is ${VALIDATION.MAX_FILE_SIZE / (1024 * 1024)}MB`);
+            }
+            
+            const fileName = file.name.toLowerCase();
+            const isValidType = VALIDATION.ALLOWED_FILE_TYPES.some(ext => fileName.endsWith(ext));
+            if (!isValidType) {
+                throw new Error('Invalid file type. Please select an L5X or XML file');
+            }
+        }
+
+        function parseXMLSafely(xmlString) {
+            try {
+                const parser = new DOMParser();
+                const xmlDoc = parser.parseFromString(xmlString, 'text/xml');
+                
+                if (xmlDoc.getElementsByTagName('parsererror').length > 0) {
+                    throw new Error('Invalid XML format');
+                }
+                
+                return xmlDoc;
+            } catch (error) {
+                throw new Error('Failed to parse XML: ' + error.message);
+            }
+        }
+
+        function handleError(error, context) {
+            console.error(`${context} error:`, error);
+            return `Error: ${error.message}`;
+        }
+
+        // File handling functions
+        function openFile() {
+            try {
+                if (!elements.fileInput) {
+                    throw new Error('File input element not available');
+                }
+                elements.fileInput.click();
+            } catch (error) {
+                console.error('File open operation failed:', error);
+                updateStatus(handleError(error, 'File open operation'));
+            }
+        }
+
+        function handleFileSelect(event) {
+            try {
+                const file = event.target.files[0];
+                if (!file) return;
+
+                // Validate file
+                validateFile(file);
+
+                updateStatus(`Loading ${sanitizeInput(file.name)}...`);
+                showLoading();
+
+                const reader = new FileReader();
+                
+                reader.onload = (e) => {
+                    try {
+                        const xmlString = e.target.result;
+                        
+                        // Validate XML string
+                        if (typeof xmlString !== 'string' || xmlString.length === 0) {
+                            throw new Error('Invalid file content');
+                        }
+
+                        // Parse XML safely
+                        const xmlDoc = parseXMLSafely(xmlString);
+                        
+                        // Validate L5X structure
+                        const controller = xmlDoc.querySelector('Controller');
+                        if (!controller) {
+                            throw new Error('Invalid L5X file - No Controller element found');
+                        }
+
+                        // Parse project data (simplified for demo)
+                        projectData = parseL5X(xmlDoc);
+                        if (!projectData || !projectData.controller) {
+                            throw new Error('Failed to parse L5X file structure');
+                        }
+
+                        // Render project tree
+                        renderProjectTree(projectData);
+                        updateStatus(`✅ ${sanitizeInput(projectData.controller.name)} loaded successfully`);
+                        showProjectInfo();
+                        
+                        // Reset security violations on successful load
+                        securityViolations = 0;
+                        
+                    } catch (error) {
+                        const errorMessage = handleError(error, 'File processing');
+                        updateStatus(errorMessage);
+                        showError(errorMessage);
+                    }
+                };
+                
+                reader.onerror = () => {
+                    const errorMessage = handleError(new Error('Failed to read file'), 'File reading');
+                    updateStatus(errorMessage);
+                    showError(errorMessage);
+                };
+                
+                reader.readAsText(file);
+                
+            } catch (error) {
+                const errorMessage = handleError(error, 'File selection');
+                updateStatus(errorMessage);
+                showError(errorMessage);
+            }
+        }
+
+        // Helper functions for getting appropriate icons
+        function getTagIcon(tagType) {
+            const type = tagType?.toLowerCase() || '';
+            if (type.includes('bool')) return '🔘';
+            if (type.includes('int') || type.includes('dint') || type.includes('sint')) return '🔢';
+            if (type.includes('real') || type.includes('float')) return '📊';
+            if (type.includes('string')) return '📝';
+            if (type.includes('timer')) return '⏱️';
+            if (type.includes('counter')) return '🔢';
+            return '🏷️';
+        }
+
+        function getTaskIcon(taskType) {
+            const type = taskType?.toLowerCase() || '';
+            if (type.includes('continuous')) return '🔄';
+            if (type.includes('periodic')) return '⏰';
+            if (type.includes('event')) return '⚡';
+            return '⚙️';
+        }
+
+        function getRoutineIcon(routineType) {
+            const type = routineType?.toLowerCase() || '';
+            if (type.includes('rll')) return '📋';
+            if (type.includes('st')) return '📝';
+            if (type.includes('fbd')) return '🔧';
+            return '📄';
+        }
+
+        // Enhanced L5X parser to extract actual project structure
+        function parseL5X(xmlDoc) {
+            const controller = xmlDoc.querySelector('Controller');
+            if (!controller) return null;
+
+            const controllerName = controller.getAttribute('Name') || 'Unknown Controller';
+            const processorType = controller.getAttribute('ProcessorType') || 'Unknown';
+            const majorRev = controller.getAttribute('MajorRev') || '0';
+            const minorRev = controller.getAttribute('MinorRev') || '0';
+
+            // Parse Controller Tags
+            const controllerTags = [];
+            const tags = controller.querySelectorAll('Tags Tag');
+            tags.forEach(tag => {
+                const tagName = tag.getAttribute('Name') || 'Unknown Tag';
+                const tagType = tag.getAttribute('DataType') || 'Unknown';
+                const tagValue = tag.getAttribute('Value') || '';
+                controllerTags.push({
+                    name: tagName,
+                    type: tagType,
+                    value: tagValue
+                });
+            });
+
+            // Parse Tasks
+            const tasks = [];
+            const taskElements = controller.querySelectorAll('Tasks Task');
+            taskElements.forEach(task => {
+                const taskName = task.getAttribute('Name') || 'Unknown Task';
+                const taskType = task.getAttribute('Type') || 'Unknown';
+                const taskRate = task.getAttribute('Rate') || '';
+                const taskPriority = task.getAttribute('Priority') || '';
+                tasks.push({
+                    name: taskName,
+                    type: taskType,
+                    rate: taskRate,
+                    priority: taskPriority
+                });
+            });
+
+            // Parse Programs
+            const programs = [];
+            const programElements = controller.querySelectorAll('Programs Program');
+            programElements.forEach(program => {
+                const programName = program.getAttribute('Name') || 'Unknown Program';
+                const programType = program.getAttribute('Type') || 'Unknown';
+                const programTestEdits = program.getAttribute('TestEdits') || 'false';
+                
+                // Parse Program Tags
+                const programTags = [];
+                const programTagElements = program.querySelectorAll('Tags Tag');
+                programTagElements.forEach(tag => {
+                    const tagName = tag.getAttribute('Name') || 'Unknown Tag';
+                    const tagType = tag.getAttribute('DataType') || 'Unknown';
+                    programTags.push({
+                        name: tagName,
+                        type: tagType
+                    });
+                });
+
+                // Parse Routines
+                const routines = [];
+                const routineElements = program.querySelectorAll('Routines Routine');
+                routineElements.forEach(routine => {
+                    const routineName = routine.getAttribute('Name') || 'Unknown Routine';
+                    const routineType = routine.getAttribute('Type') || 'Unknown';
+                    const routineInhibit = routine.getAttribute('Inhibit') || 'false';
+                    routines.push({
+                        name: routineName,
+                        type: routineType,
+                        inhibit: routineInhibit
+                    });
+                });
+
+                programs.push({
+                    name: programName,
+                    type: programType,
+                    testedits: programTestEdits,
+                    tags: programTags,
+                    routines: routines
+                });
+            });
+
+            // Parse Data Types
+            const dataTypes = [];
+            const dataTypeElements = controller.querySelectorAll('DataTypes DataType');
+            dataTypeElements.forEach(dataType => {
+                const dataTypeName = dataType.getAttribute('Name') || 'Unknown DataType';
+                const dataTypeFamily = dataType.getAttribute('Family') || 'Unknown';
+                dataTypes.push({
+                    name: dataTypeName,
+                    family: dataTypeFamily
+                });
+            });
+
+            // Parse Add-On Instructions
+            const addOnInstructions = [];
+            const aoiElements = controller.querySelectorAll('AddOnInstructionDefinitions AddOnInstructionDefinition');
+            aoiElements.forEach(aoi => {
+                const aoiName = aoi.getAttribute('Name') || 'Unknown AOI';
+                const aoiRevision = aoi.getAttribute('Revision') || '0';
+                addOnInstructions.push({
+                    name: aoiName,
+                    revision: aoiRevision
+                });
+            });
+
+            return {
+                controller: {
+                    name: controllerName,
+                    processortype: processorType,
+                    majorrev: majorRev,
+                    minorrev: minorRev
+                },
+                controllerTags: controllerTags,
+                tasks: tasks,
+                programs: programs,
+                dataTypes: dataTypes,
+                addOnInstructions: addOnInstructions
+            };
+        }
+
+        // Search functionality
+        function handleSearch() {
+            try {
+                const query = elements.searchInput.value;
+                
+                // Validate search query
+                if (query.length > VALIDATION.MAX_SEARCH_LENGTH) {
+                    elements.searchInput.value = query.substring(0, VALIDATION.MAX_SEARCH_LENGTH);
+                    return;
+                }
+                
+                searchQuery = sanitizeInput(query);
+                // Implement search functionality here
+                
+            } catch (error) {
+                console.error('Search operation failed:', error);
+            }
+        }
+
+        function handleSearchKeyboard(event) {
+            if (event.key === 'Escape') {
+                clearSearch();
+            }
+        }
+
+        function clearSearch() {
+            try {
+                if (elements.searchInput) {
+                    elements.searchInput.value = '';
+                    searchQuery = '';
+                    elements.searchInput.blur();
+                }
+            } catch (error) {
+                console.error('Clear search failed:', error);
+            }
+        }
+
+        // Tree rendering functions
+        function renderProjectTree(data) {
+            try {
+                if (!data || !data.controller) {
+                    throw new Error('Invalid project data for tree rendering');
+                }
+
+                // Clear existing tree
+                if (elements.treeContent) {
+                    elements.treeContent.innerHTML = '';
+                }
+
+                // Create root controller node
+                const controllerNode = createTreeNode({
+                    id: 'controller',
+                    name: data.controller.name,
+                    type: 'controller',
+                    icon: '🏭',
+                    meta: `${data.controller.processortype || 'Unknown'} - v${data.controller.majorrev || '0'}.${data.controller.minorrev || '0'}`
+                });
+
+                // Add actual project sections based on parsed data
+                const childrenContainer = controllerNode.querySelector('.tree-children');
+                if (childrenContainer) {
+                    // Add Controller Tags section
+                    if (data.controllerTags && data.controllerTags.length > 0) {
+                        const tagsNode = createTreeNode({
+                            id: 'tags',
+                            name: 'Controller Tags',
+                            type: 'tags-section',
+                            icon: '🏷️',
+                            meta: `${data.controllerTags.length} tags`
+                        });
+                        const tagsChildrenContainer = tagsNode.querySelector('.tree-children');
+                        if (tagsChildrenContainer) {
+                            data.controllerTags.forEach((tag, index) => {
+                                const tagNode = createTreeNode({
+                                    id: `tag-${index}`,
+                                    name: tag.name,
+                                    type: `tag-${tag.type.toLowerCase()}`,
+                                    icon: getTagIcon(tag.type),
+                                    meta: tag.type
+                                });
+                                tagsChildrenContainer.appendChild(tagNode);
+                            });
+                        }
+                        childrenContainer.appendChild(tagsNode);
+                    }
+                    
+                    // Add Tasks section with Programs INSIDE each task
+                    if (data.tasks && data.tasks.length > 0) {
+                        const tasksNode = createTreeNode({
+                            id: 'tasks',
+                            name: 'Tasks',
+                            type: 'tasks-section',
+                            icon: '⚙️',
+                            meta: `${data.tasks.length} tasks`
+                        });
+                        const tasksChildrenContainer = tasksNode.querySelector('.tree-children');
+                        if (tasksChildrenContainer) {
+                            data.tasks.forEach((task, taskIndex) => {
+                                const taskNode = createTreeNode({
+                                    id: `task-${taskIndex}`,
+                                    name: task.name,
+                                    type: `task-${task.type?.toLowerCase() || 'continuous'}`,
+                                    icon: getTaskIcon(task.type),
+                                    meta: `${task.type || 'CONTINUOUS'} - Priority: ${task.priority || '10'}`
+                                });
+                                
+                                // Add Programs container INSIDE this task
+                                const taskChildrenContainer = taskNode.querySelector('.tree-children');
+                                if (taskChildrenContainer && task.programs && task.programs.length > 0) {
+                                    const programsNode = createTreeNode({
+                                        id: `task-${taskIndex}-programs`,
+                                        name: 'Programs',
+                                        type: 'programs-section',
+                                        icon: '📋',
+                                        meta: `${task.programs.length} programs`
+                                    });
+                                    
+                                    const programsChildrenContainer = programsNode.querySelector('.tree-children');
+                                    if (programsChildrenContainer) {
+                                        task.programs.forEach((program, programIndex) => {
+                                            const programNode = createTreeNode({
+                                                id: `program-${taskIndex}-${programIndex}`,
+                                                name: program.name,
+                                                type: 'program',
+                                                icon: '📄',
+                                                meta: `Main: ${program.mainroutinename || 'MainRoutine'}`
+                                            });
+                                            
+                                            // Add routines to program
+                                            const programChildrenContainer = programNode.querySelector('.tree-children');
+                                            if (programChildrenContainer && program.routines && program.routines.length > 0) {
+                                                const routinesNode = createTreeNode({
+                                                    id: `routines-${taskIndex}-${programIndex}`,
+                                                    name: 'Routines',
+                                                    type: 'routines-section',
+                                                    icon: '📝',
+                                                    meta: `${program.routines.length} routines`
+                                                });
+                                                
+                                                const routinesChildrenContainer = routinesNode.querySelector('.tree-children');
+                                                if (routinesChildrenContainer) {
+                                                    program.routines.forEach((routine, routineIndex) => {
+                                                        const routineNode = createTreeNode({
+                                                            id: `routine-${taskIndex}-${programIndex}-${routineIndex}`,
+                                                            name: routine.name,
+                                                            type: `routine-${routine.type?.toLowerCase() || 'rll'}`,
+                                                            icon: getRoutineIcon(routine.type),
+                                                            meta: routine.type || 'RLL'
+                                                        });
+                                                        routinesChildrenContainer.appendChild(routineNode);
+                                                    });
+                                                }
+                                                programChildrenContainer.appendChild(routinesNode);
+                                            }
+                                            
+                                            programsChildrenContainer.appendChild(programNode);
+                                        });
+                                    }
+                                    
+                                    taskChildrenContainer.appendChild(programsNode);
+                                }
+                                
+                                tasksChildrenContainer.appendChild(taskNode);
+                            });
+                        }
+                        childrenContainer.appendChild(tasksNode);
+                    }
+                    
+                    // Add Data Types section
+                    if (data.dataTypes && data.dataTypes.length > 0) {
+                        const dataTypesNode = createTreeNode({
+                            id: 'datatypes',
+                            name: 'Data Types',
+                            type: 'datatypes-section',
+                            icon: '📊',
+                            meta: `${data.dataTypes.length} types`
+                        });
+                        const dataTypesChildrenContainer = dataTypesNode.querySelector('.tree-children');
+                        if (dataTypesChildrenContainer) {
+                            data.dataTypes.forEach((dataType, index) => {
+                                const dataTypeNode = createTreeNode({
+                                    id: `datatype-${index}`,
+                                    name: dataType.name,
+                                    type: 'datatype',
+                                    icon: '📋',
+                                    meta: dataType.family
+                                });
+                                dataTypesChildrenContainer.appendChild(dataTypeNode);
+                            });
+                        }
+                        childrenContainer.appendChild(dataTypesNode);
+                    }
+                    
+                    // Add Add-On Instructions section
+                    if (data.addOnInstructions && data.addOnInstructions.length > 0) {
+                        const aoiNode = createTreeNode({
+                            id: 'aoi',
+                            name: 'Add-On Instructions',
+                            type: 'aoi-section',
+                            icon: '🔧',
+                            meta: `${data.addOnInstructions.length} instructions`
+                        });
+                        const aoiChildrenContainer = aoiNode.querySelector('.tree-children');
+                        if (aoiChildrenContainer) {
+                            data.addOnInstructions.forEach((aoi, index) => {
+                                const aoiItemNode = createTreeNode({
+                                    id: `aoi-${index}`,
+                                    name: aoi.name,
+                                    type: 'addon-instruction',
+                                    icon: '⚙️',
+                                    meta: `Rev ${aoi.revision}`
+                                });
+                                aoiChildrenContainer.appendChild(aoiItemNode);
+                            });
+                        }
+                        childrenContainer.appendChild(aoiNode);
+                    }
+                }
+
+                // Add to tree content
+                if (elements.treeContent) {
+                    elements.treeContent.appendChild(controllerNode);
+                }
+
+                // Show tree panel and resizer
+                if (elements.treePanel) {
+                    elements.treePanel.style.display = 'flex';
+                }
+                if (elements.resizer) {
+                    elements.resizer.style.display = 'block';
+                }
+
+                // Reset tree state
+                treeState.clear();
+
+            } catch (error) {
+                console.error('Tree rendering failed:', error);
+                throw error;
+            }
+        }
+
+        function createTreeNode({ id, name, type, icon, meta }) {
+            const li = document.createElement('li');
+            li.className = 'tree-node';
+            
+            // Create tree item
+            const item = document.createElement('div');
+            item.className = 'tree-item';
+            item.setAttribute('data-id', id);
+            item.setAttribute('data-type', type);
+            
+            // Create toggle
+            const toggle = document.createElement('span');
+            toggle.className = 'tree-toggle';
+            toggle.textContent = '▶';
+            toggle.onclick = (e) => {
+                e.stopPropagation();
+                toggleNode(item);
+            };
+            item.appendChild(toggle);
+            
+            // Create icon
+            const iconSpan = document.createElement('span');
+            iconSpan.className = 'tree-icon';
+            iconSpan.textContent = icon;
+            item.appendChild(iconSpan);
+            
+            // Create text
+            const textSpan = document.createElement('span');
+            textSpan.className = 'tree-text';
+            textSpan.textContent = sanitizeInput(name);
+            item.appendChild(textSpan);
+            
+            // Create meta
+            const metaSpan = document.createElement('span');
+            metaSpan.className = 'tree-meta';
+            metaSpan.textContent = sanitizeInput(meta);
+            item.appendChild(metaSpan);
+            
+            // Add click handler for selection
+            item.onclick = () => selectNode(item);
+            
+            li.appendChild(item);
+            
+            // Create children container
+            const childrenContainer = document.createElement('ul');
+            childrenContainer.className = 'tree-children collapsed';
+            li.appendChild(childrenContainer);
+            
+            return li;
+        }
+
+        // Tree interaction functions
+        function toggleNode(item) {
+            try {
+                // The children container is the next sibling of the tree-item
+                const children = item.nextElementSibling;
+                const toggle = item.querySelector('.tree-toggle');
+                
+                console.log('Toggle clicked:', {
+                    item: item,
+                    children: children,
+                    toggle: toggle,
+                    childrenClassList: children?.classList?.toString(),
+                    hasChildren: children && children.classList.contains('tree-children')
+                });
+                
+                if (children && children.classList.contains('tree-children') && toggle) {
+                    const isCollapsed = children.classList.contains('collapsed');
+                    console.log('Toggling node:', { isCollapsed, childrenCount: children.children.length });
+                    
+                    if (isCollapsed) {
+                        children.classList.remove('collapsed');
+                        toggle.textContent = '▼';
+                        toggle.classList.add('expanded');
+                        console.log('Node expanded');
+                    } else {
+                        children.classList.add('collapsed');
+                        toggle.textContent = '▶';
+                        toggle.classList.remove('expanded');
+                        console.log('Node collapsed');
+                    }
+                } else {
+                    console.log('Toggle failed - missing elements:', {
+                        hasChildren: !!children,
+                        isTreeChildren: children?.classList?.contains('tree-children'),
+                        hasToggle: !!toggle
+                    });
+                }
+            } catch (error) {
+                console.error('Node toggle failed:', error);
+            }
+        }
+
+        function selectNode(item) {
+            try {
+                // Remove previous selection
+                document.querySelectorAll('.tree-item.selected').forEach(selected => {
+                    selected.classList.remove('selected');
+                });
+
+                // Add selection to current item
+                item.classList.add('selected');
+                
+                // Show content based on node type
+                const nodeType = item.getAttribute('data-type');
+                const nodeName = item.querySelector('.tree-text')?.textContent || '';
+                showNodeContent(nodeType, nodeName);
+                
+            } catch (error) {
+                console.error('Node selection failed:', error);
+            }
+        }
+
+        // Tree control functions
+        function expandAll() {
+            try {
+                document.querySelectorAll('.tree-children.collapsed').forEach(children => {
+                    children.classList.remove('collapsed');
+                    const toggle = children.previousElementSibling?.querySelector('.tree-toggle');
+                    if (toggle) {
+                        toggle.textContent = '▼';
+                        toggle.classList.add('expanded');
+                    }
+                });
+            } catch (error) {
+                console.error('Expand all operation failed:', error);
+            }
+        }
+
+        function collapseAll() {
+            try {
+                document.querySelectorAll('.tree-children:not(.collapsed)').forEach(children => {
+                    children.classList.add('collapsed');
+                    const toggle = children.previousElementSibling?.querySelector('.tree-toggle');
+                    if (toggle) {
+                        toggle.textContent = '▶';
+                        toggle.classList.remove('expanded');
+                    }
+                });
+            } catch (error) {
+                console.error('Collapse all operation failed:', error);
+            }
+        }
+
+        // Content display functions
+        function showNodeContent(nodeType, nodeName) {
+            try {
+                // For now, just show basic content
+                if (elements.contentHeader) {
+                    elements.contentHeader.style.display = 'block';
+                }
+                if (elements.contentTitle) {
+                    elements.contentTitle.textContent = sanitizeInput(nodeName);
+                }
+                if (elements.contentMeta) {
+                    elements.contentMeta.innerHTML = `
+                        <span>Type: ${sanitizeInput(nodeType)}</span>
+                    `;
+                }
+                if (elements.rungContainer) {
+                    elements.rungContainer.innerHTML = `
+                        <div class="welcome">
+                            <h2>${sanitizeInput(nodeName)}</h2>
+                            <p>Node type: ${sanitizeInput(nodeType)}</p>
+                            <p>Content for this node type is not yet implemented.</p>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('Node content display failed:', error);
+            }
+        }
+
+        function showProjectInfo() {
+            try {
+                if (elements.contentHeader) {
+                    elements.contentHeader.style.display = 'block';
+                }
+                if (elements.contentTitle && projectData?.controller) {
+                    elements.contentTitle.textContent = sanitizeInput(projectData.controller.name);
+                }
+                if (elements.contentMeta && projectData?.controller) {
+                    elements.contentMeta.innerHTML = `
+                        <span>Type: ${sanitizeInput(projectData.controller.processortype || 'Unknown')}</span>
+                        <span>Version: ${sanitizeInput(projectData.controller.majorrev || '0')}.${sanitizeInput(projectData.controller.minorrev || '0')}</span>
+                    `;
+                }
+            } catch (error) {
+                console.error('Show project info failed:', error);
+            }
+        }
+
+        function updateStatus(message, type = 'info') {
+            try {
+                if (elements.statusText) {
+                    elements.statusText.textContent = sanitizeInput(message);
+                }
+            } catch (error) {
+                console.error('Status update failed:', error);
+            }
+        }
+
+        function showLoading() {
+            try {
+                if (elements.rungContainer) {
+                    elements.rungContainer.innerHTML = `
+                        <div class="loading">
+                            <div class="welcome-icon">⚙️</div>
+                            <p>Loading project...</p>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('Loading state display failed:', error);
+            }
+        }
+
+        function showError(message) {
+            try {
+                if (elements.rungContainer) {
+                    elements.rungContainer.innerHTML = `
+                        <div class="error">
+                            <div class="error-icon">❌</div>
+                            <h2>Error</h2>
+                            <p>${sanitizeInput(message)}</p>
+                            <button class="btn" onclick="openFile()" style="margin-top: 1rem;">Try Another File</button>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('Error display failed:', error);
+            }
+        }
+
+        // Initialize application
+        function initializeApp() {
+            try {
+                setupElements();
+                setupEventListeners();
+                
+                updateStatus('Ready to load L5X project file');
+            } catch (error) {
+                console.error('Application initialization failed:', error);
+                showError('Application initialization failed');
+            }
+        }
+
+        // Start the application when DOM is loaded
+        document.addEventListener('DOMContentLoaded', initializeApp);
+    </script>
+</body>
+</html> 

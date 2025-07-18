@@ -122,6 +122,68 @@
             border-right: 1px solid var(--tree-border);
             display: none;
             flex-direction: column;
+            min-width: 200px;
+            max-width: 600px;
+        }
+
+        /* Resizable Divider */
+        .resizer {
+            width: 8px;
+            background: var(--border-color);
+            border-left: 1px solid var(--border-color);
+            border-right: 1px solid var(--border-color);
+            cursor: col-resize;
+            position: relative;
+            transition: background-color 0.2s;
+            display: none;
+            z-index: 10;
+            margin: 0 -1px;
+        }
+
+        .resizer:hover {
+            background: var(--accent-color);
+        }
+
+        .resizer::before {
+            content: '';
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            width: 2px;
+            height: 30px;
+            background: var(--muted-text);
+            border-radius: 1px;
+        }
+
+        .resizer::after {
+            content: '';
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            width: 2px;
+            height: 30px;
+            background: var(--muted-text);
+            border-radius: 1px;
+            margin-left: 4px;
+        }
+
+        .resizer.dragging {
+            background: var(--accent-color);
+        }
+
+        .resizer.dragging::before,
+        .resizer.dragging::after {
+            background: var(--light-text);
+        }
+
+        /* Prevent text selection during resize */
+        .resizing {
+            user-select: none;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
         }
 
         .tree-header {
@@ -480,6 +542,9 @@
                 <!-- Tree will be populated here -->
             </div>
         </aside>
+
+        <!-- Resizable Divider -->
+        <div class="resizer" id="resizer"></div>
 
         <!-- Content Panel -->
         <main class="content-panel">

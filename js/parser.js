@@ -31,11 +31,8 @@ export function parseL5X(xmlDoc) {
             throw new Error('Controller name is required');
         }
 
-        // Parse tasks with enhanced validation
+        // Parse tasks with their nested programs
         const tasks = parseTasks(xmlDoc, getAttrs, getTextContent);
-
-        // Parse programs with enhanced structure
-        const programs = parsePrograms(xmlDoc, getAttrs, getTextContent);
 
         // Parse controller tags with enhanced information
         const controllerTags = parseControllerTags(xmlDoc, getAttrs, getTextContent);
@@ -61,7 +58,6 @@ export function parseL5X(xmlDoc) {
         return {
             controller: controllerInfo,
             tasks: tasks,
-            programs: programs,
             controllerTags: controllerTags,
             dataTypes: dataTypes,
             addOnInstructions: addOnInstructions,
@@ -76,7 +72,7 @@ export function parseL5X(xmlDoc) {
     }
 }
 
-// Parse tasks
+// Parse tasks with their nested programs
 function parseTasks(xmlDoc, getAttrs, getTextContent) {
     return Array.from(xmlDoc.querySelectorAll('Tasks > Task')).map((task, index) => {
         const taskInfo = getAttrs(task, ['Name', 'Type', 'Priority', 'Watchdog', 'Rate', 'Scheduled']);
@@ -84,8 +80,40 @@ function parseTasks(xmlDoc, getAttrs, getTextContent) {
             throw new Error(`Task ${index + 1} missing name`);
         }
         
-        // Parse scheduled programs
-        taskInfo.programs = Array.from(task.querySelectorAll('ScheduledPrograms > ScheduledProgram')).map(sp => 
+        // Parse programs WITHIN this task (not separate)
+        const programElements = task.querySelectorAll('Programs > Program');
+        taskInfo.programs = Array.from(programElements).map((program, programIndex) => {
+            const programInfo = getAttrs(program, ['Name', 'Type', 'TestEdits', 'MainRoutineName', 'UseAsFolder']);
+            if (!programInfo.name) {
+                throw new Error(`Program ${programIndex + 1} in task ${taskInfo.name} missing name`);
+            }
+            
+            // Parse program tags
+            programInfo.tags = Array.from(program.querySelectorAll('Tags > Tag')).map(tag => {
+                const tagInfo = getAttrs(tag, ['Name', 'TagType', 'DataType', 'Usage', 'Constant', 'ExternalAccess']);
+                if (!tagInfo.name) {
+                    throw new Error('Program tag missing name');
+                }
+                return tagInfo;
+            });
+            
+            // Parse program parameters
+            programInfo.parameters = Array.from(program.querySelectorAll('Parameters > Parameter')).map(param => {
+                const paramInfo = getAttrs(param, ['Name', 'DataType', 'Required', 'ExternalAccess']);
+                if (!paramInfo.name) {
+                    throw new Error('Program parameter missing name');
+                }
+                return paramInfo;
+            });
+            
+            // Parse program routines with enhanced content
+            programInfo.routines = parseRoutines(program, getAttrs, getTextContent);
+            
+            return programInfo;
+        });
+        
+        // Parse scheduled programs (for backward compatibility)
+        taskInfo.scheduledPrograms = Array.from(task.querySelectorAll('ScheduledPrograms > ScheduledProgram')).map(sp => 
             sanitizeInput(sp.getAttribute('Name') || '')
         );
         
@@ -102,38 +130,7 @@ function parseTasks(xmlDoc, getAttrs, getTextContent) {
     });
 }
 
-// Parse programs
-function parsePrograms(xmlDoc, getAttrs, getTextContent) {
-    return Array.from(xmlDoc.querySelectorAll('Programs > Program')).map((program, index) => {
-        const programInfo = getAttrs(program, ['Name', 'Type', 'TestEdits', 'MainRoutineName', 'UseAsFolder']);
-        if (!programInfo.name) {
-            throw new Error(`Program ${index + 1} missing name`);
-        }
-        
-        // Parse program tags
-        programInfo.tags = Array.from(program.querySelectorAll('Tags > Tag')).map(tag => {
-            const tagInfo = getAttrs(tag, ['Name', 'TagType', 'DataType', 'Usage', 'Constant', 'ExternalAccess']);
-            if (!tagInfo.name) {
-                throw new Error('Program tag missing name');
-            }
-            return tagInfo;
-        });
-        
-        // Parse program parameters
-        programInfo.parameters = Array.from(program.querySelectorAll('Parameters > Parameter')).map(param => {
-            const paramInfo = getAttrs(param, ['Name', 'DataType', 'Required', 'ExternalAccess']);
-            if (!paramInfo.name) {
-                throw new Error('Program parameter missing name');
-            }
-            return paramInfo;
-        });
-        
-        // Parse program routines with enhanced content
-        programInfo.routines = parseRoutines(program, getAttrs, getTextContent);
-        
-        return programInfo;
-    });
-}
+
 
 // Parse routines
 function parseRoutines(program, getAttrs, getTextContent) {

@@ -57,12 +57,17 @@ export function showNodeContent(nodeType, nodeName, nodeId) {
 // Show routine content
 export function showRoutineContent(routineName) {
     try {
-        // Find routine in project data
+        // Find routine in project data (now nested within tasks)
         let routine = null;
-        if (projectData && projectData.programs) {
-            for (const program of projectData.programs) {
-                if (program.routines) {
-                    routine = program.routines.find(r => r.name === routineName);
+        if (projectData && projectData.tasks) {
+            for (const task of projectData.tasks) {
+                if (task.programs) {
+                    for (const program of task.programs) {
+                        if (program.routines) {
+                            routine = program.routines.find(r => r.name === routineName);
+                            if (routine) break;
+                        }
+                    }
                     if (routine) break;
                 }
             }
@@ -163,7 +168,7 @@ export function showTagContent(tagName) {
 }
 
 // Show program content
-export function showProgramContent(programName) {
+export function showProgramContent(programName, taskName = null) {
     try {
         const contentHeader = document.getElementById('contentHeader');
         const contentTitle = document.getElementById('contentTitle');
@@ -174,13 +179,27 @@ export function showProgramContent(programName) {
             throw new Error('Content elements not available');
         }
 
-        const program = projectData?.programs?.find(p => p.name === programName);
+        // Find program in the new nested structure
+        let program = null;
+        if (projectData?.tasks) {
+            for (const task of projectData.tasks) {
+                if (task.programs) {
+                    program = task.programs.find(p => p.name === programName);
+                    if (program) {
+                        taskName = task.name; // Update task name if found
+                        break;
+                    }
+                }
+            }
+        }
         
         contentHeader.style.display = 'block';
         contentTitle.textContent = sanitizeInput(programName);
         contentMeta.innerHTML = `
+            <span>Task: ${sanitizeInput(taskName || 'Unknown')}</span>
             <span>Type: ${sanitizeInput(program?.type || 'Unknown')}</span>
             <span>Routines: ${program?.routines?.length || 0}</span>
+            <span>Main Routine: ${sanitizeInput(program?.mainroutinename || 'MainRoutine')}</span>
         `;
 
         rungContainer.innerHTML = `
@@ -188,8 +207,12 @@ export function showProgramContent(programName) {
                 <div class="welcome-icon">📋</div>
                 <h2>Program Information</h2>
                 <p>Program: ${sanitizeInput(programName)}</p>
+                <p>Task: ${sanitizeInput(taskName || 'Unknown')}</p>
                 <p>Type: ${sanitizeInput(program?.type || 'Unknown')}</p>
+                <p>Main Routine: ${sanitizeInput(program?.mainroutinename || 'MainRoutine')}</p>
                 <p>Routines: ${program?.routines?.length || 0}</p>
+                <p>Tags: ${program?.tags?.length || 0}</p>
+                <p>Parameters: ${program?.parameters?.length || 0}</p>
             </div>
         `;
 
@@ -651,9 +674,10 @@ export function showProjectInfo() {
         }
 
         // Calculate comprehensive statistics
+        const totalPrograms = projectData.tasks?.reduce((total, task) => total + (task.programs?.length || 0), 0) || 0;
         const stats = {
             tasks: projectData.tasks?.length || 0,
-            programs: projectData.programs?.length || 0,
+            programs: totalPrograms,
             controllerTags: projectData.controllerTags?.length || 0,
             dataTypes: projectData.dataTypes?.length || 0,
             addOnInstructions: projectData.addOnInstructions?.length || 0,
