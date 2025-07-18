@@ -536,138 +536,81 @@
                     <p>Load an L5X project file to explore the complete controller structure with full Studio 5000-style navigation</p>
                     <p style="margin-top: 1rem; font-size: 0.9rem; color: var(--muted-text);">
                         <strong>Complete Studio 5000 Structure:</strong><br>
-                        • Controller Tags (organized by type) • Tasks & Programs • Motion Groups • Data Types & Add-On Instructions<br>
-                        • I/O Configuration (Local, EtherNet/IP, DeviceNet, ControlNet) • Safety Configuration<br>
-                        • Event Tasks • Trends & Diagnostics • Search functionality • Expand/collapse navigation
+                        • Controller Tags (BOOL, DINT, REAL, STRING, TIMER, COUNTER, UDT, Array, Produced/Consumed)<br>
+                        • Tasks & Programs (MainTask, Continuous, Periodic, Event) with Routines (RLL, ST, FBD, SFC)<br>
+                        • Motion Groups with Motion Instructions • Module Defined Data Types & Add-On Instructions<br>
+                        • I/O Configuration (Local, EtherNet/IP, DeviceNet, ControlNet, Other Networks)<br>
+                        • Safety (Safety Task, Safety I/O, Safety Configuration) • Event Tasks with Event Configuration<br>
+                        • Trends & Diagnostics (Trend Configurations, Diagnostic Logs, Performance Data)<br>
+                        • Search functionality • Expand/collapse navigation • Complete Studio 5000 experience
                     </p>
                 </div>
             </div>
         </section>
     </main>
 
-    <script>
-        // ============================================================================
-        // CODE HARDENING: SECURITY AND ROBUSTNESS IMPLEMENTATION
-        // ============================================================================
+    <script type="module" src="js/main.js"></script>
 
-        // Input validation and sanitization
-        const VALIDATION = {
-            MAX_FILE_SIZE: 50 * 1024 * 1024, // 50MB limit
-            ALLOWED_FILE_TYPES: ['.l5x', '.xml'],
-            MAX_TREE_DEPTH: 10,
-            MAX_SEARCH_LENGTH: 100,
-            SANITIZE_REGEX: /[<>\"'&]/g,
-            XML_ENTITIES: {
-                '&': '&amp;',
-                '<': '&lt;',
-                '>': '&gt;',
-                '"': '&quot;',
-                "'": '&#x27;'
-            }
-        };
-
-        // Error handling and logging
-        const ERROR_CODES = {
-            FILE_TOO_LARGE: 'FILE_TOO_LARGE',
-            INVALID_FILE_TYPE: 'INVALID_FILE_TYPE',
-            XML_PARSE_ERROR: 'XML_PARSE_ERROR',
-            INVALID_L5X_STRUCTURE: 'INVALID_L5X_STRUCTURE',
-            TREE_RENDER_ERROR: 'TREE_RENDER_ERROR',
-            SECURITY_VIOLATION: 'SECURITY_VIOLATION'
-        };
-
-        // Application state with validation
-        let projectData = null;
-        let selectedItem = null;
-        let searchQuery = '';
-        let treeState = new Map(); // Track expanded/collapsed state
-        let securityViolations = 0;
-        const MAX_SECURITY_VIOLATIONS = 5;
-
-        // DOM elements with null checks
-        const elements = {
-            fileInput: null,
-            searchInput: null,
-            statusText: null,
-            statusDetails: null,
-            treePanel: null,
-            treeContent: null,
-            contentHeader: null,
-            contentTitle: null,
-            contentMeta: null,
-            rungContainer: null
-        };
-
-        // Initialize DOM elements with error handling
-        function initializeElements() {
-            try {
-                elements.fileInput = document.getElementById('fileInput');
-                elements.searchInput = document.getElementById('searchInput');
-                elements.statusText = document.getElementById('statusText');
-                elements.statusDetails = document.getElementById('statusDetails');
-                elements.treePanel = document.getElementById('treePanel');
-                elements.treeContent = document.getElementById('treeContent');
-                elements.contentHeader = document.getElementById('contentHeader');
-                elements.contentTitle = document.getElementById('contentTitle');
-                elements.contentMeta = document.getElementById('contentMeta');
-                elements.rungContainer = document.getElementById('rungContainer');
-
-                // Validate all elements exist
-                Object.entries(elements).forEach(([key, element]) => {
-                    if (!element) {
-                        throw new Error(`Required DOM element not found: ${key}`);
-                    }
-                });
-            } catch (error) {
-                console.error('DOM initialization failed:', error);
-                showFatalError('Application initialization failed. Please refresh the page.');
-            }
-        }
+        // =====================
+        // Utility Functions
+        // =====================
 
         // Input sanitization function
         function sanitizeInput(input, maxLength = 1000) {
             if (typeof input !== 'string') {
                 return '';
             }
-            
-            // Check length
             if (input.length > maxLength) {
                 input = input.substring(0, maxLength);
             }
-            
-            // Sanitize HTML entities
             return input.replace(VALIDATION.SANITIZE_REGEX, (match) => {
                 return VALIDATION.XML_ENTITIES[match] || match;
             });
         }
 
-        // Security violation handler
-        function handleSecurityViolation(violation, details = '') {
-            securityViolations++;
-            console.warn(`Security violation ${securityViolations}: ${violation}`, details);
-            
-            if (securityViolations >= MAX_SECURITY_VIOLATIONS) {
-                showFatalError('Security violations detected. Application disabled.');
-                return false;
+        // Status update utility
+        function updateStatus(message, type = 'info') {
+            try {
+                if (elements.statusText) {
+                    elements.statusText.textContent = sanitizeInput(message);
+                }
+            } catch (error) {
+                console.error('Status update failed:', error);
             }
-            
-            return true;
         }
 
-        // Error handling with user feedback
-        function handleError(error, context = '') {
-            const errorMessage = sanitizeInput(error.message || 'Unknown error');
-            const errorContext = sanitizeInput(context);
-            
-            console.error(`Error in ${errorContext}:`, error);
-            
-            if (errorContext) {
-                updateStatus(`❌ Error in ${errorContext}: ${errorMessage}`, 'error');
-            } else {
-                updateStatus(`❌ Error: ${errorMessage}`, 'error');
+        // Error display utility
+        function showError(message) {
+            try {
+                if (elements.rungContainer) {
+                    elements.rungContainer.innerHTML = `
+                        <div class="error">
+                            <div class="error-icon">❌</div>
+                            <h2>Error</h2>
+                            <p>${sanitizeInput(message)}</p>
+                            <button class="btn" onclick="openFile()" style="margin-top: 1rem;">Try Another File</button>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('Error display failed:', error);
             }
-            
-            showError(errorMessage);
+        }
+
+        // Loading state utility
+        function showLoading() {
+            try {
+                if (elements.rungContainer) {
+                    elements.rungContainer.innerHTML = `
+                        <div class="loading">
+                            <div class="welcome-icon">⚙️</div>
+                            <p>Loading project...</p>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                handleError(error, 'Loading state display');
+            }
         }
 
         // Fatal error handler
@@ -683,49 +626,66 @@
             `;
         }
 
-        // File validation
-        function validateFile(file) {
-            if (!file) {
-                throw new Error('No file selected');
+        // Error handling with user feedback
+        function handleError(error, context = '') {
+            const errorMessage = sanitizeInput(error.message || 'Unknown error');
+            const errorContext = sanitizeInput(context);
+            console.error(`Error in ${errorContext}:`, error);
+            if (errorContext) {
+                updateStatus(`❌ Error in ${errorContext}: ${errorMessage}`, 'error');
+            } else {
+                updateStatus(`❌ Error: ${errorMessage}`, 'error');
             }
+            showError(errorMessage);
+        }
 
-            // Check file size
-            if (file.size > VALIDATION.MAX_FILE_SIZE) {
-                throw new Error(`File too large. Maximum size is ${VALIDATION.MAX_FILE_SIZE / (1024 * 1024)}MB`);
+        // Security violation handler
+        function handleSecurityViolation(violation, details = '') {
+            securityViolations++;
+            console.warn(`Security violation ${securityViolations}: ${violation}`, details);
+            if (securityViolations >= MAX_SECURITY_VIOLATIONS) {
+                showFatalError('Security violations detected. Application disabled.');
+                return false;
             }
-
-            // Check file type
-            const fileName = file.name.toLowerCase();
-            const isValidType = VALIDATION.ALLOWED_FILE_TYPES.some(type => fileName.endsWith(type));
-            if (!isValidType) {
-                throw new Error(`Invalid file type. Allowed types: ${VALIDATION.ALLOWED_FILE_TYPES.join(', ')}`);
-            }
-
             return true;
         }
 
-        // XML parsing with security
-        function parseXMLSafely(xmlString) {
+        // Accessibility: screen reader announcement
+        function announceToScreenReader(message) {
             try {
-                // Check for potential XXE attacks
-                if (xmlString.includes('<!DOCTYPE') || xmlString.includes('<!ENTITY')) {
-                    throw new Error('XML external entity processing not allowed');
-                }
-
-                const parser = new DOMParser();
-                const xmlDoc = parser.parseFromString(xmlString, "text/xml");
-                
-                // Check for parsing errors
-                const parseError = xmlDoc.querySelector('parsererror');
-                if (parseError) {
-                    throw new Error('XML parsing failed: Invalid XML structure');
-                }
-
-                return xmlDoc;
+                const announcement = document.createElement('div');
+                announcement.setAttribute('aria-live', 'polite');
+                announcement.setAttribute('aria-atomic', 'true');
+                announcement.className = 'sr-only';
+                announcement.textContent = sanitizeInput(message);
+                document.body.appendChild(announcement);
+                setTimeout(() => {
+                    if (document.body.contains(announcement)) {
+                        document.body.removeChild(announcement);
+                    }
+                }, 1000);
             } catch (error) {
-                throw new Error(`XML parsing error: ${error.message}`);
+                console.error('Screen reader announcement failed:', error);
             }
         }
+
+        // =====================
+        // Initialization Logic
+        // =====================
+
+        function initializeApp() {
+            try {
+                initializeElements();
+                setupEventListeners();
+                updateStatus('Ready to load L5X project file');
+                announceToScreenReader('Studio 5000 Logix Designer Style PLC Viewer ready. Load an L5X file to begin.');
+            } catch (error) {
+                showFatalError('Application initialization failed');
+            }
+        }
+
+        // Start the application
+        initializeApp();
 
         // Event listeners with error handling
         function setupEventListeners() {
@@ -1261,7 +1221,7 @@
                     meta: `${data.controller.processortype || 'Unknown'} - v${data.controller.majorrev || '0'}.${data.controller.minorrev || '0'}`
                 });
 
-                // 1. Controller Tags Section
+                // 1. Controller Tags Section - Enhanced with Produced/Consumed Tags
                 if (data.controllerTags && data.controllerTags.length > 0) {
                     const tagsNode = createTreeNode({
                         id: 'controller-tags',
@@ -1298,10 +1258,41 @@
                         addChildrenToNode(tagsNode, [typeNode]);
                     });
 
+                    // Add Produced/Consumed Tags subsection
+                    const producedConsumedTags = data.controllerTags.filter(tag => 
+                        tag.usage?.toLowerCase().includes('produced') || 
+                        tag.usage?.toLowerCase().includes('consumed')
+                    );
+                    
+                    if (producedConsumedTags.length > 0) {
+                        const producedConsumedNode = createTreeNode({
+                            id: 'produced-consumed-tags',
+                            name: 'Produced/Consumed Tags',
+                            type: 'produced-consumed-tags',
+                            icon: '🔄',
+                            meta: `${producedConsumedTags.length} tags`
+                        });
+
+                        const pcTagNodes = [];
+                        producedConsumedTags.forEach(tag => {
+                            const tagNode = createTreeNode({
+                                id: `pc-tag-${tag.name}`,
+                                name: tag.name,
+                                type: `tag-${tag.datatype?.toLowerCase() || 'unknown'}`,
+                                icon: getTagIcon(tag.datatype),
+                                meta: `${tag.usage || 'Unknown'} - ${tag.datatype || 'Unknown'}`
+                            });
+                            pcTagNodes.push(tagNode);
+                        });
+
+                        addChildrenToNode(producedConsumedNode, pcTagNodes);
+                        addChildrenToNode(tagsNode, [producedConsumedNode]);
+                    }
+
                     addChildrenToNode(controllerNode, [tagsNode]);
                 }
 
-                // 2. Tasks Section
+                // 2. Tasks Section - Enhanced with better organization
                 if (data.tasks && data.tasks.length > 0) {
                     const tasksNode = createTreeNode({
                         id: 'tasks',
@@ -1353,31 +1344,31 @@
                                         addChildrenToNode(programNode, [programTagsNode]);
                                     }
 
-                                                                            // Add routines section
-                                        if (program.routines && program.routines.length > 0) {
-                                            const routinesNode = createTreeNode({
-                                                id: `program-${program.name}-routines`,
-                                                name: 'Routines',
-                                                type: 'routines-section',
-                                                icon: '🪜',
-                                                meta: `${program.routines.length} routines`
-                                            });
+                                    // Add routines section with enhanced routine types
+                                    if (program.routines && program.routines.length > 0) {
+                                        const routinesNode = createTreeNode({
+                                            id: `program-${program.name}-routines`,
+                                            name: 'Routines',
+                                            type: 'routines-section',
+                                            icon: '🪜',
+                                            meta: `${program.routines.length} routines`
+                                        });
 
-                                            const routineNodes = [];
-                                            program.routines.forEach(routine => {
-                                                const routineNode = createTreeNode({
-                                                    id: `routine-${routine.name}`,
-                                                    name: routine.name,
-                                                    type: `routine-${routine.type?.toLowerCase() || 'unknown'}`,
-                                                    icon: getRoutineIcon(routine.type),
-                                                    meta: routine.description || routine.type || 'Unknown'
-                                                });
-                                                routineNodes.push(routineNode);
+                                        const routineNodes = [];
+                                        program.routines.forEach(routine => {
+                                            const routineNode = createTreeNode({
+                                                id: `routine-${routine.name}`,
+                                                name: routine.name,
+                                                type: `routine-${routine.type?.toLowerCase() || 'unknown'}`,
+                                                icon: getRoutineIcon(routine.type),
+                                                meta: routine.description || routine.type || 'Unknown'
                                             });
+                                            routineNodes.push(routineNode);
+                                        });
 
-                                            addChildrenToNode(routinesNode, routineNodes);
-                                            addChildrenToNode(programNode, [routinesNode]);
-                                        }
+                                        addChildrenToNode(routinesNode, routineNodes);
+                                        addChildrenToNode(programNode, [routinesNode]);
+                                    }
 
                                     // Add parameters section
                                     if (program.parameters && program.parameters.length > 0) {
@@ -1414,7 +1405,7 @@
                     addChildrenToNode(controllerNode, [tasksNode]);
                 }
 
-                // 3. Motion Groups Section
+                // 3. Motion Groups Section - Enhanced with motion instructions
                 if (data.motionGroups && data.motionGroups.length > 0) {
                     const motionGroupsNode = createTreeNode({
                         id: 'motion-groups',
@@ -1433,6 +1424,33 @@
                             icon: '🎛️',
                             meta: `${group.instructions?.length || 0} instructions`
                         });
+
+                        // Add motion instructions subsection
+                        if (group.instructions && group.instructions.length > 0) {
+                            const instructionsNode = createTreeNode({
+                                id: `motion-group-${group.name}-instructions`,
+                                name: 'Motion Instructions',
+                                type: 'motion-instructions',
+                                icon: '📊',
+                                meta: `${group.instructions.length} instructions`
+                            });
+
+                            const instructionNodes = [];
+                            group.instructions.forEach(instruction => {
+                                const instructionNode = createTreeNode({
+                                    id: `motion-instruction-${instruction.name}`,
+                                    name: instruction.name,
+                                    type: 'motion-instruction',
+                                    icon: '📊',
+                                    meta: `${instruction.type || 'Unknown'} - ${instruction.axis || 'Unknown'}`
+                                });
+                                instructionNodes.push(instructionNode);
+                            });
+
+                            addChildrenToNode(instructionsNode, instructionNodes);
+                            addChildrenToNode(groupNode, [instructionsNode]);
+                        }
+
                         groupNodes.push(groupNode);
                     });
 
@@ -1449,7 +1467,7 @@
                     addChildrenToNode(controllerNode, [motionGroupsNode]);
                 }
 
-                // 4. Module Defined Data Types Section
+                // 4. Module Defined Data Types Section - Enhanced with better organization
                 if (data.dataTypes && data.dataTypes.length > 0) {
                     const dataTypesNode = createTreeNode({
                         id: 'data-types',
@@ -1519,7 +1537,7 @@
                     addChildrenToNode(controllerNode, [dataTypesNode]);
                 }
 
-                // 5. I/O Configuration Section
+                // 5. I/O Configuration Section - Enhanced with all network types
                 const ioConfigNode = createTreeNode({
                     id: 'io-configuration',
                     name: 'I/O Configuration',
@@ -1560,7 +1578,7 @@
                         icon: '🔌',
                         meta: 'No local modules'
                     });
-                    ioConfigNode.appendChild(localIONode);
+                    addChildrenToNode(ioConfigNode, [localIONode]);
                 }
 
                 // EtherNet/IP subsection
@@ -1668,9 +1686,43 @@
                     addChildrenToNode(ioConfigNode, [controlNetNode]);
                 }
 
+                // Other Networks subsection (for any additional network types)
+                const otherNetworks = [];
+                if (data.ioConfiguration) {
+                    Object.entries(data.ioConfiguration).forEach(([networkType, modules]) => {
+                        if (!['local', 'ethernet', 'devicenet', 'controlnet'].includes(networkType) && 
+                            Array.isArray(modules) && modules.length > 0) {
+                            otherNetworks.push({ type: networkType, modules });
+                        }
+                    });
+                }
+
+                if (otherNetworks.length > 0) {
+                    const otherNetworksNode = createTreeNode({
+                        id: 'other-networks',
+                        name: 'Other Networks',
+                        type: 'other-networks',
+                        icon: '🏭',
+                        meta: `${otherNetworks.length} networks`
+                    });
+
+                    otherNetworks.forEach(network => {
+                        const networkNode = createTreeNode({
+                            id: `network-${network.type}`,
+                            name: network.type.charAt(0).toUpperCase() + network.type.slice(1),
+                            type: 'network',
+                            icon: '🏭',
+                            meta: `${network.modules.length} devices`
+                        });
+                        addChildrenToNode(otherNetworksNode, [networkNode]);
+                    });
+
+                    addChildrenToNode(ioConfigNode, [otherNetworksNode]);
+                }
+
                 addChildrenToNode(controllerNode, [ioConfigNode]);
 
-                // 6. Safety Section
+                // 6. Safety Section - Enhanced with complete safety structure
                 const safetyNode = createTreeNode({
                     id: 'safety',
                     name: 'Safety',
@@ -1758,7 +1810,7 @@
 
                 addChildrenToNode(controllerNode, [safetyNode]);
 
-                // 7. Event Tasks Section
+                // 7. Event Tasks Section - Enhanced with event configuration
                 const eventTasks = data.tasks?.filter(task => task.type?.toLowerCase().includes('event')) || [];
                 if (eventTasks.length > 0) {
                     const eventTasksNode = createTreeNode({
@@ -1778,6 +1830,17 @@
                             icon: '⚡',
                             meta: `Priority: ${task.priority || 'Unknown'}`
                         });
+
+                        // Add event configuration subsection
+                        const eventConfigNode = createTreeNode({
+                            id: `event-task-${task.name}-config`,
+                            name: 'Event Configuration',
+                            type: 'event-config',
+                            icon: '📋',
+                            meta: 'Event settings'
+                        });
+                        addChildrenToNode(taskNode, [eventConfigNode]);
+
                         eventTaskNodes.push(taskNode);
                     });
 
@@ -1794,7 +1857,7 @@
                     addChildrenToNode(controllerNode, [eventTasksNode]);
                 }
 
-                // 8. Trends & Diagnostics Section
+                // 8. Trends & Diagnostics Section - Enhanced with complete structure
                 const trendsNode = createTreeNode({
                     id: 'trends-diagnostics',
                     name: 'Trends & Diagnostics',
@@ -1934,7 +1997,7 @@
                 const sanitizedId = sanitizeInput(id, 50);
                 const sanitizedName = sanitizeInput(name, 100);
                 const sanitizedType = sanitizeInput(type, 30);
-                const sanitizedIcon = sanitizeInput(icon, 10);
+                const sanitizedIcon = sanitizeInput(icon || getNodeIcon(type), 10);
                 const sanitizedMeta = sanitizeInput(meta, 100);
 
                 // Create list item
@@ -2079,6 +2142,8 @@
             if (type.includes('timer')) return '⏱️';
             if (type.includes('counter')) return '🔢';
             if (type.includes('string')) return '📝';
+            if (type.includes('udt') || type.includes('user_defined')) return '📋';
+            if (type.includes('array')) return '📦';
             return '🏷️';
         }
 
@@ -2095,6 +2160,102 @@
                 case 'ARRAY': return '📦';
                 default: return '🏷️';
             }
+        }
+
+        // Enhanced icon mapping for all Studio 5000 node types
+        function getNodeIcon(nodeType, subType = '') {
+            const type = nodeType?.toLowerCase() || '';
+            const sub = subType?.toLowerCase() || '';
+            
+            // Controller and main sections
+            if (type === 'controller') return '🏭';
+            if (type === 'tags-section') return '🏷️';
+            if (type === 'tasks-section') return '⚡';
+            if (type === 'motion-section') return '🎛️';
+            if (type === 'datatypes-section') return '📊';
+            if (type === 'io-section') return '🔌';
+            if (type === 'safety-section') return '🛡️';
+            if (type === 'event-tasks-section') return '⚡';
+            if (type === 'trends-section') return '📈';
+            
+            // Task types
+            if (type.startsWith('task-')) {
+                if (sub.includes('continuous')) return '🔄';
+                if (sub.includes('periodic')) return '⏰';
+                if (sub.includes('event')) return '⚡';
+                return '⚡';
+            }
+            
+            // Program and routine types
+            if (type === 'program') return '📋';
+            if (type === 'programs-section') return '📋';
+            if (type === 'routines-section') return '🪜';
+            if (type === 'program-tags') return '🏷️';
+            if (type === 'parameters-section') return '⚙️';
+            if (type === 'task-properties') return '⚙️';
+            
+            if (type.startsWith('routine-')) {
+                if (sub.includes('rll') || sub.includes('ladder')) return '🪜';
+                if (sub.includes('st') || sub.includes('structured')) return '📄';
+                if (sub.includes('fbd') || sub.includes('function')) return '🔧';
+                if (sub.includes('sfc') || sub.includes('sequential')) return '⚡';
+                return '📄';
+            }
+            
+            // Tag types
+            if (type.startsWith('tag-')) {
+                if (sub.includes('bool')) return '🔘';
+                if (sub.includes('int') || sub.includes('dint')) return '🔢';
+                if (sub.includes('real') || sub.includes('float')) return '📊';
+                if (sub.includes('timer')) return '⏱️';
+                if (sub.includes('counter')) return '🔢';
+                if (sub.includes('string')) return '📝';
+                if (sub.includes('udt') || sub.includes('user_defined')) return '📋';
+                if (sub.includes('array')) return '📦';
+                return '🏷️';
+            }
+            
+            if (type === 'tag-type-group') return '🏷️';
+            if (type === 'produced-consumed-tags') return '🔄';
+            
+            // Motion types
+            if (type === 'motion-group') return '🎛️';
+            if (type === 'motion-instructions') return '📊';
+            if (type === 'motion-instruction') return '📊';
+            
+            // Data types
+            if (type === 'datatype') return '📋';
+            if (type === 'addon-instructions') return '🔗';
+            if (type === 'addon-instruction') return '🔗';
+            
+            // I/O types
+            if (type === 'local-io') return '🔌';
+            if (type === 'ethernet-ip') return '🌐';
+            if (type === 'devicenet') return '🔗';
+            if (type === 'controlnet') return '📡';
+            if (type === 'other-networks') return '🏭';
+            if (type === 'network') return '🏭';
+            if (type === 'io-module') return '📟';
+            
+            // Safety types
+            if (type === 'safety-task') return '🛡️';
+            if (type === 'safety-io') return '🚨';
+            if (type === 'safety-config') return '⚠️';
+            if (type === 'safety-module') return '🚨';
+            
+            // Event types
+            if (type === 'event-task') return '⚡';
+            if (type === 'event-config') return '📋';
+            
+            // Trends and diagnostics
+            if (type === 'trend-config') return '📈';
+            if (type === 'trend') return '📈';
+            if (type === 'diagnostic-logs') return '🔍';
+            if (type === 'diagnostic-log') return '🔍';
+            if (type === 'performance-data') return '📊';
+            
+            // Default fallback
+            return '📄';
         }
 
         // Tree interaction functions
@@ -2198,7 +2359,12 @@
                 if (nodeType?.startsWith('routine-')) {
                     showRoutineContent(nodeName);
                 } else if (nodeType?.startsWith('tag-')) {
-                    showTagContent(nodeName);
+                    // Check if it's a produced/consumed tag
+                    if (item.getAttribute('data-id')?.startsWith('pc-tag-')) {
+                        showProducedConsumedTagContent(nodeName);
+                    } else {
+                        showTagContent(nodeName);
+                    }
                 } else if (nodeType === 'program') {
                     showProgramContent(nodeName);
                 } else if (nodeType === 'datatype') {
@@ -2209,6 +2375,8 @@
                     showIOModuleContent(nodeName);
                 } else if (nodeType === 'motion-group') {
                     showMotionGroupContent(nodeName);
+                } else if (nodeType === 'motion-instruction') {
+                    showMotionInstructionContent(nodeName);
                 } else if (nodeType === 'safety-module') {
                     showSafetyModuleContent(nodeName);
                 } else if (nodeType === 'trend') {
@@ -2611,6 +2779,81 @@
             }
         }
 
+        function showMotionInstructionContent(instructionName) {
+            try {
+                if (!elements.contentHeader || !elements.contentTitle || !elements.contentMeta || !elements.rungContainer) {
+                    throw new Error('Content elements not available');
+                }
+
+                // Find motion instruction in project data
+                let instruction = null;
+                if (projectData?.motionGroups) {
+                    for (const group of projectData.motionGroups) {
+                        if (group.instructions) {
+                            instruction = group.instructions.find(i => i.name === instructionName);
+                            if (instruction) break;
+                        }
+                    }
+                }
+                
+                elements.contentHeader.style.display = 'block';
+                elements.contentTitle.textContent = sanitizeInput(instructionName);
+                elements.contentMeta.innerHTML = `
+                    <span>Type: ${sanitizeInput(instruction?.type || 'Unknown')}</span>
+                    <span>Axis: ${sanitizeInput(instruction?.axis || 'Unknown')}</span>
+                `;
+
+                elements.rungContainer.innerHTML = `
+                    <div class="welcome">
+                        <div class="welcome-icon">📊</div>
+                        <h2>Motion Instruction Information</h2>
+                        <p>Name: ${sanitizeInput(instructionName)}</p>
+                        <p>Type: ${sanitizeInput(instruction?.type || 'Unknown')}</p>
+                        <p>Axis: ${sanitizeInput(instruction?.axis || 'Unknown')}</p>
+                        ${instruction?.description ? `<p>Description: ${sanitizeInput(instruction.description)}</p>` : ''}
+                    </div>
+                `;
+
+            } catch (error) {
+                handleError(error, 'Motion Instruction content display');
+            }
+        }
+
+        function showProducedConsumedTagContent(tagName) {
+            try {
+                if (!elements.contentHeader || !elements.contentTitle || !elements.contentMeta || !elements.rungContainer) {
+                    throw new Error('Content elements not available');
+                }
+
+                // Find tag in project data
+                const tag = projectData?.controllerTags?.find(t => t.name === tagName);
+                
+                elements.contentHeader.style.display = 'block';
+                elements.contentTitle.textContent = sanitizeInput(tagName);
+                elements.contentMeta.innerHTML = `
+                    <span>Type: ${sanitizeInput(tag?.datatype || 'Unknown')}</span>
+                    <span>Usage: ${sanitizeInput(tag?.usage || 'Unknown')}</span>
+                    <span>Produced/Consumed Tag</span>
+                `;
+
+                elements.rungContainer.innerHTML = `
+                    <div class="welcome">
+                        <div class="welcome-icon">🔄</div>
+                        <h2>Produced/Consumed Tag Information</h2>
+                        <p>Tag: ${sanitizeInput(tagName)}</p>
+                        <p>Data Type: ${sanitizeInput(tag?.datatype || 'Unknown')}</p>
+                        <p>Usage: ${sanitizeInput(tag?.usage || 'Unknown')}</p>
+                        <p>Category: Produced/Consumed Tag</p>
+                        ${tag?.description ? `<p>Description: ${sanitizeInput(tag.description)}</p>` : ''}
+                        ${tag?.value ? `<p>Value: ${sanitizeInput(tag.value)}</p>` : ''}
+                    </div>
+                `;
+
+            } catch (error) {
+                handleError(error, 'Produced/Consumed Tag content display');
+            }
+        }
+
         function showDefaultContent(name, type) {
             try {
                 if (!elements.contentHeader || !elements.contentTitle || !elements.contentMeta || !elements.rungContainer) {
@@ -2675,17 +2918,18 @@
                         <p>Controller loaded successfully with complete Studio 5000-style structure!</p>
                         <p>Navigate through the project tree to explore:</p>
                         <ul style="text-align: left; margin: 1rem 0; padding-left: 2rem;">
-                            <li><strong>Controller Tags</strong> - ${stats.controllerTags} tags organized by type</li>
-                            <li><strong>Tasks</strong> - ${stats.tasks} tasks with programs and routines</li>
-                            <li><strong>Motion Groups</strong> - ${stats.motionGroups} motion control groups</li>
+                            <li><strong>Controller Tags</strong> - ${stats.controllerTags} tags (BOOL, DINT, REAL, STRING, TIMER, COUNTER, UDT, Array, Produced/Consumed)</li>
+                            <li><strong>Tasks</strong> - ${stats.tasks} tasks (MainTask, Continuous, Periodic, Event) with programs and routines</li>
+                            <li><strong>Motion Groups</strong> - ${stats.motionGroups} motion control groups with instructions</li>
                             <li><strong>Data Types</strong> - ${stats.dataTypes} user-defined types</li>
                             <li><strong>Add-On Instructions</strong> - ${stats.addOnInstructions} custom instructions</li>
-                            <li><strong>I/O Configuration</strong> - ${stats.localModules + stats.ethernetModules + stats.devicenetModules + stats.controlnetModules} modules</li>
-                            <li><strong>Safety</strong> - ${stats.safetyModules} safety modules</li>
-                            <li><strong>Trends & Diagnostics</strong> - ${stats.trends} trends, ${stats.diagnosticLogs} logs</li>
+                            <li><strong>I/O Configuration</strong> - ${stats.localModules + stats.ethernetModules + stats.devicenetModules + stats.controlnetModules} modules (Local, EtherNet/IP, DeviceNet, ControlNet, Other Networks)</li>
+                            <li><strong>Safety</strong> - ${stats.safetyModules} safety modules (Safety Task, Safety I/O, Safety Configuration)</li>
+                            <li><strong>Event Tasks</strong> - Event tasks with event configuration</li>
+                            <li><strong>Trends & Diagnostics</strong> - ${stats.trends} trends, ${stats.diagnosticLogs} logs (Trend Configurations, Diagnostic Logs, Performance Data)</li>
                         </ul>
                         <p style="margin-top: 1rem; font-size: 0.9rem; color: var(--muted-text);">
-                            This viewer now provides the complete Studio 5000 Logix Designer experience with all major sections and subsections.
+                            This viewer now provides the complete Studio 5000 Logix Designer experience with all major sections, subsections, and the exact hierarchical structure that users expect from Studio 5000.
                         </p>
                     </div>
                 `;
@@ -2799,86 +3043,6 @@
                 handleError(error, 'Collapse all operation');
             }
         }
-
-        // Initialize application
-        function initialize() {
-            try {
-                initializeElements();
-                setupEventListeners();
-                updateStatus('Ready to load L5X project file');
-                
-                // Announce to screen readers
-                announceToScreenReader('Studio 5000 Logix Designer Style PLC Viewer ready. Load an L5X file to begin.');
-                
-            } catch (error) {
-                showFatalError('Application initialization failed');
-            }
-        }
-
-        // Utility functions
-        function updateStatus(message, type = 'info') {
-            try {
-                if (elements.statusText) {
-                    elements.statusText.textContent = sanitizeInput(message);
-                }
-            } catch (error) {
-                console.error('Status update failed:', error);
-            }
-        }
-
-        function showLoading() {
-            try {
-                if (elements.rungContainer) {
-                    elements.rungContainer.innerHTML = `
-                        <div class="loading">
-                            <div class="welcome-icon">⚙️</div>
-                            <p>Loading project...</p>
-                        </div>
-                    `;
-                }
-            } catch (error) {
-                handleError(error, 'Loading state display');
-            }
-        }
-
-        function showError(message) {
-            try {
-                if (elements.rungContainer) {
-                    elements.rungContainer.innerHTML = `
-                        <div class="error">
-                            <div class="error-icon">❌</div>
-                            <h2>Error</h2>
-                            <p>${sanitizeInput(message)}</p>
-                            <button class="btn" onclick="openFile()" style="margin-top: 1rem;">Try Another File</button>
-                        </div>
-                    `;
-                }
-            } catch (error) {
-                console.error('Error display failed:', error);
-            }
-        }
-
-        function announceToScreenReader(message) {
-            try {
-                const announcement = document.createElement('div');
-                announcement.setAttribute('aria-live', 'polite');
-                announcement.setAttribute('aria-atomic', 'true');
-                announcement.className = 'sr-only';
-                announcement.textContent = sanitizeInput(message);
-                document.body.appendChild(announcement);
-                
-                setTimeout(() => {
-                    if (document.body.contains(announcement)) {
-                        document.body.removeChild(announcement);
-                    }
-                }, 1000);
-            } catch (error) {
-                console.error('Screen reader announcement failed:', error);
-            }
-        }
-
-        // Start the application
-        initialize();
     </script>
 </body>
 </html> 
