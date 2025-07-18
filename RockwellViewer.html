@@ -27,7 +27,7 @@
         #canvas-container {
             transition: height 0.3s ease-in-out;
             max-height: calc(100vh - 200px); /* Prevent growing beyond viewport */
-            overflow: hidden;
+            overflow: visible;
         }
     </style>
 </head>
@@ -47,6 +47,7 @@
                 <div class="panel-content p-4">
                     <div id="button-container" class="button-group flex flex-wrap gap-3 mb-4">
                         <button class="btn btn-primary" data-testid="simple" onclick="app.runTest('simple')">Simple Rung</button>
+                        <button class="btn btn-primary" data-testid="longLabels" onclick="app.runTest('longLabels')">Long Labels Test</button>
                         <button class="btn btn-primary" data-testid="complex" onclick="app.runTest('complex')">Standard Branch</button>
                         <button class="btn btn-primary" data-testid="longRung" onclick="app.runTest('longRung')">Long Rung Wrap</button>
                         <button class="btn btn-primary" data-testid="gsvMeqComplex" onclick="app.runTest('gsvMeqComplex')">Complex Branch (GSV/MEQ)</button>
@@ -77,6 +78,7 @@
             COMPARISON_WIDTH: 60,
             COIL_RADIUS: 20,
             ELEMENT_SPACING: 40,      // Horizontal spacing between elements
+            MIN_TEXT_SPACING: 100,    // Minimum spacing to prevent text overlap
             BRANCH_V_SPACING: 60,     // Vertical spacing for paths within a branch
             RAIL_PADDING: 40,         // Horizontal padding from power rails
             SYMBOL_FONT: 'bold 14px "Courier New", monospace',
@@ -142,6 +144,16 @@
                 const positionedLayout = this.layoutElements(tempRungDef, leftRailX, rightRailX);
                 const { rungTop, rungBottom } = this.getVerticalBounds(positionedLayout);
                 
+                // Check if content fits horizontally and adjust if needed
+                const contentWidth = this.getContentWidth(positionedLayout);
+                const availableWidth = width - 40; // Leave 20px padding on each side
+                
+                if (contentWidth > availableWidth) {
+                    // Content is too wide, we need to adjust the layout
+                    const scale = availableWidth / contentWidth;
+                    this.scaleLayout(positionedLayout, scale);
+                }
+                
                 // Clear and prepare canvas
                 this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
                 this.ctx.imageSmoothingEnabled = true;
@@ -190,7 +202,7 @@
                 const effectiveLeftRailX = leftRailConnectionX + CONFIG.ELEMENT_SPACING;
                 
                 // This loop now correctly calculates when to wrap.
-                rungDefinition.forEach(el => {
+                rungDefinition.forEach((el, index) => {
                     const elementEndPos = xCursor + el.elWidth;
                     
                     // Check if we need to wrap due to right rail proximity OR left rail proximity
@@ -204,7 +216,11 @@
                     }
                     
                     currentLineElements.push(el);
-                    xCursor += el.elWidth + CONFIG.ELEMENT_SPACING;
+                    
+                    // Calculate optimal spacing to next element
+                    const nextEl = rungDefinition[index + 1];
+                    const spacing = this.calculateOptimalSpacing(el, nextEl);
+                    xCursor += el.elWidth + spacing;
                 });
                 
                 if (currentLineElements.length > 0 || lines.length === 0) {
@@ -221,19 +237,32 @@
                         coilToJustify = line.elements.pop();
                     }
 
-                    // Use the same effective left rail position for consistent spacing
+                    // Calculate proper starting position that accounts for text labels
                     const leftRailConnectionX = leftRailX + CONFIG.POWER_RAIL_WIDTH / 2 + 5;
-                    const effectiveLeftRailX = leftRailConnectionX + CONFIG.ELEMENT_SPACING;
-                    let xPos = effectiveLeftRailX;
+                    let xPos = leftRailConnectionX + CONFIG.ELEMENT_SPACING;
                     
-                    line.elements.forEach(el => {
+                    // For the first element, ensure there's enough space for its text label
+                    if (line.elements.length > 0) {
+                        const firstEl = line.elements[0];
+                        const textPadding = Math.max(0, (firstEl.textWidth || 0) / 2 + 20); // Half text width plus padding
+                        xPos = Math.max(xPos, leftRailConnectionX + textPadding);
+                    }
+                    
+                    line.elements.forEach((el, index) => {
                         el.x = xPos + el.elWidth / 2;
                         el.y = line.y;
-                        xPos += el.elWidth + CONFIG.ELEMENT_SPACING;
+                        
+                        // Calculate optimal spacing to next element based on text width
+                        const nextEl = line.elements[index + 1];
+                        const spacing = this.calculateOptimalSpacing(el, nextEl);
+                        xPos += el.elWidth + spacing;
                     });
 
                     if (coilToJustify) {
-                        coilToJustify.x = rightRailX - CONFIG.RAIL_PADDING - (coilToJustify.elWidth / 2);
+                        // Ensure the coil has enough space for its text label
+                        const textPadding = Math.max(0, (coilToJustify.textWidth || 0) / 2 + 20);
+                        const coilX = rightRailX - CONFIG.RAIL_PADDING - textPadding - (coilToJustify.elWidth / 2);
+                        coilToJustify.x = coilX;
                         coilToJustify.y = line.y;
                         line.elements.push(coilToJustify);
                     }
@@ -244,11 +273,33 @@
 
             calculateElementDimensions(el) {
                 el.elHeight = CONFIG.CONTACT_HEIGHT; // Default height
+                
+                // Calculate text width for label if it exists
+                let textWidth = 0;
+                if (el.label) {
+                    // Create a temporary canvas to measure text accurately
+                    const tempCanvas = document.createElement('canvas');
+                    const tempCtx = tempCanvas.getContext('2d');
+                    tempCtx.font = CONFIG.LABEL_FONT;
+                    textWidth = tempCtx.measureText(el.label).width;
+                }
+                el.textWidth = textWidth;
+                
                 switch(el.type) {
-                    case 'NO_CONTACT': case 'NC_CONTACT': el.elWidth = CONFIG.CONTACT_WIDTH; break;
-                    case 'COMPARISON': el.elWidth = CONFIG.COMPARISON_WIDTH; break;
-                    case 'OUTPUT_COIL': el.elWidth = CONFIG.COIL_RADIUS * 2; el.elHeight = CONFIG.COIL_RADIUS * 2; break;
-                    case 'INSTRUCTION_BOX': el.elWidth = CONFIG.INSTRUCTION_BOX_WIDTH; el.elHeight = CONFIG.INSTRUCTION_BOX_HEIGHT; break;
+                    case 'NO_CONTACT': case 'NC_CONTACT': 
+                        el.elWidth = CONFIG.CONTACT_WIDTH; // Keep physical symbol width constant
+                        break;
+                    case 'COMPARISON': 
+                        el.elWidth = CONFIG.COMPARISON_WIDTH;
+                        break;
+                    case 'OUTPUT_COIL': 
+                        el.elWidth = CONFIG.COIL_RADIUS * 2;
+                        el.elHeight = CONFIG.COIL_RADIUS * 2;
+                        break;
+                    case 'INSTRUCTION_BOX': 
+                        el.elWidth = CONFIG.INSTRUCTION_BOX_WIDTH;
+                        el.elHeight = CONFIG.INSTRUCTION_BOX_HEIGHT;
+                        break;
                     case 'BRANCH':
                         let maxWidth = 0;
                         let totalHeight = 0;
@@ -261,12 +312,14 @@
                                 pathWidth += subEl.elWidth;
                                 if(subEl.elHeight > pathMaxHeight) pathMaxHeight = subEl.elHeight;
                             });
-                            pathWidth += (path.elements.length > 1 ? (path.elements.length - 1) * CONFIG.ELEMENT_SPACING : 0);
-                            
-                            const lastInPath = path.elements[path.elements.length - 1];
-                            if(lastInPath && lastInPath.type === 'OUTPUT_COIL'){
-                                pathWidth += CONFIG.ELEMENT_SPACING * 2;
+                            // Calculate optimal spacing for elements in this path
+                            for (let i = 0; i < path.elements.length - 1; i++) {
+                                const spacing = this.calculateOptimalSpacing(path.elements[i], path.elements[i + 1]);
+                                pathWidth += spacing;
                             }
+                            
+                            // Add extra padding for the path
+                            pathWidth += CONFIG.ELEMENT_SPACING * 2;
 
                             if (pathWidth > maxWidth) maxWidth = pathWidth;
                             path.pathHeight = pathMaxHeight;
@@ -274,11 +327,27 @@
                         });
                         
                         totalHeight += (el.paths.length > 1 ? (el.paths.length - 1) * CONFIG.BRANCH_V_SPACING : 0);
-                        el.elWidth = maxWidth + CONFIG.ELEMENT_SPACING * 2; // Add padding for branch connectors
+                        el.elWidth = maxWidth + CONFIG.ELEMENT_SPACING * 4; // Add more padding for branch connectors
                         el.elHeight = totalHeight;
                         break;
                     default: el.elWidth = 0; break;
                 }
+            }
+
+            // Calculate optimal spacing between two elements based on their text labels
+            calculateOptimalSpacing(el1, el2) {
+                if (!el1 || !el2) return CONFIG.MIN_TEXT_SPACING;
+                
+                // Get text widths
+                const text1Width = el1.textWidth || 0;
+                const text2Width = el2.textWidth || 0;
+                
+                // Calculate minimum spacing needed to prevent text overlap
+                // Use the full text width, not just half, to ensure no overlap even with truncated text
+                const minTextSpacing = Math.max(text1Width, text2Width) + 40; // Full text width plus padding
+                
+                // Return the maximum of minimum text spacing and default element spacing
+                return Math.max(CONFIG.ELEMENT_SPACING, CONFIG.MIN_TEXT_SPACING, minTextSpacing);
             }
 
             getVerticalBounds(layout) {
@@ -294,6 +363,50 @@
                     });
                 });
                 return { rungTop, rungBottom };
+            }
+
+            getContentWidth(layout) {
+                if (layout.length === 0 || layout[0].elements.length === 0) return 0;
+                
+                let minX = Infinity, maxX = -Infinity;
+                layout.forEach(line => {
+                    line.elements.forEach(el => {
+                        const left = el.x - el.elWidth / 2 - (el.textWidth || 0) / 2 - 20; // Include text width
+                        const right = el.x + el.elWidth / 2 + (el.textWidth || 0) / 2 + 20;
+                        if (left < minX) minX = left;
+                        if (right > maxX) maxX = right;
+                    });
+                });
+                
+                return maxX - minX;
+            }
+
+            scaleLayout(layout, scale) {
+                layout.forEach(line => {
+                    line.elements.forEach(el => {
+                        el.x *= scale;
+                        el.elWidth *= scale;
+                        el.elHeight *= scale;
+                        if (el.textWidth) el.textWidth *= scale;
+                        if (el.type === 'BRANCH') {
+                            this.scaleBranch(el, scale);
+                        }
+                    });
+                });
+            }
+
+            scaleBranch(branchEl, scale) {
+                branchEl.paths.forEach(path => {
+                    path.elements.forEach(el => {
+                        el.x *= scale;
+                        el.elWidth *= scale;
+                        el.elHeight *= scale;
+                        if (el.textWidth) el.textWidth *= scale;
+                        if (el.type === 'BRANCH') {
+                            this.scaleBranch(el, scale);
+                        }
+                    });
+                });
             }
 
             shiftLayout(layout, yOffset) {
@@ -318,8 +431,8 @@
             }
             
             getRailPositions() {
-                const leftRailX = CONFIG.POWER_RAIL_WIDTH / 2 + 20;
-                const rightRailX = this.canvas.width - (CONFIG.POWER_RAIL_WIDTH / 2) - 20;
+                const leftRailX = CONFIG.POWER_RAIL_WIDTH / 2 + 40; // Increased padding for text labels
+                const rightRailX = this.canvas.width - (CONFIG.POWER_RAIL_WIDTH / 2) - 40; // Increased padding for text labels
                 return { leftRailX, rightRailX };
             }
 
@@ -356,8 +469,8 @@
                         const currentEl = line.elements[i];
                         const nextEl = line.elements[i + 1];
                         this.ctx.beginPath();
-                        this.ctx.moveTo(currentEl.x + currentEl.elWidth / 2, currentEl.y);
-                        this.ctx.lineTo(nextEl.x - nextEl.elWidth / 2, nextEl.y);
+                        this.ctx.moveTo(currentEl.x + currentEl.elWidth / 2 + 5, currentEl.y); // Add 5px padding
+                        this.ctx.lineTo(nextEl.x - nextEl.elWidth / 2 - 5, nextEl.y); // Add 5px padding
                         this.ctx.stroke();
                     }
                 });
@@ -367,14 +480,14 @@
                 const leftRailConnectionX = leftRailX + CONFIG.POWER_RAIL_WIDTH / 2 + 5; // Add small gap from rail
                 this.ctx.beginPath();
                 this.ctx.moveTo(leftRailConnectionX, firstEl.y);
-                this.ctx.lineTo(firstEl.x - firstEl.elWidth / 2, firstEl.y);
+                this.ctx.lineTo(firstEl.x - firstEl.elWidth / 2 - 5, firstEl.y); // Add 5px padding
                 this.ctx.stroke();
                 
                 const lastLine = lines[lines.length - 1];
                 const lastEl = lastLine.elements[lastLine.elements.length - 1];
                 if (lastEl.type !== 'BRANCH') {
                     this.ctx.beginPath();
-                    this.ctx.moveTo(lastEl.x + lastEl.elWidth / 2, lastEl.y);
+                    this.ctx.moveTo(lastEl.x + lastEl.elWidth / 2 + 5, lastEl.y); // Add 5px padding
                     this.ctx.lineTo(rightRailX, lastEl.y);
                     this.ctx.stroke();
                 }
@@ -387,30 +500,37 @@
                     const transferY = endOfCurrentLine.y + (CONFIG.RUNG_V_SPACING / 2);
 
                     this.ctx.beginPath();
-                    this.ctx.moveTo(endOfCurrentLine.x + endOfCurrentLine.elWidth / 2, endOfCurrentLine.y);
+                    this.ctx.moveTo(endOfCurrentLine.x + endOfCurrentLine.elWidth / 2 + 5, endOfCurrentLine.y); // Add 5px padding
                     this.ctx.lineTo(rightRailX, endOfCurrentLine.y);
                     this.ctx.lineTo(rightRailX, transferY);
                     this.ctx.lineTo(leftRailX, transferY);
                     this.ctx.lineTo(leftRailX, startOfNextLine.y);
-                    this.ctx.lineTo(startOfNextLine.x - startOfNextLine.elWidth / 2, startOfNextLine.y);
+                    this.ctx.lineTo(startOfNextLine.x - startOfNextLine.elWidth / 2 - 5, startOfNextLine.y); // Add 5px padding
                     this.ctx.stroke();
                 }
             }
 
             drawTextAboveSymbol(text, x, y, el) {
                 if (!text) return;
+                
                 this.ctx.font = CONFIG.LABEL_FONT;
                 this.ctx.textAlign = 'center';
                 this.ctx.textBaseline = 'bottom';
-                const textMetrics = this.ctx.measureText(text);
+                
+                // Display the full text without truncation
+                let displayText = text;
+                let textMetrics = this.ctx.measureText(displayText);
+                
                 const textHeight = 14; 
                 const textY = y - (el.elHeight / 2) - 8; 
                 
+                // Draw background with proper width
                 this.ctx.fillStyle = CONFIG.COLORS.TEXT_BG;
                 this.ctx.fillRect(x - textMetrics.width / 2 - 4, textY - textHeight, textMetrics.width + 8, textHeight + 4);
                 
+                // Draw text
                 this.ctx.fillStyle = CONFIG.COLORS.TEXT;
-                this.ctx.fillText(text, x, textY);
+                this.ctx.fillText(displayText, x, textY);
             }
 
             drawContact(x, y, label, type, el) {
@@ -482,6 +602,12 @@
                 const branchStartX = x - elWidth / 2;
                 const internalBranchEndX = x + elWidth / 2;
                 
+                console.log('Drawing branch:', {
+                    x, y, elWidth, elHeight,
+                    branchStartX, internalBranchEndX,
+                    paths: paths.map(p => ({ elements: p.elements.map(e => e.label) }))
+                });
+                
                 let startY = y - elHeight / 2;
 
                 const topPathCenterY = startY + paths[0].pathHeight / 2;
@@ -505,48 +631,34 @@
                     const pathY = startY + path.pathHeight / 2;
                     let currentXInPath = branchStartX;
 
-                    const lastInPath = path.elements[path.elements.length - 1];
-                    const hasCoilAtEnd = lastInPath && lastInPath.type === 'OUTPUT_COIL';
-                    const normalElements = hasCoilAtEnd ? path.elements.slice(0, -1) : path.elements;
-                    const coilToDraw = hasCoilAtEnd ? lastInPath : null;
-
-                    normalElements.forEach(element => {
-                        const elementX = currentXInPath + CONFIG.ELEMENT_SPACING + element.elWidth / 2;
+                    // Draw all elements in this path sequentially
+                    path.elements.forEach((element, index) => {
+                        // Calculate optimal spacing to this element
+                        const prevElement = index > 0 ? path.elements[index - 1] : null;
+                        const spacing = this.calculateOptimalSpacing(prevElement, element);
+                        const elementX = currentXInPath + spacing + element.elWidth / 2;
+                        
+                        // Draw wire to this element
                         this.ctx.beginPath();
                         this.ctx.moveTo(currentXInPath, pathY);
-                        this.ctx.lineTo(elementX - element.elWidth / 2, pathY);
+                        this.ctx.lineTo(elementX - element.elWidth / 2 - 5, pathY);
                         this.ctx.stroke();
+                        
+                        // Draw the element itself
                         this.drawElement({ ...element, x: elementX, y: pathY });
-                        // Reset stroke style to wire color after drawing element
+                        
+                        // Reset stroke style and update position
                         this.ctx.strokeStyle = CONFIG.COLORS.WIRE;
-                        currentXInPath = elementX + element.elWidth / 2;
+                        currentXInPath = elementX + element.elWidth / 2 + 5;
                     });
 
+                    // Connect to the end of the branch
                     const finalEndX = isLastElementInRung ? rightRailX : internalBranchEndX;
-
-                    if (coilToDraw) {
-                        const justificationPadding = isLastElementInRung ? CONFIG.RAIL_PADDING : CONFIG.ELEMENT_SPACING;
-                        const coilX = finalEndX - justificationPadding - (coilToDraw.elWidth / 2);
-
-                        this.ctx.beginPath();
-                        this.ctx.moveTo(currentXInPath, pathY);
-                        this.ctx.lineTo(coilX - coilToDraw.elWidth / 2, pathY);
-                        this.ctx.stroke();
-                        
-                        this.drawElement({ ...coilToDraw, x: coilX, y: pathY });
-                        // Reset stroke style to wire color after drawing coil
-                        this.ctx.strokeStyle = CONFIG.COLORS.WIRE;
-                        
-                        this.ctx.beginPath();
-                        this.ctx.moveTo(coilX + coilToDraw.elWidth / 2, pathY);
-                        this.ctx.lineTo(finalEndX, pathY);
-                        this.ctx.stroke();
-                    } else {
-                        this.ctx.beginPath();
-                        this.ctx.moveTo(currentXInPath, pathY);
-                        this.ctx.lineTo(finalEndX, pathY);
-                        this.ctx.stroke();
-                    }
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(currentXInPath, pathY);
+                    this.ctx.lineTo(finalEndX, pathY);
+                    this.ctx.stroke();
+                    
                     startY += path.pathHeight + CONFIG.BRANCH_V_SPACING;
                 });
             }
@@ -570,6 +682,11 @@
                     { type: 'NO_CONTACT', label: 'Start_Button' },
                     { type: 'NC_CONTACT', label: 'Stop_Button' },
                     { type: 'OUTPUT_COIL', label: 'Motor_Output' }
+                ],
+                longLabels: [
+                    { type: 'NO_CONTACT', label: 'Very_Long_Start_Button_Label_That_Should_Not_Overlap' },
+                    { type: 'NC_CONTACT', label: 'Another_Very_Long_Stop_Button_Label_For_Testing' },
+                    { type: 'OUTPUT_COIL', label: 'Motor_Output_With_Long_Label_Too' }
                 ],
                 complex: [
                     { type: 'NO_CONTACT', label: 'Start_Button' },
@@ -671,6 +788,8 @@
             runTest(testName) {
                 this.activeTest = testName;
                 if (this.rungDefs[testName]) {
+                    console.log('Running test:', testName, 'at', new Date().toISOString());
+                    console.log('Test data:', JSON.stringify(this.rungDefs[testName], null, 2));
                     this.renderer.initialize(this.rungDefs[testName]);
                 }
                 this.updateButtonStyles();
@@ -695,7 +814,7 @@
 
             init() {
                 // Set an initial test case to display on load
-                this.runTest('zoomTest'); 
+                this.runTest('simple'); 
             }
         };
 
