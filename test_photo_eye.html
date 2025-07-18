@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Photo_Eye Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-case { margin: 20px 0; padding: 10px; border: 1px solid #ccc; }
+        pre { background: #f5f5f5; padding: 10px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>Photo_Eye Parallel Branch Test</h1>
+    
+    <div class="test-case">
+        <h2>Current Data Structure:</h2>
+        <pre id="current-structure"></pre>
+    </div>
+    
+    <div class="test-case">
+        <h2>Expected Structure:</h2>
+        <pre>
+complex: [
+    { type: 'NO_CONTACT', label: 'Start_Button' },
+    { type: 'NC_CONTACT', label: 'Stop_Button' },
+    { 
+        type: 'BRANCH', 
+        paths: [
+            { elements: [{ type: 'NO_CONTACT', label: 'Limit_Switch' }, { type: 'NO_CONTACT', label: 'Photo_Eye' }] },
+            { elements: [{ type: 'NO_CONTACT', label: 'Pressure_Switch' }] }
+        ]
+    },
+    { type: 'OUTPUT_COIL', label: 'Motor_Output' }
+]
+        </pre>
+    </div>
+
+    <script>
+        // Current test data from RockwellViewer.html
+        const complex = [
+            { type: 'NO_CONTACT', label: 'Start_Button' },
+            { type: 'NC_CONTACT', label: 'Stop_Button' },
+            { 
+                type: 'BRANCH', 
+                paths: [
+                    { elements: [{ type: 'NO_CONTACT', label: 'Limit_Switch' }, { type: 'NO_CONTACT', label: 'Photo_Eye' }] },
+                    { elements: [{ type: 'NO_CONTACT', label: 'Pressure_Switch' }] }
+                ]
+            },
+            { type: 'OUTPUT_COIL', label: 'Motor_Output' }
+        ];
+
+        document.getElementById('current-structure').textContent = JSON.stringify(complex, null, 2);
+        
+        // Verify the structure
+        console.log('Testing Photo_Eye positioning...');
+        console.log('Branch paths:', complex[2].paths);
+        console.log('First path elements:', complex[2].paths[0].elements);
+        console.log('Second path elements:', complex[2].paths[1].elements);
+        
+        // Check if Photo_Eye is in the first path
+        const firstPath = complex[2].paths[0];
+        const photoEyeInFirstPath = firstPath.elements.some(el => el.label === 'Photo_Eye');
+        console.log('Photo_Eye in first path:', photoEyeInFirstPath);
+        
+        if (photoEyeInFirstPath) {
+            console.log('✅ Structure is correct - Photo_Eye should be in the first path');
+        } else {
+            console.log('❌ Structure is incorrect - Photo_Eye is not in the first path');
+        }
+    </script>
+</body>
+</html> 

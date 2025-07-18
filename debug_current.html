@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Debug Current State</title>
+</head>
+<body>
+    <h1>Current Photo_Eye Test</h1>
+    <div id="output"></div>
+    
+    <script>
+        // Copy the exact test data from RockwellViewer.html
+        const complex = [
+            { type: 'NO_CONTACT', label: 'Start_Button' },
+            { type: 'NC_CONTACT', label: 'Stop_Button' },
+            { 
+                type: 'BRANCH', 
+                paths: [
+                    { elements: [{ type: 'NO_CONTACT', label: 'Limit_Switch' }, { type: 'NO_CONTACT', label: 'Photo_Eye' }] },
+                    { elements: [{ type: 'NO_CONTACT', label: 'Pressure_Switch' }] }
+                ]
+            },
+            { type: 'OUTPUT_COIL', label: 'Motor_Output' }
+        ];
+
+        const output = document.getElementById('output');
+        
+        // Check the structure
+        const firstPath = complex[2].paths[0];
+        const photoEyeInFirstPath = firstPath.elements.some(el => el.label === 'Photo_Eye');
+        
+        output.innerHTML = `
+            <h2>Data Structure Analysis:</h2>
+            <pre>${JSON.stringify(complex, null, 2)}</pre>
+            
+            <h2>Results:</h2>
+            <p><strong>Photo_Eye in first path:</strong> ${photoEyeInFirstPath ? 'YES' : 'NO'}</p>
+            <p><strong>First path elements:</strong> ${firstPath.elements.map(el => el.label).join(' + ')}</p>
+            <p><strong>Second path elements:</strong> ${complex[2].paths[1].elements.map(el => el.label).join(' + ')}</p>
+            
+            <h2>Expected vs Actual:</h2>
+            <p><strong>Expected:</strong> [Branch: Limit_Switch + Photo_Eye | Pressure_Switch] -> Motor_Output</p>
+            <p><strong>Data Structure:</strong> ✅ Correct</p>
+            <p><strong>Rendering Issue:</strong> ❌ Photo_Eye appears after branch instead of inside it</p>
+        `;
+        
+        console.log('Debug output:', {
+            complex,
+            firstPath,
+            photoEyeInFirstPath,
+            firstPathElements: firstPath.elements.map(el => el.label),
+            secondPathElements: complex[2].paths[1].elements.map(el => el.label)
+        });
+    </script>
+</body>
+</html> 
