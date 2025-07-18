@@ -3,825 +3,2882 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Responsive Ladder Logic System</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <title>Studio 5000 Logix Designer Style PLC Viewer</title>
     <style>
-        /* Custom styles for a more polished look and feel */
+        :root {
+            /* Studio 5000 Color Scheme */
+            --primary-bg: #1e3a8a;
+            --secondary-bg: #f8fafc;
+            --content-bg: #ffffff;
+            --border-color: #e2e8f0;
+            --accent-color: #2563eb;
+            --text-color: #1f2937;
+            --light-text: #f1f5f9;
+            --muted-text: #6b7280;
+            --hover-bg: #f1f5f9;
+            --selected-bg: #dbeafe;
+            --error-color: #dc2626;
+            --warning-color: #f59e0b;
+            --success-color: #059669;
+            
+            /* Tree-specific colors */
+            --tree-bg: #ffffff;
+            --tree-border: #e2e8f0;
+            --tree-hover: #f8fafc;
+            --tree-selected: #eff6ff;
+            --tree-selected-border: #2563eb;
+            
+            /* Element type colors */
+            --task-continuous: #059669;
+            --task-periodic: #f59e0b;
+            --task-event: #dc2626;
+            --routine-rll: #2563eb;
+            --routine-st: #7c3aed;
+            --routine-fbd: #ea580c;
+            --tag-bool: #059669;
+            --tag-int: #2563eb;
+            --tag-real: #7c3aed;
+            --tag-timer: #f59e0b;
+            --tag-counter: #dc2626;
+            --tag-string: #0891b2;
+            --tag-group: #059669;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
         body {
-            font-family: 'Inter', sans-serif;
-            background-color: #f3f4f6; /* A slightly lighter gray */
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: var(--secondary-bg);
+            color: var(--text-color);
+            line-height: 1.6;
+            overflow: hidden;
         }
+
+        .header {
+            background: var(--primary-bg);
+            color: var(--light-text);
+            padding: 0.75rem 1.5rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            z-index: 100;
+        }
+
+        .header h1 {
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
+
+        .toolbar {
+            background: var(--content-bg);
+            border-bottom: 1px solid var(--border-color);
+            padding: 0.75rem 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
         .btn {
-            @apply font-semibold py-3 px-5 rounded-lg shadow-md hover:shadow-lg transition-all duration-200 ease-in-out transform hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-offset-2;
+            background: var(--accent-color);
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.875rem;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            min-height: 36px;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
         }
-        .btn-primary {
-            @apply bg-blue-600 hover:bg-blue-700 text-white focus:ring-blue-500;
+
+        .btn:hover {
+            background: #1d4ed8;
+            transform: translateY(-1px);
         }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .btn:disabled {
+            background: var(--muted-text);
+            cursor: not-allowed;
+            transform: none;
+        }
+
         .btn-secondary {
-            @apply bg-gray-500 hover:bg-gray-600 text-white focus:ring-gray-400;
+            background: var(--content-bg);
+            color: var(--text-color);
+            border: 1px solid var(--border-color);
         }
-        .btn-active {
-            @apply bg-blue-700 ring-2 ring-offset-2 ring-blue-500 shadow-inner scale-105 -translate-y-0.5;
+
+        .btn-secondary:hover {
+            background: var(--hover-bg);
         }
-        #canvas-container {
-            transition: height 0.3s ease-in-out;
-            max-height: calc(100vh - 200px); /* Prevent growing beyond viewport */
-            overflow: visible;
+
+        .search-container {
+            flex-grow: 1;
+            max-width: 300px;
+            position: relative;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 0.5rem 1rem 0.5rem 2.5rem;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            background: var(--content-bg);
+            font-size: 0.875rem;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 0.75rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--muted-text);
+            pointer-events: none;
+        }
+
+        .status {
+            background: var(--secondary-bg);
+            border-bottom: 1px solid var(--border-color);
+            padding: 0.5rem 1.5rem;
+            font-size: 0.875rem;
+            color: var(--muted-text);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .main-container {
+            display: flex;
+            height: calc(100vh - 140px);
+            overflow: hidden;
+        }
+
+        /* Enhanced Tree Panel */
+        .tree-panel {
+            width: 350px;
+            min-width: 300px;
+            max-width: 500px;
+            background: var(--tree-bg);
+            border-right: 1px solid var(--tree-border);
+            display: flex;
+            flex-direction: column;
+            resize: horizontal;
+            overflow: hidden;
+        }
+
+        .tree-header {
+            background: var(--secondary-bg);
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid var(--tree-border);
+            font-weight: 600;
+            font-size: 0.875rem;
+            color: var(--text-color);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .tree-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 0.5rem 0;
+        }
+
+        .tree-node {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+        }
+
+        .tree-item {
+            display: flex;
+            align-items: center;
+            padding: 0.375rem 0.75rem;
+            cursor: pointer;
+            font-size: 0.875rem;
+            transition: all 0.15s ease;
+            border-left: 3px solid transparent;
+            margin: 1px 0.5rem;
+            border-radius: 4px;
+            min-height: 32px;
+            user-select: none;
+        }
+
+        .tree-item:hover {
+            background: var(--tree-hover);
+        }
+
+        .tree-item.selected {
+            background: var(--tree-selected);
+            border-left-color: var(--tree-selected-border);
+            color: var(--accent-color);
+            font-weight: 500;
+        }
+
+        .tree-item.focused {
+            outline: 2px solid var(--accent-color);
+            outline-offset: -2px;
+        }
+
+        .tree-toggle {
+            width: 16px;
+            height: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            color: var(--muted-text);
+            margin-right: 0.5rem;
+            font-size: 0.75rem;
+            transition: transform 0.2s ease;
+            flex-shrink: 0;
+        }
+
+        .tree-toggle.expanded {
+            transform: rotate(90deg);
+        }
+
+        .tree-icon {
+            margin-right: 0.5rem;
+            font-size: 1rem;
+            width: 16px;
+            text-align: center;
+            flex-shrink: 0;
+        }
+
+        .tree-text {
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .tree-meta {
+            font-size: 0.75rem;
+            color: var(--muted-text);
+            margin-left: 0.5rem;
+            flex-shrink: 0;
+        }
+
+        .tree-children {
+            margin-left: 1.5rem;
+            border-left: 1px solid var(--tree-border);
+            padding-left: 0.5rem;
+        }
+
+        .tree-children.collapsed {
+            display: none;
+        }
+
+        /* Element type styling */
+        .tree-item[data-type="task-continuous"] .tree-icon { color: var(--task-continuous); }
+        .tree-item[data-type="task-periodic"] .tree-icon { color: var(--task-periodic); }
+        .tree-item[data-type="task-event"] .tree-icon { color: var(--task-event); }
+        .tree-item[data-type="routine-rll"] .tree-icon { color: var(--routine-rll); }
+        .tree-item[data-type="routine-st"] .tree-icon { color: var(--routine-st); }
+        .tree-item[data-type="routine-fbd"] .tree-icon { color: var(--routine-fbd); }
+        .tree-item[data-type="tag-bool"] .tree-icon { color: var(--tag-bool); }
+        .tree-item[data-type="tag-int"] .tree-icon { color: var(--tag-int); }
+        .tree-item[data-type="tag-real"] .tree-icon { color: var(--tag-real); }
+        .tree-item[data-type="tag-timer"] .tree-icon { color: var(--tag-timer); }
+        .tree-item[data-type="tag-counter"] .tree-icon { color: var(--tag-counter); }
+        .tree-item[data-type="tag-string"] .tree-icon { color: var(--tag-string); }
+        .tree-item[data-type="tag-group"] .tree-icon { color: var(--tag-group); }
+        .tree-item[data-type="tags-section"] .tree-icon { color: #2563eb; }
+
+        .content-panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .content-header {
+            background: var(--content-bg);
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .content-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+            color: var(--text-color);
+        }
+
+        .content-meta {
+            font-size: 0.875rem;
+            color: var(--muted-text);
+            display: flex;
+            gap: 1.5rem;
+            flex-wrap: wrap;
+        }
+
+        .rung-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1rem 1.5rem;
+            background: var(--secondary-bg);
+        }
+
+        .rung {
+            background: var(--content-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            margin-bottom: 1rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            transition: all 0.2s ease;
+        }
+
+        .rung:hover {
+            box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+        }
+
+        .rung.selected {
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+
+        .rung-header {
+            background: var(--secondary-bg);
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-radius: 6px 6px 0 0;
+        }
+
+        .rung-number {
+            font-weight: 600;
+            color: var(--accent-color);
+            font-size: 0.875rem;
+        }
+
+        .rung-comment {
+            color: var(--success-color);
+            font-style: italic;
+            flex: 1;
+            margin-left: 1rem;
+            font-size: 0.875rem;
+        }
+
+        .rung-content {
+            padding: 1rem;
+            font-family: 'Courier New', monospace;
+            font-size: 0.875rem;
+            background: #1f2937;
+            color: #e5e7eb;
+            border-radius: 0 0 6px 6px;
+            white-space: pre-wrap;
+            word-break: break-word;
+            line-height: 1.5;
+        }
+
+        .welcome {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            text-align: center;
+            color: var(--muted-text);
+            padding: 2rem;
+        }
+
+        .welcome-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+
+        .loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: var(--muted-text);
+        }
+
+        .error {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            text-align: center;
+            color: var(--error-color);
+            padding: 2rem;
+        }
+
+        .error-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+
+        #fileInput {
+            display: none;
+        }
+
+        /* Accessibility */
+        .sr-only {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border: 0;
+        }
+
+        /* Focus styles */
+        .tree-item:focus,
+        .btn:focus,
+        .search-input:focus {
+            outline: 2px solid var(--accent-color);
+            outline-offset: 2px;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .tree-panel {
+                width: 280px;
+                min-width: 250px;
+            }
+            
+            .toolbar {
+                flex-wrap: wrap;
+                gap: 0.5rem;
+            }
+            
+            .search-container {
+                max-width: none;
+                order: 3;
+                width: 100%;
+            }
+        }
+
+        /* Animation */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .tree-item {
+            animation: fadeIn 0.2s ease;
         }
     </style>
 </head>
-<body class="bg-gray-100">
+<body>
+    <header class="header">
+        <h1>Studio 5000 Logix Designer Style PLC Viewer</h1>
+    </header>
 
-    <div class="min-h-screen flex flex-col">
-        <header class="text-center p-4 bg-white shadow-lg flex-shrink-0">
-            <h1 class="text-3xl md:text-4xl font-bold text-gray-800">Responsive Ladder Logic System</h1>
-            <p class="text-gray-500 mt-1">A modern, responsive ladder logic renderer with a completely rebuilt and corrected wiring engine.</p>
-        </header>
-
-        <div class="flex-1 flex flex-col">
-            <div class="bg-white shadow-lg flex-shrink-0">
-                <div class="panel-header bg-gray-800 text-white p-4 flex justify-between items-center">
-                    <h2 class="text-lg font-semibold">Ladder Logic Canvas</h2>
-                </div>
-                <div class="panel-content p-4">
-                    <div id="button-container" class="button-group flex flex-wrap gap-3 mb-4">
-                        <button class="btn btn-primary" data-testid="simple" onclick="app.runTest('simple')">Simple Rung</button>
-                        <button class="btn btn-primary" data-testid="longLabels" onclick="app.runTest('longLabels')">Long Labels Test</button>
-                        <button class="btn btn-primary" data-testid="complex" onclick="app.runTest('complex')">Standard Branch</button>
-                        <button class="btn btn-primary" data-testid="longRung" onclick="app.runTest('longRung')">Long Rung Wrap</button>
-                        <button class="btn btn-primary" data-testid="gsvMeqComplex" onclick="app.runTest('gsvMeqComplex')">Complex Branch (GSV/MEQ)</button>
-                        <button class="btn btn-primary" data-testid="complexWrap" onclick="app.runTest('complexWrap')">Complex Wrap</button>
-                        <button class="btn btn-primary" data-testid="zoomTest" onclick="app.runTest('zoomTest')">Zoom Test</button>
-                        <button class="btn btn-secondary" onclick="app.clear()">Clear</button>
-                    </div>
-                </div>
-            </div>
-            
-            <div id="canvas-container" class="flex-1 bg-gray-50 border-2 border-gray-200 overflow-hidden">
-                <!-- Canvas will be inserted here by JavaScript -->
-            </div>
+    <div class="toolbar">
+        <input type="file" id="fileInput" accept=".l5x,.xml" aria-label="Select L5X project file">
+        <button class="btn" onclick="openFile()" aria-label="Load L5X project file">
+            📁 Load Project
+        </button>
+        <div class="search-container">
+            <span class="search-icon" aria-hidden="true">🔍</span>
+            <input type="text" class="search-input" placeholder="Search project tree..." id="searchInput" aria-label="Search project tree">
         </div>
+        <button class="btn btn-secondary" onclick="expandAll()" aria-label="Expand all tree items">
+            📂 Expand All
+        </button>
+        <button class="btn btn-secondary" onclick="collapseAll()" aria-label="Collapse all tree items">
+            📁 Collapse All
+        </button>
     </div>
 
+    <div class="status" id="statusInfo">
+        <span id="statusText">Ready to load L5X project file</span>
+        <span id="statusDetails"></span>
+    </div>
+
+    <main class="main-container">
+        <aside class="tree-panel" id="treePanel" style="display: none;" role="navigation" aria-label="Project organizer">
+            <div class="tree-header">
+                📁 Controller Organizer
+            </div>
+            <div class="tree-content" id="treeContent" role="tree" aria-label="Project structure">
+                <!-- Tree content will be populated here -->
+            </div>
+        </aside>
+
+        <section class="content-panel" role="main">
+            <div class="content-header" id="contentHeader" style="display: none;">
+                <div class="content-title" id="contentTitle">Select an item to view details</div>
+                <div class="content-meta" id="contentMeta"></div>
+            </div>
+
+            <div class="rung-container" id="rungContainer">
+                <div class="welcome">
+                    <div class="welcome-icon">🏭</div>
+                    <h2>Studio 5000 Logix Designer Style PLC Viewer</h2>
+                    <p>Load an L5X project file to explore the complete controller structure with full Studio 5000-style navigation</p>
+                    <p style="margin-top: 1rem; font-size: 0.9rem; color: var(--muted-text);">
+                        <strong>Complete Studio 5000 Structure:</strong><br>
+                        • Controller Tags (organized by type) • Tasks & Programs • Motion Groups • Data Types & Add-On Instructions<br>
+                        • I/O Configuration (Local, EtherNet/IP, DeviceNet, ControlNet) • Safety Configuration<br>
+                        • Event Tasks • Trends & Diagnostics • Search functionality • Expand/collapse navigation
+                    </p>
+                </div>
+            </div>
+        </section>
+    </main>
+
     <script>
-        // --- CONFIGURATION ---
-        const CONFIG = {
-            RUNG_V_SPACING: 100,      // Vertical spacing for wrapped lines
-            RUNG_TOP_PADDING: 50,
-            POWER_RAIL_WIDTH: 8,
-            WIRE_WIDTH: 3,
-            CONTACT_WIDTH: 40,
-            CONTACT_HEIGHT: 30,
-            INSTRUCTION_BOX_WIDTH: 280,
-            INSTRUCTION_BOX_HEIGHT: 120,
-            COMPARISON_WIDTH: 60,
-            COIL_RADIUS: 20,
-            ELEMENT_SPACING: 40,      // Horizontal spacing between elements
-            MIN_TEXT_SPACING: 100,    // Minimum spacing to prevent text overlap
-            BRANCH_V_SPACING: 60,     // Vertical spacing for paths within a branch
-            RAIL_PADDING: 40,         // Horizontal padding from power rails
-            SYMBOL_FONT: 'bold 14px "Courier New", monospace',
-            LABEL_FONT: '12px "Courier New", monospace',
-            COLORS: {
-                RAIL: '#10b981',      // Green for power rails
-                WIRE: '#374151',      // Dark gray for wires
-                CONTACT_NO: '#1f2937',
-                CONTACT_NC: '#1f2937',
-                COIL: '#ea580c',      // Orange for coils
-                TEXT: '#1f2937',
-                TEXT_BG: 'rgba(255, 255, 255, 0.85)' // Slightly transparent white for label backgrounds
+        // ============================================================================
+        // CODE HARDENING: SECURITY AND ROBUSTNESS IMPLEMENTATION
+        // ============================================================================
+
+        // Input validation and sanitization
+        const VALIDATION = {
+            MAX_FILE_SIZE: 50 * 1024 * 1024, // 50MB limit
+            ALLOWED_FILE_TYPES: ['.l5x', '.xml'],
+            MAX_TREE_DEPTH: 10,
+            MAX_SEARCH_LENGTH: 100,
+            SANITIZE_REGEX: /[<>\"'&]/g,
+            XML_ENTITIES: {
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#x27;'
             }
         };
 
-        // --- LADDER RENDERER CLASS ---
-        class LadderRenderer {
-            constructor(containerId) {
-                this.container = document.getElementById(containerId);
-                if (!this.container) throw new Error(`Container with id "${containerId}" not found.`);
-                this.canvas = null;
-                this.ctx = null;
-                this.rungDefinition = null;
-                this.resizeObserver = null;
-            }
+        // Error handling and logging
+        const ERROR_CODES = {
+            FILE_TOO_LARGE: 'FILE_TOO_LARGE',
+            INVALID_FILE_TYPE: 'INVALID_FILE_TYPE',
+            XML_PARSE_ERROR: 'XML_PARSE_ERROR',
+            INVALID_L5X_STRUCTURE: 'INVALID_L5X_STRUCTURE',
+            TREE_RENDER_ERROR: 'TREE_RENDER_ERROR',
+            SECURITY_VIOLATION: 'SECURITY_VIOLATION'
+        };
 
-            // Initializes canvas and sets up responsive resizing
-            initialize(rungDefinition) {
-                this.rungDefinition = rungDefinition;
-                this.container.innerHTML = '';
-                this.canvas = document.createElement('canvas');
-                this.container.appendChild(this.canvas);
-                this.ctx = this.canvas.getContext('2d');
-                
-                if (this.resizeObserver) {
-                    this.resizeObserver.disconnect();
-                }
-                
-                // Add debounce to prevent rapid firing
-                let resizeTimeout;
-                this.resizeObserver = new ResizeObserver(() => {
-                    clearTimeout(resizeTimeout);
-                    resizeTimeout = setTimeout(() => this.redraw(), 10);
-                });
-                this.resizeObserver.observe(this.container);
+        // Application state with validation
+        let projectData = null;
+        let selectedItem = null;
+        let searchQuery = '';
+        let treeState = new Map(); // Track expanded/collapsed state
+        let securityViolations = 0;
+        const MAX_SECURITY_VIOLATIONS = 5;
 
-                // Initial draw with a small delay to ensure container is stable
-                setTimeout(() => this.redraw(), 50);
-            }
-            
-            // --- SIMPLIFIED REDRAW FUNCTION ---
-            redraw() {
-                if (!this.rungDefinition || !this.container.offsetParent) return;
-                const { width, height } = this.container.getBoundingClientRect();
-                
-                // Set canvas dimensions to match container
-                this.canvas.width = width;
-                this.canvas.height = height;
+        // DOM elements with null checks
+        const elements = {
+            fileInput: null,
+            searchInput: null,
+            statusText: null,
+            statusDetails: null,
+            treePanel: null,
+            treeContent: null,
+            contentHeader: null,
+            contentTitle: null,
+            contentMeta: null,
+            rungContainer: null
+        };
 
-                // Calculate layout
-                const { leftRailX, rightRailX } = this.getRailPositions();
-                const tempRungDef = JSON.parse(JSON.stringify(this.rungDefinition));
-                const positionedLayout = this.layoutElements(tempRungDef, leftRailX, rightRailX);
-                const { rungTop, rungBottom } = this.getVerticalBounds(positionedLayout);
-                
-                // Check if content fits horizontally and adjust if needed
-                const contentWidth = this.getContentWidth(positionedLayout);
-                const availableWidth = width - 40; // Leave 20px padding on each side
-                
-                if (contentWidth > availableWidth) {
-                    // Content is too wide, we need to adjust the layout
-                    const scale = availableWidth / contentWidth;
-                    this.scaleLayout(positionedLayout, scale);
-                }
-                
-                // Clear and prepare canvas
-                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-                this.ctx.imageSmoothingEnabled = true;
-                this.ctx.imageSmoothingQuality = 'high';
-                
-                // Center the content vertically in the available space
-                const contentHeight = rungBottom - rungTop;
-                const yOffset = -rungTop + (height - contentHeight) / 2;
-                this.shiftLayout(positionedLayout, yOffset);
-                
-                // Drawing logic (order is critical)
-                this.drawPowerRails(rungTop + yOffset, rungBottom + yOffset);
-                this.drawWires(positionedLayout, leftRailX, rightRailX);
-                
-                positionedLayout.forEach((line, lineIndex) => {
-                    const isLastLine = lineIndex === positionedLayout.length - 1;
-                    line.elements.forEach((el, elIndex) => {
-                        const isLastElementInRung = isLastLine && (elIndex === line.elements.length - 1);
-                        this.drawElement(el, isLastElementInRung, rightRailX);
-                    });
-                });
-            }
-            
-            drawElement(el, isLastElementInRung = false, rightRailX = 0) {
-                switch (el.type) {
-                    case 'NO_CONTACT': this.drawContact(el.x, el.y, el.label, 'NO', el); break;
-                    case 'NC_CONTACT': this.drawContact(el.x, el.y, el.label, 'NC', el); break;
-                    case 'OUTPUT_COIL': this.drawCoil(el.x, el.y, el.label, el); break;
-                    case 'BRANCH': this.drawBranch(el, isLastElementInRung, rightRailX); break;
-                    case 'INSTRUCTION_BOX': this.drawInstructionBox(el.x, el.y, el.label, el.instruction, el.params, el); break;
-                    case 'COMPARISON': this.drawComparison(el.x, el.y, el.label, el.instruction, el); break;
-                }
-            }
-            
-            // --- CORRECTED LAYOUT ENGINE ---
-            layoutElements(rungDefinition, leftRailX, rightRailX) {
-                const lines = [];
-                let currentLineElements = [];
-                let xCursor = leftRailX + CONFIG.RAIL_PADDING;
-                let currentY = 0; // Start at 0, will be shifted later
+        // Initialize DOM elements with error handling
+        function initializeElements() {
+            try {
+                elements.fileInput = document.getElementById('fileInput');
+                elements.searchInput = document.getElementById('searchInput');
+                elements.statusText = document.getElementById('statusText');
+                elements.statusDetails = document.getElementById('statusDetails');
+                elements.treePanel = document.getElementById('treePanel');
+                elements.treeContent = document.getElementById('treeContent');
+                elements.contentHeader = document.getElementById('contentHeader');
+                elements.contentTitle = document.getElementById('contentTitle');
+                elements.contentMeta = document.getElementById('contentMeta');
+                elements.rungContainer = document.getElementById('rungContainer');
 
-                rungDefinition.forEach(el => this.calculateElementDimensions(el));
-                
-                // Calculate the effective left rail position for layout purposes
-                const leftRailConnectionX = leftRailX + CONFIG.POWER_RAIL_WIDTH / 2 + 5;
-                const effectiveLeftRailX = leftRailConnectionX + CONFIG.ELEMENT_SPACING;
-                
-                // This loop now correctly calculates when to wrap.
-                rungDefinition.forEach((el, index) => {
-                    const elementEndPos = xCursor + el.elWidth;
-                    
-                    // Check if we need to wrap due to right rail proximity OR left rail proximity
-                    if (currentLineElements.length > 0 && 
-                        (elementEndPos > (rightRailX - CONFIG.RAIL_PADDING) || 
-                         xCursor < effectiveLeftRailX)) {
-                        lines.push({ elements: currentLineElements, y: currentY });
-                        currentLineElements = [];
-                        currentY += CONFIG.RUNG_V_SPACING;
-                        xCursor = effectiveLeftRailX;
-                    }
-                    
-                    currentLineElements.push(el);
-                    
-                    // Calculate optimal spacing to next element
-                    const nextEl = rungDefinition[index + 1];
-                    const spacing = this.calculateOptimalSpacing(el, nextEl);
-                    xCursor += el.elWidth + spacing;
-                });
-                
-                if (currentLineElements.length > 0 || lines.length === 0) {
-                    lines.push({ elements: currentLineElements, y: currentY });
-                }
-
-                // Position all elements within their lines, handling final coil justification
-                lines.forEach((line, lineIndex) => {
-                    const isLastLine = lineIndex === lines.length - 1;
-                    const lastElement = line.elements[line.elements.length - 1];
-                    let coilToJustify = null;
-
-                    if (isLastLine && lastElement && lastElement.type === 'OUTPUT_COIL') {
-                        coilToJustify = line.elements.pop();
-                    }
-
-                    // Calculate proper starting position that accounts for text labels
-                    const leftRailConnectionX = leftRailX + CONFIG.POWER_RAIL_WIDTH / 2 + 5;
-                    let xPos = leftRailConnectionX + CONFIG.ELEMENT_SPACING;
-                    
-                    // For the first element, ensure there's enough space for its text label
-                    if (line.elements.length > 0) {
-                        const firstEl = line.elements[0];
-                        const textPadding = Math.max(0, (firstEl.textWidth || 0) / 2 + 20); // Half text width plus padding
-                        xPos = Math.max(xPos, leftRailConnectionX + textPadding);
-                    }
-                    
-                    line.elements.forEach((el, index) => {
-                        el.x = xPos + el.elWidth / 2;
-                        el.y = line.y;
-                        
-                        // Calculate optimal spacing to next element based on text width
-                        const nextEl = line.elements[index + 1];
-                        const spacing = this.calculateOptimalSpacing(el, nextEl);
-                        xPos += el.elWidth + spacing;
-                    });
-
-                    if (coilToJustify) {
-                        // Ensure the coil has enough space for its text label
-                        const textPadding = Math.max(0, (coilToJustify.textWidth || 0) / 2 + 20);
-                        const coilX = rightRailX - CONFIG.RAIL_PADDING - textPadding - (coilToJustify.elWidth / 2);
-                        coilToJustify.x = coilX;
-                        coilToJustify.y = line.y;
-                        line.elements.push(coilToJustify);
+                // Validate all elements exist
+                Object.entries(elements).forEach(([key, element]) => {
+                    if (!element) {
+                        throw new Error(`Required DOM element not found: ${key}`);
                     }
                 });
-
-                return lines;
-            }
-
-            calculateElementDimensions(el) {
-                el.elHeight = CONFIG.CONTACT_HEIGHT; // Default height
-                
-                // Calculate text width for label if it exists
-                let textWidth = 0;
-                if (el.label) {
-                    // Create a temporary canvas to measure text accurately
-                    const tempCanvas = document.createElement('canvas');
-                    const tempCtx = tempCanvas.getContext('2d');
-                    tempCtx.font = CONFIG.LABEL_FONT;
-                    textWidth = tempCtx.measureText(el.label).width;
-                }
-                el.textWidth = textWidth;
-                
-                switch(el.type) {
-                    case 'NO_CONTACT': case 'NC_CONTACT': 
-                        el.elWidth = CONFIG.CONTACT_WIDTH; // Keep physical symbol width constant
-                        break;
-                    case 'COMPARISON': 
-                        el.elWidth = CONFIG.COMPARISON_WIDTH;
-                        break;
-                    case 'OUTPUT_COIL': 
-                        el.elWidth = CONFIG.COIL_RADIUS * 2;
-                        el.elHeight = CONFIG.COIL_RADIUS * 2;
-                        break;
-                    case 'INSTRUCTION_BOX': 
-                        el.elWidth = CONFIG.INSTRUCTION_BOX_WIDTH;
-                        el.elHeight = CONFIG.INSTRUCTION_BOX_HEIGHT;
-                        break;
-                    case 'BRANCH':
-                        let maxWidth = 0;
-                        let totalHeight = 0;
-                        
-                        el.paths.forEach(path => {
-                            let pathWidth = 0;
-                            let pathMaxHeight = 0;
-                            path.elements.forEach(subEl => {
-                                this.calculateElementDimensions(subEl);
-                                pathWidth += subEl.elWidth;
-                                if(subEl.elHeight > pathMaxHeight) pathMaxHeight = subEl.elHeight;
-                            });
-                            // Calculate optimal spacing for elements in this path
-                            for (let i = 0; i < path.elements.length - 1; i++) {
-                                const spacing = this.calculateOptimalSpacing(path.elements[i], path.elements[i + 1]);
-                                pathWidth += spacing;
-                            }
-                            
-                            // Add extra padding for the path
-                            pathWidth += CONFIG.ELEMENT_SPACING * 2;
-
-                            if (pathWidth > maxWidth) maxWidth = pathWidth;
-                            path.pathHeight = pathMaxHeight;
-                            totalHeight += pathMaxHeight;
-                        });
-                        
-                        totalHeight += (el.paths.length > 1 ? (el.paths.length - 1) * CONFIG.BRANCH_V_SPACING : 0);
-                        el.elWidth = maxWidth + CONFIG.ELEMENT_SPACING * 4; // Add more padding for branch connectors
-                        el.elHeight = totalHeight;
-                        break;
-                    default: el.elWidth = 0; break;
-                }
-            }
-
-            // Calculate optimal spacing between two elements based on their text labels
-            calculateOptimalSpacing(el1, el2) {
-                if (!el1 || !el2) return CONFIG.MIN_TEXT_SPACING;
-                
-                // Get text widths
-                const text1Width = el1.textWidth || 0;
-                const text2Width = el2.textWidth || 0;
-                
-                // Calculate minimum spacing needed to prevent text overlap
-                // Use the full text width, not just half, to ensure no overlap even with truncated text
-                const minTextSpacing = Math.max(text1Width, text2Width) + 40; // Full text width plus padding
-                
-                // Return the maximum of minimum text spacing and default element spacing
-                return Math.max(CONFIG.ELEMENT_SPACING, CONFIG.MIN_TEXT_SPACING, minTextSpacing);
-            }
-
-            getVerticalBounds(layout) {
-                let rungTop = Infinity, rungBottom = -Infinity;
-                if (layout.length === 0 || layout[0].elements.length === 0) return { rungTop: 0, rungBottom: 200 };
-                
-                layout.forEach(line => {
-                    line.elements.forEach(el => {
-                        const top = el.y - el.elHeight / 2 - 20; // Add buffer for labels
-                        const bottom = el.y + el.elHeight / 2 + 20;
-                        if (top < rungTop) rungTop = top;
-                        if (bottom > rungBottom) rungBottom = bottom;
-                    });
-                });
-                return { rungTop, rungBottom };
-            }
-
-            getContentWidth(layout) {
-                if (layout.length === 0 || layout[0].elements.length === 0) return 0;
-                
-                let minX = Infinity, maxX = -Infinity;
-                layout.forEach(line => {
-                    line.elements.forEach(el => {
-                        const left = el.x - el.elWidth / 2 - (el.textWidth || 0) / 2 - 20; // Include text width
-                        const right = el.x + el.elWidth / 2 + (el.textWidth || 0) / 2 + 20;
-                        if (left < minX) minX = left;
-                        if (right > maxX) maxX = right;
-                    });
-                });
-                
-                return maxX - minX;
-            }
-
-            scaleLayout(layout, scale) {
-                layout.forEach(line => {
-                    line.elements.forEach(el => {
-                        el.x *= scale;
-                        el.elWidth *= scale;
-                        el.elHeight *= scale;
-                        if (el.textWidth) el.textWidth *= scale;
-                        if (el.type === 'BRANCH') {
-                            this.scaleBranch(el, scale);
-                        }
-                    });
-                });
-            }
-
-            scaleBranch(branchEl, scale) {
-                branchEl.paths.forEach(path => {
-                    path.elements.forEach(el => {
-                        el.x *= scale;
-                        el.elWidth *= scale;
-                        el.elHeight *= scale;
-                        if (el.textWidth) el.textWidth *= scale;
-                        if (el.type === 'BRANCH') {
-                            this.scaleBranch(el, scale);
-                        }
-                    });
-                });
-            }
-
-            shiftLayout(layout, yOffset) {
-                layout.forEach(line => {
-                    line.y += yOffset;
-                    line.elements.forEach(el => {
-                        el.y += yOffset;
-                        if(el.type === 'BRANCH') {
-                           this.shiftBranch(el, yOffset);
-                        }
-                    });
-                });
-            }
-
-            shiftBranch(branchEl, yOffset){
-                branchEl.paths.forEach(path => {
-                    path.elements.forEach(el => {
-                        el.y += yOffset;
-                        if(el.type === 'BRANCH') this.shiftBranch(el, yOffset);
-                    });
-                });
-            }
-            
-            getRailPositions() {
-                const leftRailX = CONFIG.POWER_RAIL_WIDTH / 2 + 40; // Increased padding for text labels
-                const rightRailX = this.canvas.width - (CONFIG.POWER_RAIL_WIDTH / 2) - 40; // Increased padding for text labels
-                return { leftRailX, rightRailX };
-            }
-
-            drawPowerRails(contentTop, contentBottom) {
-                const { leftRailX, rightRailX } = this.getRailPositions();
-                this.ctx.strokeStyle = CONFIG.COLORS.RAIL;
-                this.ctx.lineWidth = CONFIG.POWER_RAIL_WIDTH;
-                this.ctx.lineCap = 'round';
-                
-                // Add some padding above and below the content for the rails
-                const railTop = Math.max(0, contentTop - 20);
-                const railBottom = Math.min(this.canvas.height, contentBottom + 20);
-                
-                this.ctx.beginPath();
-                this.ctx.moveTo(leftRailX, railTop);
-                this.ctx.lineTo(leftRailX, railBottom);
-                this.ctx.stroke();
-                
-                this.ctx.beginPath();
-                this.ctx.moveTo(rightRailX, railTop);
-                this.ctx.lineTo(rightRailX, railBottom);
-                this.ctx.stroke();
-            }
-
-            drawWires(lines, leftRailX, rightRailX) {
-                if (lines.length === 0 || lines[0].elements.length === 0) return;
-
-                this.ctx.strokeStyle = CONFIG.COLORS.WIRE;
-                this.ctx.lineWidth = CONFIG.WIRE_WIDTH;
-                this.ctx.lineCap = 'butt';
-
-                lines.forEach(line => {
-                    for (let i = 0; i < line.elements.length - 1; i++) {
-                        const currentEl = line.elements[i];
-                        const nextEl = line.elements[i + 1];
-                        this.ctx.beginPath();
-                        this.ctx.moveTo(currentEl.x + currentEl.elWidth / 2 + 5, currentEl.y); // Add 5px padding
-                        this.ctx.lineTo(nextEl.x - nextEl.elWidth / 2 - 5, nextEl.y); // Add 5px padding
-                        this.ctx.stroke();
-                    }
-                });
-
-                // Draw left rail connection with proper spacing consideration
-                const firstEl = lines[0].elements[0];
-                const leftRailConnectionX = leftRailX + CONFIG.POWER_RAIL_WIDTH / 2 + 5; // Add small gap from rail
-                this.ctx.beginPath();
-                this.ctx.moveTo(leftRailConnectionX, firstEl.y);
-                this.ctx.lineTo(firstEl.x - firstEl.elWidth / 2 - 5, firstEl.y); // Add 5px padding
-                this.ctx.stroke();
-                
-                const lastLine = lines[lines.length - 1];
-                const lastEl = lastLine.elements[lastLine.elements.length - 1];
-                if (lastEl.type !== 'BRANCH') {
-                    this.ctx.beginPath();
-                    this.ctx.moveTo(lastEl.x + lastEl.elWidth / 2 + 5, lastEl.y); // Add 5px padding
-                    this.ctx.lineTo(rightRailX, lastEl.y);
-                    this.ctx.stroke();
-                }
-
-                for (let i = 0; i < lines.length - 1; i++) {
-                    const endOfCurrentLine = lines[i].elements[lines[i].elements.length - 1];
-                    const startOfNextLine = lines[i + 1].elements[0];
-                    if (!endOfCurrentLine || !startOfNextLine) continue;
-
-                    const transferY = endOfCurrentLine.y + (CONFIG.RUNG_V_SPACING / 2);
-
-                    this.ctx.beginPath();
-                    this.ctx.moveTo(endOfCurrentLine.x + endOfCurrentLine.elWidth / 2 + 5, endOfCurrentLine.y); // Add 5px padding
-                    this.ctx.lineTo(rightRailX, endOfCurrentLine.y);
-                    this.ctx.lineTo(rightRailX, transferY);
-                    this.ctx.lineTo(leftRailX, transferY);
-                    this.ctx.lineTo(leftRailX, startOfNextLine.y);
-                    this.ctx.lineTo(startOfNextLine.x - startOfNextLine.elWidth / 2 - 5, startOfNextLine.y); // Add 5px padding
-                    this.ctx.stroke();
-                }
-            }
-
-            drawTextAboveSymbol(text, x, y, el) {
-                if (!text) return;
-                
-                this.ctx.font = CONFIG.LABEL_FONT;
-                this.ctx.textAlign = 'center';
-                this.ctx.textBaseline = 'bottom';
-                
-                // Display the full text without truncation
-                let displayText = text;
-                let textMetrics = this.ctx.measureText(displayText);
-                
-                const textHeight = 14; 
-                const textY = y - (el.elHeight / 2) - 8; 
-                
-                // Draw background with proper width
-                this.ctx.fillStyle = CONFIG.COLORS.TEXT_BG;
-                this.ctx.fillRect(x - textMetrics.width / 2 - 4, textY - textHeight, textMetrics.width + 8, textHeight + 4);
-                
-                // Draw text
-                this.ctx.fillStyle = CONFIG.COLORS.TEXT;
-                this.ctx.fillText(displayText, x, textY);
-            }
-
-            drawContact(x, y, label, type, el) {
-                this.drawTextAboveSymbol(label, x, y, el);
-                this.ctx.strokeStyle = type === 'NC' ? CONFIG.COLORS.CONTACT_NC : CONFIG.COLORS.CONTACT_NO;
-                this.ctx.lineWidth = 2.5;
-                this.ctx.font = CONFIG.SYMBOL_FONT;
-                this.ctx.fillStyle = CONFIG.COLORS.CONTACT_NO;
-                this.ctx.textAlign = 'center';
-                this.ctx.textBaseline = 'middle';
-                this.ctx.fillText(type === 'NC' ? '|/|' : '| |', x, y);
-            }
-
-            drawComparison(x, y, label, text, el) {
-                this.drawTextAboveSymbol(label, x, y, el);
-                this.ctx.strokeStyle = CONFIG.COLORS.CONTACT_NO;
-                this.ctx.lineWidth = 2.5;
-                this.ctx.font = CONFIG.SYMBOL_FONT;
-                this.ctx.fillStyle = CONFIG.COLORS.TEXT;
-                this.ctx.textAlign = 'center';
-                this.ctx.textBaseline = 'middle';
-                this.ctx.fillText(`[ ${text} ]`, x, y);
-            }
-
-            drawInstructionBox(x, y, label, instruction, params = {}, el) {
-                this.drawTextAboveSymbol(label, x, y, el);
-                const w = el.elWidth;
-                const h = el.elHeight;
-                
-                this.ctx.strokeStyle = CONFIG.COLORS.WIRE;
-                this.ctx.lineWidth = 2.5;
-                this.ctx.fillStyle = 'white';
-                this.ctx.strokeRect(x - w / 2, y - h / 2, w, h);
-                
-                this.ctx.fillStyle = CONFIG.COLORS.TEXT;
-                this.ctx.textAlign = 'center';
-                this.ctx.font = 'bold 14px "Courier New", monospace';
-                this.ctx.fillText(instruction, x, y - h/2 + 20);
-                
-                this.ctx.font = '12px "Courier New", monospace';
-                this.ctx.textAlign = 'left';
-                let paramY = y - h/2 + 45;
-                for (const [key, value] of Object.entries(params)) {
-                    this.ctx.fillText(`${key}: ${value}`, x - w/2 + 10, paramY);
-                    paramY += 20;
-                }
-            }
-
-            drawCoil(x, y, label, el) {
-                const r = CONFIG.COIL_RADIUS;
-                this.drawTextAboveSymbol(label, x, y, el);
-                this.ctx.strokeStyle = CONFIG.COLORS.COIL;
-                this.ctx.lineWidth = 2.5;
-                this.ctx.fillStyle = 'white';
-                
-                this.ctx.beginPath();
-                this.ctx.arc(x, y, r, 0, 2 * Math.PI);
-                this.ctx.stroke();
-                
-                this.ctx.font = CONFIG.SYMBOL_FONT;
-                this.ctx.fillStyle = CONFIG.COLORS.TEXT;
-                this.ctx.textAlign = 'center';
-                this.ctx.textBaseline = 'middle';
-                this.ctx.fillText('( )', x, y);
-            }
-
-            drawBranch(branchEl, isLastElementInRung = false, rightRailX = 0) {
-                const { x, y, elWidth, elHeight, paths } = branchEl;
-                const branchStartX = x - elWidth / 2;
-                const internalBranchEndX = x + elWidth / 2;
-                
-                console.log('Drawing branch:', {
-                    x, y, elWidth, elHeight,
-                    branchStartX, internalBranchEndX,
-                    paths: paths.map(p => ({ elements: p.elements.map(e => e.label) }))
-                });
-                
-                let startY = y - elHeight / 2;
-
-                const topPathCenterY = startY + paths[0].pathHeight / 2;
-                const bottomPathCenterY = startY + elHeight - paths[paths.length-1].pathHeight / 2;
-
-                this.ctx.strokeStyle = CONFIG.COLORS.WIRE;
-                this.ctx.lineWidth = CONFIG.WIRE_WIDTH;
-                this.ctx.beginPath();
-                this.ctx.moveTo(branchStartX, topPathCenterY);
-                this.ctx.lineTo(branchStartX, bottomPathCenterY);
-                this.ctx.stroke();
-
-                if (!isLastElementInRung) {
-                    this.ctx.beginPath();
-                    this.ctx.moveTo(internalBranchEndX, topPathCenterY);
-                    this.ctx.lineTo(internalBranchEndX, bottomPathCenterY);
-                    this.ctx.stroke();
-                }
-
-                paths.forEach(path => {
-                    const pathY = startY + path.pathHeight / 2;
-                    let currentXInPath = branchStartX;
-
-                    // Draw all elements in this path sequentially
-                    path.elements.forEach((element, index) => {
-                        // Calculate optimal spacing to this element
-                        const prevElement = index > 0 ? path.elements[index - 1] : null;
-                        const spacing = this.calculateOptimalSpacing(prevElement, element);
-                        const elementX = currentXInPath + spacing + element.elWidth / 2;
-                        
-                        // Draw wire to this element
-                        this.ctx.beginPath();
-                        this.ctx.moveTo(currentXInPath, pathY);
-                        this.ctx.lineTo(elementX - element.elWidth / 2 - 5, pathY);
-                        this.ctx.stroke();
-                        
-                        // Draw the element itself
-                        this.drawElement({ ...element, x: elementX, y: pathY });
-                        
-                        // Reset stroke style and update position
-                        this.ctx.strokeStyle = CONFIG.COLORS.WIRE;
-                        currentXInPath = elementX + element.elWidth / 2 + 5;
-                    });
-
-                    // Connect to the end of the branch
-                    const finalEndX = isLastElementInRung ? rightRailX : internalBranchEndX;
-                    this.ctx.beginPath();
-                    this.ctx.moveTo(currentXInPath, pathY);
-                    this.ctx.lineTo(finalEndX, pathY);
-                    this.ctx.stroke();
-                    
-                    startY += path.pathHeight + CONFIG.BRANCH_V_SPACING;
-                });
-            }
-            
-            destroy() {
-                if (this.resizeObserver && this.container) {
-                    this.resizeObserver.disconnect();
-                    this.resizeObserver = null;
-                }
-                if (this.container) this.container.innerHTML = '';
+            } catch (error) {
+                console.error('DOM initialization failed:', error);
+                showFatalError('Application initialization failed. Please refresh the page.');
             }
         }
 
-        // --- APPLICATION LOGIC ---
-        const app = {
-            renderer: new LadderRenderer('canvas-container'),
-            activeTest: null,
+        // Input sanitization function
+        function sanitizeInput(input, maxLength = 1000) {
+            if (typeof input !== 'string') {
+                return '';
+            }
             
-            rungDefs: {
-                simple: [
-                    { type: 'NO_CONTACT', label: 'Start_Button' },
-                    { type: 'NC_CONTACT', label: 'Stop_Button' },
-                    { type: 'OUTPUT_COIL', label: 'Motor_Output' }
-                ],
-                longLabels: [
-                    { type: 'NO_CONTACT', label: 'Very_Long_Start_Button_Label_That_Should_Not_Overlap' },
-                    { type: 'NC_CONTACT', label: 'Another_Very_Long_Stop_Button_Label_For_Testing' },
-                    { type: 'OUTPUT_COIL', label: 'Motor_Output_With_Long_Label_Too' }
-                ],
-                complex: [
-                    { type: 'NO_CONTACT', label: 'Start_Button' },
-                    { type: 'NC_CONTACT', label: 'Stop_Button' },
-                    { 
-                        type: 'BRANCH', 
-                        paths: [
-                            { elements: [{ type: 'NO_CONTACT', label: 'Limit_Switch' }, { type: 'NO_CONTACT', label: 'Photo_Eye' }] },
-                            { elements: [{ type: 'NO_CONTACT', label: 'Pressure_Switch' }] }
-                        ]
-                    },
-                    { type: 'OUTPUT_COIL', label: 'Motor_Output' }
-                ],
-                longRung: [
-                    { type: 'NO_CONTACT', label: 'Input_A' }, { type: 'NO_CONTACT', label: 'Input_B' },
-                    { type: 'NC_CONTACT', label: 'Input_C' }, { type: 'NO_CONTACT', label: 'Input_D' },
-                    { type: 'NO_CONTACT', label: 'Input_E' }, { type: 'NC_CONTACT', label: 'Input_F' },
-                    { type: 'NO_CONTACT', label: 'Input_G' }, { type: 'NC_CONTACT', label: 'Input_H' },
-                    { type: 'OUTPUT_COIL', label: 'Long_Rung_Coil' }
-                ],
-                gsvMeqComplex: [
-                    {
-                        type: 'INSTRUCTION_BOX',
-                        instruction: 'GSV',
-                        params: {
-                            'Class': 'Module',
-                            'Instance': 'S100FX1PMN1',
-                            'Attribute': 'EntryStatus',
-                            'Dest': 'S100FX1PMN1.M.ObjectStatus'
-                        }
-                    },
-                    {
-                        type: 'BRANCH',
-                        paths: [
-                            {
-                                elements: [
-                                    {
-                                        type: 'INSTRUCTION_BOX', instruction: 'MEQ',
-                                        params: { 'Source': 'S100FX1PMN1.M.ObjectStatus', 'Mask': '16#F000', 'Compare': '16#6000' }
-                                    },
-                                    { type: 'OUTPUT_COIL', label: 'S100FX1PMN1.M.Inhibited' }
-                                ]
-                            },
-                            {
-                                elements: [
-                                    {
-                                        type: 'INSTRUCTION_BOX', instruction: 'MEQ',
-                                        params: { 'Source': 'S100FX1PMN1.M.ObjectStatus', 'Mask': '16#F000', 'Compare': '16#4000' }
-                                    },
-                                    { type: 'OUTPUT_COIL', label: 'S100FX1PMN1.M.CommOk' }
-                                ]
-                            }
-                        ]
-                    }
-                ],
-                complexWrap: [
-                    { type: 'NO_CONTACT', label: 'System_Enable' },
-                    { type: 'NO_CONTACT', label: 'Auto_Mode' },
-                    {
-                        type: 'BRANCH',
-                        paths: [
-                            { elements: [
-                                { type: 'NO_CONTACT', label: 'Path_A_Sensor_1' },
-                                { type: 'NC_CONTACT', label: 'Path_A_Sensor_2' },
-                                { type: 'NO_CONTACT', label: 'Path_A_Sensor_3' }
-                            ]},
-                            { elements: [
-                                { type: 'NO_CONTACT', label: 'Path_B_Sensor_1' },
-                                { type: 'NO_CONTACT', label: 'Path_B_Sensor_2' }
-                            ]}
-                        ]
-                    },
-                    { type: 'NO_CONTACT', label: 'Another_Condition' },
-                    { type: 'NC_CONTACT', label: 'Yet_Another_Condition' },
-                    { type: 'NO_CONTACT', label: 'Final_Input_Before_Coil'},
-                    { type: 'OUTPUT_COIL', label: 'Complex_Wrapped_Output' }
-                ],
-                zoomTest: [
-                    { type: 'NO_CONTACT', label: 'A' },
-                    { type: 'NO_CONTACT', label: 'B' },
-                    { type: 'NO_CONTACT', label: 'C' },
-                    { type: 'NO_CONTACT', label: 'D' },
-                    { type: 'NO_CONTACT', label: 'E' },
-                    { type: 'NO_CONTACT', label: 'F' },
-                    { type: 'NO_CONTACT', label: 'G' },
-                    { type: 'NO_CONTACT', label: 'H' },
-                    { type: 'NO_CONTACT', label: 'I' },
-                    { type: 'NO_CONTACT', label: 'J' },
-                    { type: 'NO_CONTACT', label: 'K' },
-                    { type: 'NO_CONTACT', label: 'L' },
-                    { type: 'NO_CONTACT', label: 'M' },
-                    { type: 'NO_CONTACT', label: 'N' },
-                    { type: 'NO_CONTACT', label: 'O' },
-                    { type: 'NO_CONTACT', label: 'P' },
-                    { type: 'OUTPUT_COIL', label: 'Zoom_Test_Coil' }
-                ]
-            },
+            // Check length
+            if (input.length > maxLength) {
+                input = input.substring(0, maxLength);
+            }
+            
+            // Sanitize HTML entities
+            return input.replace(VALIDATION.SANITIZE_REGEX, (match) => {
+                return VALIDATION.XML_ENTITIES[match] || match;
+            });
+        }
 
-            runTest(testName) {
-                this.activeTest = testName;
-                if (this.rungDefs[testName]) {
-                    console.log('Running test:', testName, 'at', new Date().toISOString());
-                    console.log('Test data:', JSON.stringify(this.rungDefs[testName], null, 2));
-                    this.renderer.initialize(this.rungDefs[testName]);
+        // Security violation handler
+        function handleSecurityViolation(violation, details = '') {
+            securityViolations++;
+            console.warn(`Security violation ${securityViolations}: ${violation}`, details);
+            
+            if (securityViolations >= MAX_SECURITY_VIOLATIONS) {
+                showFatalError('Security violations detected. Application disabled.');
+                return false;
+            }
+            
+            return true;
+        }
+
+        // Error handling with user feedback
+        function handleError(error, context = '') {
+            const errorMessage = sanitizeInput(error.message || 'Unknown error');
+            const errorContext = sanitizeInput(context);
+            
+            console.error(`Error in ${errorContext}:`, error);
+            
+            if (errorContext) {
+                updateStatus(`❌ Error in ${errorContext}: ${errorMessage}`, 'error');
+            } else {
+                updateStatus(`❌ Error: ${errorMessage}`, 'error');
+            }
+            
+            showError(errorMessage);
+        }
+
+        // Fatal error handler
+        function showFatalError(message) {
+            document.body.innerHTML = `
+                <div style="padding: 2rem; text-align: center; color: #dc2626;">
+                    <h1>🚨 Fatal Error</h1>
+                    <p>${sanitizeInput(message)}</p>
+                    <button onclick="location.reload()" style="margin-top: 1rem; padding: 0.5rem 1rem; background: #dc2626; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                        Reload Application
+                    </button>
+                </div>
+            `;
+        }
+
+        // File validation
+        function validateFile(file) {
+            if (!file) {
+                throw new Error('No file selected');
+            }
+
+            // Check file size
+            if (file.size > VALIDATION.MAX_FILE_SIZE) {
+                throw new Error(`File too large. Maximum size is ${VALIDATION.MAX_FILE_SIZE / (1024 * 1024)}MB`);
+            }
+
+            // Check file type
+            const fileName = file.name.toLowerCase();
+            const isValidType = VALIDATION.ALLOWED_FILE_TYPES.some(type => fileName.endsWith(type));
+            if (!isValidType) {
+                throw new Error(`Invalid file type. Allowed types: ${VALIDATION.ALLOWED_FILE_TYPES.join(', ')}`);
+            }
+
+            return true;
+        }
+
+        // XML parsing with security
+        function parseXMLSafely(xmlString) {
+            try {
+                // Check for potential XXE attacks
+                if (xmlString.includes('<!DOCTYPE') || xmlString.includes('<!ENTITY')) {
+                    throw new Error('XML external entity processing not allowed');
                 }
-                this.updateButtonStyles();
-            },
 
-            clear() {
-                this.activeTest = null;
-                this.renderer.destroy();
-                this.updateButtonStyles();
-            },
+                const parser = new DOMParser();
+                const xmlDoc = parser.parseFromString(xmlString, "text/xml");
+                
+                // Check for parsing errors
+                const parseError = xmlDoc.querySelector('parsererror');
+                if (parseError) {
+                    throw new Error('XML parsing failed: Invalid XML structure');
+                }
 
-            updateButtonStyles() {
-                const buttons = document.querySelectorAll('#button-container .btn-primary');
-                buttons.forEach(button => {
-                    if (button.dataset.testid === this.activeTest) {
-                        button.classList.add('btn-active');
+                return xmlDoc;
+            } catch (error) {
+                throw new Error(`XML parsing error: ${error.message}`);
+            }
+        }
+
+        // Event listeners with error handling
+        function setupEventListeners() {
+            try {
+                if (elements.fileInput) {
+                    elements.fileInput.addEventListener('change', handleFileSelect);
+                }
+                
+                if (elements.searchInput) {
+                    elements.searchInput.addEventListener('input', handleSearch);
+                    elements.searchInput.addEventListener('keydown', handleSearchKeyboard);
+                }
+
+                // Global error handler
+                window.addEventListener('error', (event) => {
+                    handleError(event.error, 'Global error handler');
+                });
+
+                // Unhandled promise rejection handler
+                window.addEventListener('unhandledrejection', (event) => {
+                    handleError(new Error(event.reason), 'Unhandled promise rejection');
+                });
+
+            } catch (error) {
+                handleError(error, 'Event listener setup');
+            }
+        }
+
+        // File handling with comprehensive validation
+        function openFile() {
+            try {
+                if (!elements.fileInput) {
+                    throw new Error('File input element not available');
+                }
+                elements.fileInput.click();
+            } catch (error) {
+                handleError(error, 'File open operation');
+            }
+        }
+
+        function handleFileSelect(event) {
+            try {
+                const file = event.target.files[0];
+                if (!file) return;
+
+                // Validate file
+                validateFile(file);
+
+                updateStatus(`Loading ${sanitizeInput(file.name)}...`);
+                showLoading();
+
+                const reader = new FileReader();
+                
+                reader.onload = (e) => {
+                    try {
+                        const xmlString = e.target.result;
+                        
+                        // Validate XML string
+                        if (typeof xmlString !== 'string' || xmlString.length === 0) {
+                            throw new Error('Invalid file content');
+                        }
+
+                        // Parse XML safely
+                        const xmlDoc = parseXMLSafely(xmlString);
+                        
+                        // Validate L5X structure
+                        const controller = xmlDoc.querySelector('Controller');
+                        if (!controller) {
+                            throw new Error('Invalid L5X file - No Controller element found');
+                        }
+
+                        // Parse project data
+                        projectData = parseL5X(xmlDoc);
+                        if (!projectData || !projectData.controller) {
+                            throw new Error('Failed to parse L5X file structure');
+                        }
+
+                        // Render project tree
+                        renderProjectTree(projectData);
+                        updateStatus(`✅ ${sanitizeInput(projectData.controller.name)} loaded successfully`);
+                        showProjectInfo();
+                        
+                        // Reset security violations on successful load
+                        securityViolations = 0;
+                        
+                    } catch (error) {
+                        handleError(error, 'File processing');
+                    }
+                };
+                
+                reader.onerror = () => {
+                    handleError(new Error('Failed to read file'), 'File reading');
+                };
+                
+                reader.readAsText(file);
+                
+            } catch (error) {
+                handleError(error, 'File selection');
+            }
+        }
+
+        // Enhanced L5X parsing with comprehensive Studio 5000 structure support
+        function parseL5X(xmlDoc) {
+            try {
+                const controller = xmlDoc.querySelector('Controller');
+                if (!controller) {
+                    throw new Error('No Controller element found in L5X file');
+                }
+
+                const getAttrs = (node, attrs) => {
+                    if (!node) return {};
+                    return attrs.reduce((acc, attr) => ({
+                        ...acc, 
+                        [attr.toLowerCase()]: sanitizeInput(node.getAttribute(attr) || '')
+                    }), {});
+                };
+
+                const getTextContent = (node, selector) => {
+                    const element = node.querySelector(selector);
+                    return element ? sanitizeInput(element.textContent.trim()) : '';
+                };
+
+                // Parse controller info with validation
+                const controllerInfo = getAttrs(controller, ['Name', 'ProcessorType', 'MajorRev', 'MinorRev', 'TimeSlice', 'ShareUnusedTimeSlice']);
+                if (!controllerInfo.name) {
+                    throw new Error('Controller name is required');
+                }
+
+                // Parse tasks with enhanced validation
+                const tasks = Array.from(xmlDoc.querySelectorAll('Tasks > Task')).map((task, index) => {
+                    const taskInfo = getAttrs(task, ['Name', 'Type', 'Priority', 'Watchdog', 'Rate', 'Scheduled']);
+                    if (!taskInfo.name) {
+                        throw new Error(`Task ${index + 1} missing name`);
+                    }
+                    
+                    // Parse scheduled programs
+                    taskInfo.programs = Array.from(task.querySelectorAll('ScheduledPrograms > ScheduledProgram')).map(sp => 
+                        sanitizeInput(sp.getAttribute('Name') || '')
+                    );
+                    
+                    // Parse task properties
+                    taskInfo.properties = {
+                        description: getTextContent(task, 'Description'),
+                        rate: taskInfo.rate,
+                        priority: taskInfo.priority,
+                        watchdog: taskInfo.watchdog === 'true',
+                        scheduled: taskInfo.scheduled === 'true'
+                    };
+                    
+                    return taskInfo;
+                });
+
+                // Parse programs with enhanced structure
+                const programs = Array.from(xmlDoc.querySelectorAll('Programs > Program')).map((program, index) => {
+                    const programInfo = getAttrs(program, ['Name', 'Type', 'TestEdits', 'MainRoutineName', 'UseAsFolder']);
+                    if (!programInfo.name) {
+                        throw new Error(`Program ${index + 1} missing name`);
+                    }
+                    
+                    // Parse program tags
+                    programInfo.tags = Array.from(program.querySelectorAll('Tags > Tag')).map(tag => {
+                        const tagInfo = getAttrs(tag, ['Name', 'TagType', 'DataType', 'Usage', 'Constant', 'ExternalAccess']);
+                        if (!tagInfo.name) {
+                            throw new Error('Program tag missing name');
+                        }
+                        return tagInfo;
+                    });
+                    
+                    // Parse program parameters
+                    programInfo.parameters = Array.from(program.querySelectorAll('Parameters > Parameter')).map(param => {
+                        const paramInfo = getAttrs(param, ['Name', 'DataType', 'Required', 'ExternalAccess']);
+                        if (!paramInfo.name) {
+                            throw new Error('Program parameter missing name');
+                        }
+                        return paramInfo;
+                    });
+                    
+                    // Parse program routines with enhanced content
+                    programInfo.routines = Array.from(program.querySelectorAll(':scope > Routines > Routine')).map((routine, routineIndex) => {
+                        const routineInfo = getAttrs(routine, ['Name', 'Type', 'TestEdits']);
+                        if (!routineInfo.name) {
+                            throw new Error(`Routine ${routineIndex + 1} in program ${programInfo.name} missing name`);
+                        }
+                        
+                        routineInfo.description = getTextContent(routine, 'Description');
+                        
+                        // Parse RLL content with validation
+                        const rllContent = routine.querySelector('RLLContent');
+                        if (rllContent) {
+                            routineInfo.logic = {
+                                type: 'RLL',
+                                content: Array.from(rllContent.querySelectorAll('Rung')).map((rung, rungIndex) => {
+                                    const textElement = rung.querySelector('Text');
+                                    const commentElement = rung.querySelector('Comment');
+                                    
+                                    return {
+                                        number: sanitizeInput(rung.getAttribute('Number') || rungIndex.toString()),
+                                        text: sanitizeInput(textElement ? textElement.textContent.trim() : ''),
+                                        comment: sanitizeInput(commentElement ? commentElement.textContent.trim() : '')
+                                    };
+                                })
+                            };
+                        }
+                        
+                        // Parse ST content
+                        const stContent = routine.querySelector('STContent');
+                        if (stContent) {
+                            routineInfo.logic = {
+                                type: 'ST',
+                                content: sanitizeInput(stContent.textContent.trim())
+                            };
+                        }
+                        
+                        // Parse FBD content
+                        const fbdContent = routine.querySelector('FBDContent');
+                        if (fbdContent) {
+                            routineInfo.logic = {
+                                type: 'FBD',
+                                content: Array.from(fbdContent.querySelectorAll('Block')).map(block => ({
+                                    name: sanitizeInput(block.getAttribute('Name') || ''),
+                                    type: sanitizeInput(block.getAttribute('Type') || ''),
+                                    position: sanitizeInput(block.getAttribute('Position') || '')
+                                }))
+                            };
+                        }
+                        
+                        return routineInfo;
+                    });
+                    
+                    return programInfo;
+                });
+
+                // Parse controller tags with enhanced information
+                const controllerTags = Array.from(xmlDoc.querySelectorAll('Controller > Tags > Tag')).map(tag => {
+                    const tagInfo = getAttrs(tag, ['Name', 'TagType', 'DataType', 'Usage', 'Constant', 'ExternalAccess', 'Radix']);
+                    if (!tagInfo.name) {
+                        throw new Error('Controller tag missing name');
+                    }
+                    
+                    // Parse tag value if present
+                    const valueElement = tag.querySelector('Value');
+                    if (valueElement) {
+                        tagInfo.value = sanitizeInput(valueElement.textContent.trim());
+                    }
+                    
+                    // Parse tag description
+                    tagInfo.description = getTextContent(tag, 'Description');
+                    
+                    return tagInfo;
+                });
+
+                // Parse data types with enhanced structure
+                const dataTypes = Array.from(xmlDoc.querySelectorAll('DataTypes > DataType')).map(dt => {
+                    const dtInfo = getAttrs(dt, ['Name', 'Family', 'Class']);
+                    if (!dtInfo.name) {
+                        throw new Error('Data type missing name');
+                    }
+                    
+                    dtInfo.description = getTextContent(dt, 'Description');
+                    
+                    dtInfo.members = Array.from(dt.querySelectorAll('Members > Member')).map(member => {
+                        const memberInfo = getAttrs(member, ['Name', 'DataType', 'Dimension', 'Radix', 'Required']);
+                        memberInfo.description = getTextContent(member, 'Description');
+                        return memberInfo;
+                    });
+                    
+                    return dtInfo;
+                });
+
+                // Parse Add-On Instructions
+                const addOnInstructions = Array.from(xmlDoc.querySelectorAll('AddOnInstructionDefinitions > AddOnInstructionDefinition')).map(aoi => {
+                    const aoiInfo = getAttrs(aoi, ['Name', 'Revision', 'Vendor']);
+                    if (!aoiInfo.name) {
+                        throw new Error('Add-On Instruction missing name');
+                    }
+                    
+                    aoiInfo.description = getTextContent(aoi, 'Description');
+                    
+                    // Parse AOI parameters
+                    aoiInfo.parameters = Array.from(aoi.querySelectorAll('Parameters > Parameter')).map(param => {
+                        const paramInfo = getAttrs(param, ['Name', 'DataType', 'Required', 'Usage']);
+                        paramInfo.description = getTextContent(param, 'Description');
+                        return paramInfo;
+                    });
+                    
+                    return aoiInfo;
+                });
+
+                // Parse I/O Configuration
+                const ioConfiguration = {
+                    local: Array.from(xmlDoc.querySelectorAll('Local > Module')).map(module => {
+                        const moduleInfo = getAttrs(module, ['Name', 'CatalogNumber', 'Vendor', 'ProductType', 'ProductCode']);
+                        moduleInfo.description = getTextContent(module, 'Description');
+                        return moduleInfo;
+                    }),
+                    ethernet: Array.from(xmlDoc.querySelectorAll('EtherNet > Module')).map(module => {
+                        const moduleInfo = getAttrs(module, ['Name', 'CatalogNumber', 'Vendor', 'ProductType', 'ProductCode', 'IPAddress']);
+                        moduleInfo.description = getTextContent(module, 'Description');
+                        return moduleInfo;
+                    }),
+                    devicenet: Array.from(xmlDoc.querySelectorAll('DeviceNet > Module')).map(module => {
+                        const moduleInfo = getAttrs(module, ['Name', 'CatalogNumber', 'Vendor', 'ProductType', 'ProductCode', 'NodeAddress']);
+                        moduleInfo.description = getTextContent(module, 'Description');
+                        return moduleInfo;
+                    }),
+                    controlnet: Array.from(xmlDoc.querySelectorAll('ControlNet > Module')).map(module => {
+                        const moduleInfo = getAttrs(module, ['Name', 'CatalogNumber', 'Vendor', 'ProductType', 'ProductCode', 'NodeAddress']);
+                        moduleInfo.description = getTextContent(module, 'Description');
+                        return moduleInfo;
+                    })
+                };
+
+                // Parse Safety Configuration
+                const safetyConfiguration = {
+                    safetyTask: xmlDoc.querySelector('Safety > SafetyTask') ? {
+                        name: getTextContent(xmlDoc.querySelector('Safety > SafetyTask'), 'Name'),
+                        description: getTextContent(xmlDoc.querySelector('Safety > SafetyTask'), 'Description')
+                    } : null,
+                    safetyIO: Array.from(xmlDoc.querySelectorAll('Safety > SafetyIO > Module')).map(module => {
+                        const moduleInfo = getAttrs(module, ['Name', 'CatalogNumber', 'Vendor', 'ProductType']);
+                        moduleInfo.description = getTextContent(module, 'Description');
+                        return moduleInfo;
+                    }),
+                    safetyConfig: xmlDoc.querySelector('Safety > SafetyConfiguration') ? {
+                        description: getTextContent(xmlDoc.querySelector('Safety > SafetyConfiguration'), 'Description')
+                    } : null
+                };
+
+                // Parse Motion Groups
+                const motionGroups = Array.from(xmlDoc.querySelectorAll('MotionGroups > MotionGroup')).map(group => {
+                    const groupInfo = getAttrs(group, ['Name', 'Type']);
+                    groupInfo.description = getTextContent(group, 'Description');
+                    
+                    // Parse motion instructions
+                    groupInfo.instructions = Array.from(group.querySelectorAll('MotionInstructions > MotionInstruction')).map(instruction => {
+                        const instructionInfo = getAttrs(instruction, ['Name', 'Type', 'Axis']);
+                        instructionInfo.description = getTextContent(instruction, 'Description');
+                        return instructionInfo;
+                    });
+                    
+                    return groupInfo;
+                });
+
+                // Parse Trends & Diagnostics
+                const trendsAndDiagnostics = {
+                    trendConfigurations: Array.from(xmlDoc.querySelectorAll('Trends > TrendConfiguration')).map(trend => {
+                        const trendInfo = getAttrs(trend, ['Name', 'Type', 'SampleRate']);
+                        trendInfo.description = getTextContent(trend, 'Description');
+                        return trendInfo;
+                    }),
+                    diagnosticLogs: Array.from(xmlDoc.querySelectorAll('Diagnostics > DiagnosticLog')).map(log => {
+                        const logInfo = getAttrs(log, ['Name', 'Type', 'Level']);
+                        logInfo.description = getTextContent(log, 'Description');
+                        return logInfo;
+                    }),
+                    performanceData: xmlDoc.querySelector('PerformanceData') ? {
+                        description: getTextContent(xmlDoc.querySelector('PerformanceData'), 'Description')
+                    } : null
+                };
+
+                return {
+                    controller: controllerInfo,
+                    tasks: tasks,
+                    programs: programs,
+                    controllerTags: controllerTags,
+                    dataTypes: dataTypes,
+                    addOnInstructions: addOnInstructions,
+                    ioConfiguration: ioConfiguration,
+                    safetyConfiguration: safetyConfiguration,
+                    motionGroups: motionGroups,
+                    trendsAndDiagnostics: trendsAndDiagnostics
+                };
+                
+            } catch (error) {
+                throw new Error(`L5X parsing error: ${error.message}`);
+            }
+        }
+
+        // Organize tags into hierarchical groups based on naming patterns
+        function organizeTagsHierarchically(tags) {
+            try {
+                const groups = {};
+                
+                tags.forEach(tag => {
+                    let groupName = 'Other Tags';
+                    
+                    // Analyze tag name for grouping patterns
+                    const name = tag.name || '';
+                    
+                    // Group by common prefixes (C000, C010, C100, etc.)
+                    if (name.match(/^C\d{3}/)) {
+                        const prefix = name.substring(0, 4); // C000, C010, C100, etc.
+                        groupName = `${prefix} Tags`;
+                    }
+                    // Group by common patterns
+                    else if (name.match(/^ENet/)) {
+                        groupName = 'Ethernet Tags';
+                    }
+                    else if (name.match(/^Comm/)) {
+                        groupName = 'Communication Tags';
+                    }
+                    else if (name.match(/Sfty/)) {
+                        groupName = 'Safety Tags';
+                    }
+                    else if (name.match(/Edit/)) {
+                        groupName = 'Edit Tags';
+                    }
+                    else if (name.match(/^FB\d+/)) {
+                        groupName = 'Function Block Tags';
+                    }
+                    else if (name.match(/^Port/)) {
+                        groupName = 'Port Tags';
+                    }
+                    else if (name.match(/Msg$/)) {
+                        groupName = 'Message Tags';
+                    }
+                    else if (name.match(/Buff$/)) {
+                        groupName = 'Buffer Tags';
+                    }
+                    else if (name.match(/Stat$/)) {
+                        groupName = 'Status Tags';
+                    }
+                    else if (name.match(/Path$/)) {
+                        groupName = 'Path Tags';
+                    }
+                    else if (name.match(/^[A-Z]\d{3}/)) {
+                        // Generic pattern for tags starting with letter + 3 digits
+                        const prefix = name.substring(0, 4);
+                        groupName = `${prefix} Tags`;
+                    }
+                    
+                    // Initialize group if it doesn't exist
+                    if (!groups[groupName]) {
+                        groups[groupName] = [];
+                    }
+                    
+                    // Add tag to group
+                    groups[groupName].push(tag);
+                });
+                
+                // Sort groups by name and tags within each group
+                const sortedGroups = {};
+                Object.keys(groups)
+                    .sort()
+                    .forEach(groupName => {
+                        sortedGroups[groupName] = groups[groupName].sort((a, b) => 
+                            (a.name || '').localeCompare(b.name || '')
+                        );
+                    });
+                
+                return sortedGroups;
+                
+            } catch (error) {
+                handleError(error, 'Tag organization');
+                // Fallback: return all tags in "All Tags" group
+                return { 'All Tags': tags };
+            }
+        }
+
+        // Organize tags by data type for Studio 5000-style grouping
+        function organizeTagsByType(tags) {
+            try {
+                const typeGroups = {
+                    'BOOL': [],
+                    'DINT': [],
+                    'REAL': [],
+                    'STRING': [],
+                    'TIMER': [],
+                    'COUNTER': [],
+                    'UDT': [],
+                    'Array': [],
+                    'Other': []
+                };
+                
+                tags.forEach(tag => {
+                    const dataType = tag.datatype?.toUpperCase() || '';
+                    
+                    if (dataType.includes('BOOL')) {
+                        typeGroups['BOOL'].push(tag);
+                    } else if (dataType.includes('DINT') || dataType.includes('INT')) {
+                        typeGroups['DINT'].push(tag);
+                    } else if (dataType.includes('REAL') || dataType.includes('FLOAT')) {
+                        typeGroups['REAL'].push(tag);
+                    } else if (dataType.includes('STRING')) {
+                        typeGroups['STRING'].push(tag);
+                    } else if (dataType.includes('TIMER')) {
+                        typeGroups['TIMER'].push(tag);
+                    } else if (dataType.includes('COUNTER')) {
+                        typeGroups['COUNTER'].push(tag);
+                    } else if (dataType.includes('UDT') || dataType.includes('USER_DEFINED')) {
+                        typeGroups['UDT'].push(tag);
+                    } else if (dataType.includes('ARRAY') || tag.name?.includes('[')) {
+                        typeGroups['Array'].push(tag);
                     } else {
-                        button.classList.remove('btn-active');
+                        typeGroups['Other'].push(tag);
                     }
                 });
-            },
-
-            init() {
-                // Set an initial test case to display on load
-                this.runTest('simple'); 
+                
+                // Remove empty groups and sort tags within each group
+                const result = {};
+                Object.entries(typeGroups).forEach(([type, tags]) => {
+                    if (tags.length > 0) {
+                        result[type] = tags.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+                    }
+                });
+                
+                return result;
+                
+            } catch (error) {
+                handleError(error, 'Tag type organization');
+                return { 'All Tags': tags };
             }
-        };
+        }
 
-        document.addEventListener('DOMContentLoaded', () => {
-            app.init();
-        });
+        // Enhanced Studio 5000-style tree rendering with complete structure
+        function renderProjectTree(data) {
+            try {
+                if (!data || !data.controller) {
+                    throw new Error('Invalid project data for tree rendering');
+                }
 
+                // Clear existing tree
+                if (elements.treeContent) {
+                    elements.treeContent.innerHTML = '';
+                }
+
+                // Create root controller node
+                const controllerNode = createTreeNode({
+                    id: 'controller',
+                    name: data.controller.name,
+                    type: 'controller',
+                    icon: '🏭',
+                    meta: `${data.controller.processortype || 'Unknown'} - v${data.controller.majorrev || '0'}.${data.controller.minorrev || '0'}`
+                });
+
+                // 1. Controller Tags Section
+                if (data.controllerTags && data.controllerTags.length > 0) {
+                    const tagsNode = createTreeNode({
+                        id: 'controller-tags',
+                        name: 'Controller Tags',
+                        type: 'tags-section',
+                        icon: '🏷️',
+                        meta: `${data.controllerTags.length} tags`
+                    });
+
+                    // Create tag type groups
+                    const tagTypeGroups = organizeTagsByType(data.controllerTags);
+                    Object.entries(tagTypeGroups).forEach(([type, tags]) => {
+                        const typeNode = createTreeNode({
+                            id: `tag-type-${type}`,
+                            name: `${type} Tags`,
+                            type: 'tag-type-group',
+                            icon: getTagTypeIcon(type),
+                            meta: `${tags.length} tags`
+                        });
+
+                        const tagNodes = [];
+                        tags.forEach(tag => {
+                            const tagNode = createTreeNode({
+                                id: `tag-${tag.name}`,
+                                name: tag.name,
+                                type: `tag-${tag.datatype?.toLowerCase() || 'unknown'}`,
+                                icon: getTagIcon(tag.datatype),
+                                meta: `${tag.datatype || 'Unknown'}${tag.usage ? ` - ${tag.usage}` : ''}`
+                            });
+                            tagNodes.push(tagNode);
+                        });
+                        
+                        addChildrenToNode(typeNode, tagNodes);
+                        addChildrenToNode(tagsNode, [typeNode]);
+                    });
+
+                    addChildrenToNode(controllerNode, [tagsNode]);
+                }
+
+                // 2. Tasks Section
+                if (data.tasks && data.tasks.length > 0) {
+                    const tasksNode = createTreeNode({
+                        id: 'tasks',
+                        name: 'Tasks',
+                        type: 'tasks-section',
+                        icon: '⚡',
+                        meta: `${data.tasks.length} tasks`
+                    });
+
+                    data.tasks.forEach(task => {
+                        const taskNode = createTreeNode({
+                            id: `task-${task.name}`,
+                            name: task.name,
+                            type: `task-${task.type?.toLowerCase() || 'unknown'}`,
+                            icon: getTaskIcon(task.type),
+                            meta: `${task.type || 'Unknown'} - Priority: ${task.priority || 'Unknown'}`
+                        });
+
+                        // Add programs under this task
+                        if (task.programs && task.programs.length > 0) {
+                            const programsNode = createTreeNode({
+                                id: `task-${task.name}-programs`,
+                                name: 'Programs',
+                                type: 'programs-section',
+                                icon: '📋',
+                                meta: `${task.programs.length} programs`
+                            });
+
+                            task.programs.forEach(programName => {
+                                const program = data.programs.find(p => p.name === programName);
+                                if (program) {
+                                    const programNode = createTreeNode({
+                                        id: `program-${program.name}`,
+                                        name: program.name,
+                                        type: 'program',
+                                        icon: '📋',
+                                        meta: `${program.routines?.length || 0} routines`
+                                    });
+
+                                    // Add program tags section
+                                    if (program.tags && program.tags.length > 0) {
+                                        const programTagsNode = createTreeNode({
+                                            id: `program-${program.name}-tags`,
+                                            name: 'Program Tags',
+                                            type: 'program-tags',
+                                            icon: '🏷️',
+                                            meta: `${program.tags.length} tags`
+                                        });
+                                        addChildrenToNode(programNode, [programTagsNode]);
+                                    }
+
+                                                                            // Add routines section
+                                        if (program.routines && program.routines.length > 0) {
+                                            const routinesNode = createTreeNode({
+                                                id: `program-${program.name}-routines`,
+                                                name: 'Routines',
+                                                type: 'routines-section',
+                                                icon: '🪜',
+                                                meta: `${program.routines.length} routines`
+                                            });
+
+                                            const routineNodes = [];
+                                            program.routines.forEach(routine => {
+                                                const routineNode = createTreeNode({
+                                                    id: `routine-${routine.name}`,
+                                                    name: routine.name,
+                                                    type: `routine-${routine.type?.toLowerCase() || 'unknown'}`,
+                                                    icon: getRoutineIcon(routine.type),
+                                                    meta: routine.description || routine.type || 'Unknown'
+                                                });
+                                                routineNodes.push(routineNode);
+                                            });
+
+                                            addChildrenToNode(routinesNode, routineNodes);
+                                            addChildrenToNode(programNode, [routinesNode]);
+                                        }
+
+                                    // Add parameters section
+                                    if (program.parameters && program.parameters.length > 0) {
+                                        const paramsNode = createTreeNode({
+                                            id: `program-${program.name}-params`,
+                                            name: 'Parameters & Local Tags',
+                                            type: 'parameters-section',
+                                            icon: '⚙️',
+                                            meta: `${program.parameters.length} parameters`
+                                        });
+                                        addChildrenToNode(programNode, [paramsNode]);
+                                    }
+
+                                    addChildrenToNode(programsNode, [programNode]);
+                                }
+                            });
+
+                            addChildrenToNode(taskNode, [programsNode]);
+                        }
+
+                        // Add task properties
+                        const taskPropsNode = createTreeNode({
+                            id: `task-${task.name}-props`,
+                            name: 'Task Properties',
+                            type: 'task-properties',
+                            icon: '⚙️',
+                            meta: 'Configuration'
+                        });
+                        addChildrenToNode(taskNode, [taskPropsNode]);
+
+                        addChildrenToNode(tasksNode, [taskNode]);
+                    });
+
+                    addChildrenToNode(controllerNode, [tasksNode]);
+                }
+
+                // 3. Motion Groups Section
+                if (data.motionGroups && data.motionGroups.length > 0) {
+                    const motionGroupsNode = createTreeNode({
+                        id: 'motion-groups',
+                        name: 'Motion Groups',
+                        type: 'motion-section',
+                        icon: '🎛️',
+                        meta: `${data.motionGroups.length} groups`
+                    });
+
+                    const groupNodes = [];
+                    data.motionGroups.forEach(group => {
+                        const groupNode = createTreeNode({
+                            id: `motion-group-${group.name}`,
+                            name: group.name,
+                            type: 'motion-group',
+                            icon: '🎛️',
+                            meta: `${group.instructions?.length || 0} instructions`
+                        });
+                        groupNodes.push(groupNode);
+                    });
+
+                    addChildrenToNode(motionGroupsNode, groupNodes);
+                    addChildrenToNode(controllerNode, [motionGroupsNode]);
+                } else {
+                    const motionGroupsNode = createTreeNode({
+                        id: 'motion-groups',
+                        name: 'Motion Groups',
+                        type: 'motion-section',
+                        icon: '🎛️',
+                        meta: 'No motion groups'
+                    });
+                    addChildrenToNode(controllerNode, [motionGroupsNode]);
+                }
+
+                // 4. Module Defined Data Types Section
+                if (data.dataTypes && data.dataTypes.length > 0) {
+                    const dataTypesNode = createTreeNode({
+                        id: 'data-types',
+                        name: 'Module Defined Data Types',
+                        type: 'datatypes-section',
+                        icon: '📊',
+                        meta: `${data.dataTypes.length} types`
+                    });
+
+                    // Add-On Instructions subsection
+                    if (data.addOnInstructions && data.addOnInstructions.length > 0) {
+                        const addOnInstructionsNode = createTreeNode({
+                            id: 'addon-instructions',
+                            name: 'Add-On Instructions',
+                            type: 'addon-instructions',
+                            icon: '🔗',
+                            meta: `${data.addOnInstructions.length} instructions`
+                        });
+
+                        const aoiNodes = [];
+                        data.addOnInstructions.forEach(aoi => {
+                            const aoiNode = createTreeNode({
+                                id: `aoi-${aoi.name}`,
+                                name: aoi.name,
+                                type: 'addon-instruction',
+                                icon: '🔗',
+                                meta: `Rev ${aoi.revision || '1'} - ${aoi.parameters?.length || 0} params`
+                            });
+                            aoiNodes.push(aoiNode);
+                        });
+
+                        addChildrenToNode(addOnInstructionsNode, aoiNodes);
+                        addChildrenToNode(dataTypesNode, [addOnInstructionsNode]);
+                    } else {
+                        const addOnInstructionsNode = createTreeNode({
+                            id: 'addon-instructions',
+                            name: 'Add-On Instructions',
+                            type: 'addon-instructions',
+                            icon: '🔗',
+                            meta: 'No instructions'
+                        });
+                        addChildrenToNode(dataTypesNode, [addOnInstructionsNode]);
+                    }
+
+                    const dtNodes = [];
+                    data.dataTypes.forEach(dt => {
+                        const dtNode = createTreeNode({
+                            id: `datatype-${dt.name}`,
+                            name: dt.name,
+                            type: 'datatype',
+                            icon: '📋',
+                            meta: `${dt.family || 'Unknown'} - ${dt.members?.length || 0} members`
+                        });
+                        dtNodes.push(dtNode);
+                    });
+
+                    addChildrenToNode(dataTypesNode, dtNodes);
+                    addChildrenToNode(controllerNode, [dataTypesNode]);
+                } else {
+                    const dataTypesNode = createTreeNode({
+                        id: 'data-types',
+                        name: 'Module Defined Data Types',
+                        type: 'datatypes-section',
+                        icon: '📊',
+                        meta: 'No data types'
+                    });
+                    addChildrenToNode(controllerNode, [dataTypesNode]);
+                }
+
+                // 5. I/O Configuration Section
+                const ioConfigNode = createTreeNode({
+                    id: 'io-configuration',
+                    name: 'I/O Configuration',
+                    type: 'io-section',
+                    icon: '🔌',
+                    meta: 'I/O modules'
+                });
+
+                // Local I/O subsection
+                if (data.ioConfiguration?.local && data.ioConfiguration.local.length > 0) {
+                    const localIONode = createTreeNode({
+                        id: 'local-io',
+                        name: 'Local I/O',
+                        type: 'local-io',
+                        icon: '🔌',
+                        meta: `${data.ioConfiguration.local.length} modules`
+                    });
+
+                    const localModuleNodes = [];
+                    data.ioConfiguration.local.forEach(module => {
+                        const moduleNode = createTreeNode({
+                            id: `local-module-${module.name}`,
+                            name: module.name,
+                            type: 'io-module',
+                            icon: '📟',
+                            meta: `${module.catalognumber || 'Unknown'} - ${module.producttype || 'Unknown'}`
+                        });
+                        localModuleNodes.push(moduleNode);
+                    });
+
+                    addChildrenToNode(localIONode, localModuleNodes);
+                    addChildrenToNode(ioConfigNode, [localIONode]);
+                } else {
+                    const localIONode = createTreeNode({
+                        id: 'local-io',
+                        name: 'Local I/O',
+                        type: 'local-io',
+                        icon: '🔌',
+                        meta: 'No local modules'
+                    });
+                    ioConfigNode.appendChild(localIONode);
+                }
+
+                // EtherNet/IP subsection
+                if (data.ioConfiguration?.ethernet && data.ioConfiguration.ethernet.length > 0) {
+                    const ethernetIPNode = createTreeNode({
+                        id: 'ethernet-ip',
+                        name: 'EtherNet/IP',
+                        type: 'ethernet-ip',
+                        icon: '🌐',
+                        meta: `${data.ioConfiguration.ethernet.length} devices`
+                    });
+
+                    const ethernetModuleNodes = [];
+                    data.ioConfiguration.ethernet.forEach(module => {
+                        const moduleNode = createTreeNode({
+                            id: `ethernet-module-${module.name}`,
+                            name: module.name,
+                            type: 'io-module',
+                            icon: '🏭',
+                            meta: `${module.catalognumber || 'Unknown'} - ${module.ipaddress || 'No IP'}`
+                        });
+                        ethernetModuleNodes.push(moduleNode);
+                    });
+
+                    addChildrenToNode(ethernetIPNode, ethernetModuleNodes);
+                    addChildrenToNode(ioConfigNode, [ethernetIPNode]);
+                } else {
+                    const ethernetIPNode = createTreeNode({
+                        id: 'ethernet-ip',
+                        name: 'EtherNet/IP',
+                        type: 'ethernet-ip',
+                        icon: '🌐',
+                        meta: 'No devices'
+                    });
+                    addChildrenToNode(ioConfigNode, [ethernetIPNode]);
+                }
+
+                // DeviceNet subsection
+                if (data.ioConfiguration?.devicenet && data.ioConfiguration.devicenet.length > 0) {
+                    const deviceNetNode = createTreeNode({
+                        id: 'devicenet',
+                        name: 'DeviceNet',
+                        type: 'devicenet',
+                        icon: '🔗',
+                        meta: `${data.ioConfiguration.devicenet.length} devices`
+                    });
+
+                    const deviceNetModuleNodes = [];
+                    data.ioConfiguration.devicenet.forEach(module => {
+                        const moduleNode = createTreeNode({
+                            id: `devicenet-module-${module.name}`,
+                            name: module.name,
+                            type: 'io-module',
+                            icon: '🔘',
+                            meta: `${module.catalognumber || 'Unknown'} - Node ${module.nodeaddress || 'Unknown'}`
+                        });
+                        deviceNetModuleNodes.push(moduleNode);
+                    });
+
+                    addChildrenToNode(deviceNetNode, deviceNetModuleNodes);
+                    addChildrenToNode(ioConfigNode, [deviceNetNode]);
+                } else {
+                    const deviceNetNode = createTreeNode({
+                        id: 'devicenet',
+                        name: 'DeviceNet',
+                        type: 'devicenet',
+                        icon: '🔗',
+                        meta: 'No devices'
+                    });
+                    addChildrenToNode(ioConfigNode, [deviceNetNode]);
+                }
+
+                // ControlNet subsection
+                if (data.ioConfiguration?.controlnet && data.ioConfiguration.controlnet.length > 0) {
+                    const controlNetNode = createTreeNode({
+                        id: 'controlnet',
+                        name: 'ControlNet',
+                        type: 'controlnet',
+                        icon: '📡',
+                        meta: `${data.ioConfiguration.controlnet.length} devices`
+                    });
+
+                    const controlNetModuleNodes = [];
+                    data.ioConfiguration.controlnet.forEach(module => {
+                        const moduleNode = createTreeNode({
+                            id: `controlnet-module-${module.name}`,
+                            name: module.name,
+                            type: 'io-module',
+                            icon: '📡',
+                            meta: `${module.catalognumber || 'Unknown'} - Node ${module.nodeaddress || 'Unknown'}`
+                        });
+                        controlNetModuleNodes.push(moduleNode);
+                    });
+
+                    addChildrenToNode(controlNetNode, controlNetModuleNodes);
+                    addChildrenToNode(ioConfigNode, [controlNetNode]);
+                } else {
+                    const controlNetNode = createTreeNode({
+                        id: 'controlnet',
+                        name: 'ControlNet',
+                        type: 'controlnet',
+                        icon: '📡',
+                        meta: 'No devices'
+                    });
+                    addChildrenToNode(ioConfigNode, [controlNetNode]);
+                }
+
+                addChildrenToNode(controllerNode, [ioConfigNode]);
+
+                // 6. Safety Section
+                const safetyNode = createTreeNode({
+                    id: 'safety',
+                    name: 'Safety',
+                    type: 'safety-section',
+                    icon: '🛡️',
+                    meta: 'Safety configuration'
+                });
+
+                // Safety Task subsection
+                if (data.safetyConfiguration?.safetyTask) {
+                    const safetyTaskNode = createTreeNode({
+                        id: 'safety-task',
+                        name: 'Safety Task',
+                        type: 'safety-task',
+                        icon: '🛡️',
+                        meta: data.safetyConfiguration.safetyTask.name || 'Safety task'
+                    });
+                    addChildrenToNode(safetyNode, [safetyTaskNode]);
+                } else {
+                    const safetyTaskNode = createTreeNode({
+                        id: 'safety-task',
+                        name: 'Safety Task',
+                        type: 'safety-task',
+                        icon: '🛡️',
+                        meta: 'No safety task'
+                    });
+                    addChildrenToNode(safetyNode, [safetyTaskNode]);
+                }
+
+                // Safety I/O subsection
+                if (data.safetyConfiguration?.safetyIO && data.safetyConfiguration.safetyIO.length > 0) {
+                    const safetyIONode = createTreeNode({
+                        id: 'safety-io',
+                        name: 'Safety I/O',
+                        type: 'safety-io',
+                        icon: '🚨',
+                        meta: `${data.safetyConfiguration.safetyIO.length} modules`
+                    });
+
+                    const safetyModuleNodes = [];
+                    data.safetyConfiguration.safetyIO.forEach(module => {
+                        const moduleNode = createTreeNode({
+                            id: `safety-module-${module.name}`,
+                            name: module.name,
+                            type: 'safety-module',
+                            icon: '🚨',
+                            meta: `${module.catalognumber || 'Unknown'} - ${module.producttype || 'Unknown'}`
+                        });
+                        safetyModuleNodes.push(moduleNode);
+                    });
+
+                    addChildrenToNode(safetyIONode, safetyModuleNodes);
+                    addChildrenToNode(safetyNode, [safetyIONode]);
+                } else {
+                    const safetyIONode = createTreeNode({
+                        id: 'safety-io',
+                        name: 'Safety I/O',
+                        type: 'safety-io',
+                        icon: '🚨',
+                        meta: 'No safety I/O modules'
+                    });
+                    addChildrenToNode(safetyNode, [safetyIONode]);
+                }
+
+                // Safety Configuration subsection
+                if (data.safetyConfiguration?.safetyConfig) {
+                    const safetyConfigNode = createTreeNode({
+                        id: 'safety-config',
+                        name: 'Safety Configuration',
+                        type: 'safety-config',
+                        icon: '⚠️',
+                        meta: 'Safety settings configured'
+                    });
+                    addChildrenToNode(safetyNode, [safetyConfigNode]);
+                } else {
+                    const safetyConfigNode = createTreeNode({
+                        id: 'safety-config',
+                        name: 'Safety Configuration',
+                        type: 'safety-config',
+                        icon: '⚠️',
+                        meta: 'No safety configuration'
+                    });
+                    addChildrenToNode(safetyNode, [safetyConfigNode]);
+                }
+
+                addChildrenToNode(controllerNode, [safetyNode]);
+
+                // 7. Event Tasks Section
+                const eventTasks = data.tasks?.filter(task => task.type?.toLowerCase().includes('event')) || [];
+                if (eventTasks.length > 0) {
+                    const eventTasksNode = createTreeNode({
+                        id: 'event-tasks',
+                        name: 'Event Tasks',
+                        type: 'event-tasks-section',
+                        icon: '⚡',
+                        meta: `${eventTasks.length} event tasks`
+                    });
+
+                    const eventTaskNodes = [];
+                    eventTasks.forEach(task => {
+                        const taskNode = createTreeNode({
+                            id: `event-task-${task.name}`,
+                            name: task.name,
+                            type: 'event-task',
+                            icon: '⚡',
+                            meta: `Priority: ${task.priority || 'Unknown'}`
+                        });
+                        eventTaskNodes.push(taskNode);
+                    });
+
+                    addChildrenToNode(eventTasksNode, eventTaskNodes);
+                    addChildrenToNode(controllerNode, [eventTasksNode]);
+                } else {
+                    const eventTasksNode = createTreeNode({
+                        id: 'event-tasks',
+                        name: 'Event Tasks',
+                        type: 'event-tasks-section',
+                        icon: '⚡',
+                        meta: 'No event tasks'
+                    });
+                    addChildrenToNode(controllerNode, [eventTasksNode]);
+                }
+
+                // 8. Trends & Diagnostics Section
+                const trendsNode = createTreeNode({
+                    id: 'trends-diagnostics',
+                    name: 'Trends & Diagnostics',
+                    type: 'trends-section',
+                    icon: '📈',
+                    meta: 'Monitoring & diagnostics'
+                });
+
+                // Trend Configurations subsection
+                if (data.trendsAndDiagnostics?.trendConfigurations && data.trendsAndDiagnostics.trendConfigurations.length > 0) {
+                    const trendConfigNode = createTreeNode({
+                        id: 'trend-configurations',
+                        name: 'Trend Configurations',
+                        type: 'trend-config',
+                        icon: '📈',
+                        meta: `${data.trendsAndDiagnostics.trendConfigurations.length} trends`
+                    });
+
+                    const trendNodes = [];
+                    data.trendsAndDiagnostics.trendConfigurations.forEach(trend => {
+                        const trendNode = createTreeNode({
+                            id: `trend-${trend.name}`,
+                            name: trend.name,
+                            type: 'trend',
+                            icon: '📈',
+                            meta: `${trend.type || 'Unknown'} - ${trend.samplerate || 'Unknown'}`
+                        });
+                        trendNodes.push(trendNode);
+                    });
+
+                    addChildrenToNode(trendConfigNode, trendNodes);
+                    addChildrenToNode(trendsNode, [trendConfigNode]);
+                } else {
+                    const trendConfigNode = createTreeNode({
+                        id: 'trend-configurations',
+                        name: 'Trend Configurations',
+                        type: 'trend-config',
+                        icon: '📈',
+                        meta: 'No trends'
+                    });
+                    addChildrenToNode(trendsNode, [trendConfigNode]);
+                }
+
+                // Diagnostic Logs subsection
+                if (data.trendsAndDiagnostics?.diagnosticLogs && data.trendsAndDiagnostics.diagnosticLogs.length > 0) {
+                    const diagnosticLogsNode = createTreeNode({
+                        id: 'diagnostic-logs',
+                        name: 'Diagnostic Logs',
+                        type: 'diagnostic-logs',
+                        icon: '🔍',
+                        meta: `${data.trendsAndDiagnostics.diagnosticLogs.length} logs`
+                    });
+
+                    const logNodes = [];
+                    data.trendsAndDiagnostics.diagnosticLogs.forEach(log => {
+                        const logNode = createTreeNode({
+                            id: `diagnostic-log-${log.name}`,
+                            name: log.name,
+                            type: 'diagnostic-log',
+                            icon: '🔍',
+                            meta: `${log.type || 'Unknown'} - ${log.level || 'Unknown'}`
+                        });
+                        logNodes.push(logNode);
+                    });
+
+                    addChildrenToNode(diagnosticLogsNode, logNodes);
+                    addChildrenToNode(trendsNode, [diagnosticLogsNode]);
+                } else {
+                    const diagnosticLogsNode = createTreeNode({
+                        id: 'diagnostic-logs',
+                        name: 'Diagnostic Logs',
+                        type: 'diagnostic-logs',
+                        icon: '🔍',
+                        meta: 'No diagnostic logs'
+                    });
+                    addChildrenToNode(trendsNode, [diagnosticLogsNode]);
+                }
+
+                // Performance Data subsection
+                if (data.trendsAndDiagnostics?.performanceData) {
+                    const performanceDataNode = createTreeNode({
+                        id: 'performance-data',
+                        name: 'Performance Data',
+                        type: 'performance-data',
+                        icon: '📊',
+                        meta: 'Performance metrics available'
+                    });
+                    addChildrenToNode(trendsNode, [performanceDataNode]);
+                } else {
+                    const performanceDataNode = createTreeNode({
+                        id: 'performance-data',
+                        name: 'Performance Data',
+                        type: 'performance-data',
+                        icon: '📊',
+                        meta: 'No performance data'
+                    });
+                    addChildrenToNode(trendsNode, [performanceDataNode]);
+                }
+
+                addChildrenToNode(controllerNode, [trendsNode]);
+
+                // Add to tree content
+                if (elements.treeContent) {
+                    elements.treeContent.appendChild(controllerNode);
+                    
+                    // Expand the controller node by default
+                    setTimeout(() => {
+                        const controllerItem = controllerNode.querySelector('.tree-item');
+                        if (controllerItem) {
+                            toggleNode(controllerItem);
+                        }
+                    }, 50);
+                }
+
+                // Show tree panel
+                if (elements.treePanel) {
+                    elements.treePanel.style.display = 'flex';
+                }
+
+                // Reset tree state
+                treeState.clear();
+
+            } catch (error) {
+                handleError(error, 'Tree rendering');
+            }
+        }
+
+        // Create tree node with security validation
+        function createTreeNode({ id, name, type, icon, meta, children = [] }) {
+            try {
+                // Validate inputs
+                if (!id || !name || !type) {
+                    throw new Error('Invalid tree node parameters');
+                }
+
+                // Sanitize all inputs
+                const sanitizedId = sanitizeInput(id, 50);
+                const sanitizedName = sanitizeInput(name, 100);
+                const sanitizedType = sanitizeInput(type, 30);
+                const sanitizedIcon = sanitizeInput(icon, 10);
+                const sanitizedMeta = sanitizeInput(meta, 100);
+
+                // Create list item
+                const li = document.createElement('li');
+                li.className = 'tree-node';
+
+                // Create tree item
+                const item = document.createElement('div');
+                item.className = 'tree-item';
+                item.setAttribute('data-id', sanitizedId);
+                item.setAttribute('data-type', sanitizedType);
+                item.setAttribute('tabindex', '0');
+                item.setAttribute('role', 'treeitem');
+                item.setAttribute('aria-label', `${sanitizedName} ${sanitizedMeta}`);
+
+                // Create toggle if has children
+                if (children && children.length > 0) {
+                    const toggle = document.createElement('span');
+                    toggle.className = 'tree-toggle';
+                    toggle.textContent = '▶';
+                    toggle.setAttribute('aria-label', 'Expand');
+                    toggle.onclick = (e) => {
+                        e.stopPropagation();
+                        toggleNode(item);
+                    };
+                    item.appendChild(toggle);
+                }
+
+                // Create icon
+                const iconSpan = document.createElement('span');
+                iconSpan.className = 'tree-icon';
+                iconSpan.textContent = sanitizedIcon;
+                iconSpan.setAttribute('aria-hidden', 'true');
+                item.appendChild(iconSpan);
+
+                // Create text
+                const textSpan = document.createElement('span');
+                textSpan.className = 'tree-text';
+                textSpan.textContent = sanitizedName;
+                item.appendChild(textSpan);
+
+                // Create meta
+                if (sanitizedMeta) {
+                    const metaSpan = document.createElement('span');
+                    metaSpan.className = 'tree-meta';
+                    metaSpan.textContent = sanitizedMeta;
+                    item.appendChild(metaSpan);
+                }
+
+                // Add click handler
+                item.onclick = () => selectNode(item);
+                item.onkeydown = (e) => handleTreeKeyboard(e, item);
+
+                li.appendChild(item);
+
+                // Add children if any
+                if (children && children.length > 0) {
+                    const childrenContainer = document.createElement('ul');
+                    childrenContainer.className = 'tree-children collapsed';
+                    childrenContainer.setAttribute('role', 'group');
+                    
+                    children.forEach(child => {
+                        childrenContainer.appendChild(child);
+                    });
+                    
+                    li.appendChild(childrenContainer);
+                }
+
+                return li;
+
+            } catch (error) {
+                handleError(error, 'Tree node creation');
+                return document.createElement('li'); // Return empty node on error
+            }
+        }
+
+        // Helper function to add children to an existing tree node
+        function addChildrenToNode(parentNode, childNodes) {
+            try {
+                if (!parentNode || !childNodes || childNodes.length === 0) {
+                    return;
+                }
+
+                // Check if parent already has a children container
+                let childrenContainer = parentNode.querySelector('.tree-children');
+                
+                if (!childrenContainer) {
+                    // Create children container
+                    childrenContainer = document.createElement('ul');
+                    childrenContainer.className = 'tree-children collapsed';
+                    childrenContainer.setAttribute('role', 'group');
+                    parentNode.appendChild(childrenContainer);
+                    
+                    // Add toggle button to parent if it doesn't have one
+                    const parentItem = parentNode.querySelector('.tree-item');
+                    if (parentItem && !parentItem.querySelector('.tree-toggle')) {
+                        const toggle = document.createElement('span');
+                        toggle.className = 'tree-toggle';
+                        toggle.textContent = '▶';
+                        toggle.setAttribute('aria-label', 'Expand');
+                        toggle.onclick = (e) => {
+                            e.stopPropagation();
+                            toggleNode(parentItem);
+                        };
+                        parentItem.insertBefore(toggle, parentItem.firstChild);
+                    }
+                }
+
+                // Add children to the container
+                childNodes.forEach(child => {
+                    childrenContainer.appendChild(child);
+                });
+
+            } catch (error) {
+                handleError(error, 'Adding children to node');
+            }
+        }
+
+        // Icon mapping functions for complete Studio 5000 structure
+        function getTaskIcon(taskType) {
+            const type = taskType?.toLowerCase() || '';
+            if (type.includes('continuous')) return '🔄';
+            if (type.includes('periodic')) return '⏰';
+            if (type.includes('event')) return '⚡';
+            return '⚡';
+        }
+
+        function getRoutineIcon(routineType) {
+            const type = routineType?.toLowerCase() || '';
+            if (type.includes('rll') || type.includes('ladder')) return '🪜';
+            if (type.includes('st') || type.includes('structured')) return '📄';
+            if (type.includes('fbd') || type.includes('function')) return '🔧';
+            if (type.includes('sfc') || type.includes('sequential')) return '⚡';
+            return '📄';
+        }
+
+        function getTagIcon(dataType) {
+            const type = dataType?.toLowerCase() || '';
+            if (type.includes('bool')) return '🔘';
+            if (type.includes('int') || type.includes('dint')) return '🔢';
+            if (type.includes('real') || type.includes('float')) return '📊';
+            if (type.includes('timer')) return '⏱️';
+            if (type.includes('counter')) return '🔢';
+            if (type.includes('string')) return '📝';
+            return '🏷️';
+        }
+
+        function getTagTypeIcon(tagType) {
+            const type = tagType?.toUpperCase() || '';
+            switch (type) {
+                case 'BOOL': return '🔘';
+                case 'DINT': return '🔢';
+                case 'REAL': return '📊';
+                case 'STRING': return '📝';
+                case 'TIMER': return '⏱️';
+                case 'COUNTER': return '🔢';
+                case 'UDT': return '📋';
+                case 'ARRAY': return '📦';
+                default: return '🏷️';
+            }
+        }
+
+        // Tree interaction functions
+        function toggleNode(item) {
+            try {
+                const children = item.parentElement.querySelector('.tree-children');
+                const toggle = item.querySelector('.tree-toggle');
+                
+                if (children && toggle) {
+                    const isCollapsed = children.classList.contains('collapsed');
+                    
+                    if (isCollapsed) {
+                        children.classList.remove('collapsed');
+                        toggle.textContent = '▼';
+                        toggle.classList.add('expanded');
+                        toggle.setAttribute('aria-label', 'Collapse');
+                        item.setAttribute('aria-expanded', 'true');
+                    } else {
+                        children.classList.add('collapsed');
+                        toggle.textContent = '▶';
+                        toggle.classList.remove('expanded');
+                        toggle.setAttribute('aria-label', 'Expand');
+                        item.setAttribute('aria-expanded', 'false');
+                    }
+                }
+            } catch (error) {
+                handleError(error, 'Node toggle');
+            }
+        }
+
+        function selectNode(item) {
+            try {
+                // Remove previous selection
+                document.querySelectorAll('.tree-item.selected').forEach(selected => {
+                    selected.classList.remove('selected');
+                });
+
+                // Add selection to current item
+                item.classList.add('selected');
+                selectedItem = item;
+
+                // Show content based on node type
+                showNodeContent(item);
+
+            } catch (error) {
+                handleError(error, 'Node selection');
+            }
+        }
+
+        function handleTreeKeyboard(event, item) {
+            try {
+                switch (event.key) {
+                    case 'Enter':
+                    case ' ':
+                        event.preventDefault();
+                        selectNode(item);
+                        break;
+                    case 'ArrowRight':
+                        event.preventDefault();
+                        const toggle = item.querySelector('.tree-toggle');
+                        if (toggle) {
+                            toggle.click();
+                        }
+                        break;
+                    case 'ArrowLeft':
+                        event.preventDefault();
+                        const parent = item.parentElement.parentElement;
+                        if (parent && parent.classList.contains('tree-children')) {
+                            const parentItem = parent.previousElementSibling;
+                            if (parentItem) {
+                                parentItem.focus();
+                            }
+                        }
+                        break;
+                    case 'ArrowDown':
+                        event.preventDefault();
+                        const next = item.parentElement.nextElementSibling;
+                        if (next && next.querySelector('.tree-item')) {
+                            next.querySelector('.tree-item').focus();
+                        }
+                        break;
+                    case 'ArrowUp':
+                        event.preventDefault();
+                        const prev = item.parentElement.previousElementSibling;
+                        if (prev && prev.querySelector('.tree-item')) {
+                            prev.querySelector('.tree-item').focus();
+                        }
+                        break;
+                }
+            } catch (error) {
+                handleError(error, 'Tree keyboard navigation');
+            }
+        }
+
+        // Enhanced content display functions for complete Studio 5000 structure
+        function showNodeContent(item) {
+            try {
+                const nodeType = item.getAttribute('data-type');
+                const nodeName = item.querySelector('.tree-text')?.textContent || '';
+
+                if (nodeType?.startsWith('routine-')) {
+                    showRoutineContent(nodeName);
+                } else if (nodeType?.startsWith('tag-')) {
+                    showTagContent(nodeName);
+                } else if (nodeType === 'program') {
+                    showProgramContent(nodeName);
+                } else if (nodeType === 'datatype') {
+                    showDataTypeContent(nodeName);
+                } else if (nodeType === 'addon-instruction') {
+                    showAddOnInstructionContent(nodeName);
+                } else if (nodeType === 'io-module') {
+                    showIOModuleContent(nodeName);
+                } else if (nodeType === 'motion-group') {
+                    showMotionGroupContent(nodeName);
+                } else if (nodeType === 'safety-module') {
+                    showSafetyModuleContent(nodeName);
+                } else if (nodeType === 'trend') {
+                    showTrendContent(nodeName);
+                } else if (nodeType === 'diagnostic-log') {
+                    showDiagnosticLogContent(nodeName);
+                } else if (nodeType === 'event-task') {
+                    showEventTaskContent(nodeName);
+                } else {
+                    showDefaultContent(nodeName, nodeType);
+                }
+
+            } catch (error) {
+                handleError(error, 'Content display');
+            }
+        }
+
+        function showRoutineContent(routineName) {
+            try {
+                // Find routine in project data
+                let routine = null;
+                if (projectData && projectData.programs) {
+                    for (const program of projectData.programs) {
+                        if (program.routines) {
+                            routine = program.routines.find(r => r.name === routineName);
+                            if (routine) break;
+                        }
+                    }
+                }
+
+                if (routine && routine.logic) {
+                    displayRungs(routine.logic.content, routineName);
+                } else {
+                    showDefaultContent(routineName, 'routine');
+                }
+
+            } catch (error) {
+                handleError(error, 'Routine content display');
+            }
+        }
+
+        function displayRungs(rungs, routineName) {
+            try {
+                if (!elements.contentHeader || !elements.contentTitle || !elements.contentMeta || !elements.rungContainer) {
+                    throw new Error('Content elements not available');
+                }
+
+                // Show content header
+                elements.contentHeader.style.display = 'block';
+                elements.contentTitle.textContent = sanitizeInput(routineName);
+                elements.contentMeta.innerHTML = `
+                    <span>Type: Ladder Logic</span>
+                    <span>Rungs: ${rungs.length}</span>
+                `;
+
+                // Display rungs
+                let rungsHTML = '';
+                rungs.forEach((rung, index) => {
+                    rungsHTML += `
+                        <div class="rung" data-rung="${index}">
+                            <div class="rung-header">
+                                <span class="rung-number">Rung ${sanitizeInput(rung.number)}</span>
+                                ${rung.comment ? `<span class="rung-comment">${sanitizeInput(rung.comment)}</span>` : ''}
+                            </div>
+                            <div class="rung-content">${sanitizeInput(rung.text)}</div>
+                        </div>
+                    `;
+                });
+
+                elements.rungContainer.innerHTML = rungsHTML;
+
+            } catch (error) {
+                handleError(error, 'Rungs display');
+            }
+        }
+
+        function showTagContent(tagName) {
+            try {
+                if (!elements.contentHeader || !elements.contentTitle || !elements.contentMeta || !elements.rungContainer) {
+                    throw new Error('Content elements not available');
+                }
+
+                // Find tag in project data
+                const tag = projectData?.controllerTags?.find(t => t.name === tagName);
+                
+                elements.contentHeader.style.display = 'block';
+                elements.contentTitle.textContent = sanitizeInput(tagName);
+                elements.contentMeta.innerHTML = `
+                    <span>Type: ${sanitizeInput(tag?.datatype || 'Unknown')}</span>
+                    <span>Usage: ${sanitizeInput(tag?.usage || 'Unknown')}</span>
+                    ${tag?.constant ? '<span>Constant: Yes</span>' : ''}
+                `;
+
+                elements.rungContainer.innerHTML = `
+                    <div class="welcome">
+                        <div class="welcome-icon">🏷️</div>
+                        <h2>Tag Information</h2>
+                        <p>Tag: ${sanitizeInput(tagName)}</p>
+                        <p>Data Type: ${sanitizeInput(tag?.datatype || 'Unknown')}</p>
+                        <p>Usage: ${sanitizeInput(tag?.usage || 'Unknown')}</p>
+                        ${tag?.constant ? '<p>Constant: Yes</p>' : ''}
+                    </div>
+                `;
+
+            } catch (error) {
+                handleError(error, 'Tag content display');
+            }
+        }
+
+        function showProgramContent(programName) {
+            try {
+                if (!elements.contentHeader || !elements.contentTitle || !elements.contentMeta || !elements.rungContainer) {
+                    throw new Error('Content elements not available');
+                }
+
+                const program = projectData?.programs?.find(p => p.name === programName);
+                
+                elements.contentHeader.style.display = 'block';
+                elements.contentTitle.textContent = sanitizeInput(programName);
+                elements.contentMeta.innerHTML = `
+                    <span>Type: ${sanitizeInput(program?.type || 'Unknown')}</span>
+                    <span>Routines: ${program?.routines?.length || 0}</span>
+                `;
+
+                elements.rungContainer.innerHTML = `
+                    <div class="welcome">
+                        <div class="welcome-icon">📋</div>
+                        <h2>Program Information</h2>
+                        <p>Program: ${sanitizeInput(programName)}</p>
+                        <p>Type: ${sanitizeInput(program?.type || 'Unknown')}</p>
+                        <p>Routines: ${program?.routines?.length || 0}</p>
+                    </div>
+                `;
+
+            } catch (error) {
+                handleError(error, 'Program content display');
+            }
+        }
+
+        function showDataTypeContent(dataTypeName) {
+            try {
+                if (!elements.contentHeader || !elements.contentTitle || !elements.contentMeta || !elements.rungContainer) {
+                    throw new Error('Content elements not available');
+                }
+
+                const dataType = projectData?.dataTypes?.find(dt => dt.name === dataTypeName);
+                
+                elements.contentHeader.style.display = 'block';
+                elements.contentTitle.textContent = sanitizeInput(dataTypeName);
+                elements.contentMeta.innerHTML = `
+                    <span>Family: ${sanitizeInput(dataType?.family || 'Unknown')}</span>
+                    <span>Members: ${dataType?.members?.length || 0}</span>
+                `;
+
+                elements.rungContainer.innerHTML = `
+                    <div class="welcome">
+                        <div class="welcome-icon">📊</div>
+                        <h2>Data Type Information</h2>
+                        <p>Name: ${sanitizeInput(dataTypeName)}</p>
+                        <p>Family: ${sanitizeInput(dataType?.family || 'Unknown')}</p>
+                        <p>Members: ${dataType?.members?.length || 0}</p>
+                        ${dataType?.description ? `<p>Description: ${sanitizeInput(dataType.description)}</p>` : ''}
+                    </div>
+                `;
+
+            } catch (error) {
+                handleError(error, 'Data type content display');
+            }
+        }
+
+        function showAddOnInstructionContent(aoiName) {
+            try {
+                if (!elements.contentHeader || !elements.contentTitle || !elements.contentMeta || !elements.rungContainer) {
+                    throw new Error('Content elements not available');
+                }
+
+                const aoi = projectData?.addOnInstructions?.find(a => a.name === aoiName);
+                
+                elements.contentHeader.style.display = 'block';
+                elements.contentTitle.textContent = sanitizeInput(aoiName);
+                elements.contentMeta.innerHTML = `
+                    <span>Revision: ${sanitizeInput(aoi?.revision || 'Unknown')}</span>
+                    <span>Vendor: ${sanitizeInput(aoi?.vendor || 'Unknown')}</span>
+                    <span>Parameters: ${aoi?.parameters?.length || 0}</span>
+                `;
+
+                elements.rungContainer.innerHTML = `
+                    <div class="welcome">
+                        <div class="welcome-icon">🔗</div>
+                        <h2>Add-On Instruction Information</h2>
+                        <p>Name: ${sanitizeInput(aoiName)}</p>
+                        <p>Revision: ${sanitizeInput(aoi?.revision || 'Unknown')}</p>
+                        <p>Vendor: ${sanitizeInput(aoi?.vendor || 'Unknown')}</p>
+                        <p>Parameters: ${aoi?.parameters?.length || 0}</p>
+                        ${aoi?.description ? `<p>Description: ${sanitizeInput(aoi.description)}</p>` : ''}
+                    </div>
+                `;
+
+            } catch (error) {
+                handleError(error, 'Add-On Instruction content display');
+            }
+        }
+
+        function showIOModuleContent(moduleName) {
+            try {
+                if (!elements.contentHeader || !elements.contentTitle || !elements.contentMeta || !elements.rungContainer) {
+                    throw new Error('Content elements not available');
+                }
+
+                // Find module in I/O configuration
+                let module = null;
+                if (projectData?.ioConfiguration) {
+                    module = projectData.ioConfiguration.local?.find(m => m.name === moduleName) ||
+                             projectData.ioConfiguration.ethernet?.find(m => m.name === moduleName) ||
+                             projectData.ioConfiguration.devicenet?.find(m => m.name === moduleName) ||
+                             projectData.ioConfiguration.controlnet?.find(m => m.name === moduleName);
+                }
+                
+                elements.contentHeader.style.display = 'block';
+                elements.contentTitle.textContent = sanitizeInput(moduleName);
+                elements.contentMeta.innerHTML = `
+                    <span>Catalog: ${sanitizeInput(module?.catalognumber || 'Unknown')}</span>
+                    <span>Type: ${sanitizeInput(module?.producttype || 'Unknown')}</span>
+                    <span>Vendor: ${sanitizeInput(module?.vendor || 'Unknown')}</span>
+                `;
+
+                elements.rungContainer.innerHTML = `
+                    <div class="welcome">
+                        <div class="welcome-icon">📟</div>
+                        <h2>I/O Module Information</h2>
+                        <p>Name: ${sanitizeInput(moduleName)}</p>
+                        <p>Catalog Number: ${sanitizeInput(module?.catalognumber || 'Unknown')}</p>
+                        <p>Product Type: ${sanitizeInput(module?.producttype || 'Unknown')}</p>
+                        <p>Vendor: ${sanitizeInput(module?.vendor || 'Unknown')}</p>
+                        ${module?.description ? `<p>Description: ${sanitizeInput(module.description)}</p>` : ''}
+                    </div>
+                `;
+
+            } catch (error) {
+                handleError(error, 'I/O Module content display');
+            }
+        }
+
+        function showMotionGroupContent(groupName) {
+            try {
+                if (!elements.contentHeader || !elements.contentTitle || !elements.contentMeta || !elements.rungContainer) {
+                    throw new Error('Content elements not available');
+                }
+
+                const group = projectData?.motionGroups?.find(g => g.name === groupName);
+                
+                elements.contentHeader.style.display = 'block';
+                elements.contentTitle.textContent = sanitizeInput(groupName);
+                elements.contentMeta.innerHTML = `
+                    <span>Type: ${sanitizeInput(group?.type || 'Unknown')}</span>
+                    <span>Instructions: ${group?.instructions?.length || 0}</span>
+                `;
+
+                elements.rungContainer.innerHTML = `
+                    <div class="welcome">
+                        <div class="welcome-icon">🎛️</div>
+                        <h2>Motion Group Information</h2>
+                        <p>Name: ${sanitizeInput(groupName)}</p>
+                        <p>Type: ${sanitizeInput(group?.type || 'Unknown')}</p>
+                        <p>Instructions: ${group?.instructions?.length || 0}</p>
+                        ${group?.description ? `<p>Description: ${sanitizeInput(group.description)}</p>` : ''}
+                    </div>
+                `;
+
+            } catch (error) {
+                handleError(error, 'Motion Group content display');
+            }
+        }
+
+        function showSafetyModuleContent(moduleName) {
+            try {
+                if (!elements.contentHeader || !elements.contentTitle || !elements.contentMeta || !elements.rungContainer) {
+                    throw new Error('Content elements not available');
+                }
+
+                const module = projectData?.safetyConfiguration?.safetyIO?.find(m => m.name === moduleName);
+                
+                elements.contentHeader.style.display = 'block';
+                elements.contentTitle.textContent = sanitizeInput(moduleName);
+                elements.contentMeta.innerHTML = `
+                    <span>Catalog: ${sanitizeInput(module?.catalognumber || 'Unknown')}</span>
+                    <span>Type: ${sanitizeInput(module?.producttype || 'Unknown')}</span>
+                    <span>Vendor: ${sanitizeInput(module?.vendor || 'Unknown')}</span>
+                `;
+
+                elements.rungContainer.innerHTML = `
+                    <div class="welcome">
+                        <div class="welcome-icon">🚨</div>
+                        <h2>Safety Module Information</h2>
+                        <p>Name: ${sanitizeInput(moduleName)}</p>
+                        <p>Catalog Number: ${sanitizeInput(module?.catalognumber || 'Unknown')}</p>
+                        <p>Product Type: ${sanitizeInput(module?.producttype || 'Unknown')}</p>
+                        <p>Vendor: ${sanitizeInput(module?.vendor || 'Unknown')}</p>
+                        ${module?.description ? `<p>Description: ${sanitizeInput(module.description)}</p>` : ''}
+                    </div>
+                `;
+
+            } catch (error) {
+                handleError(error, 'Safety Module content display');
+            }
+        }
+
+        function showTrendContent(trendName) {
+            try {
+                if (!elements.contentHeader || !elements.contentTitle || !elements.contentMeta || !elements.rungContainer) {
+                    throw new Error('Content elements not available');
+                }
+
+                const trend = projectData?.trendsAndDiagnostics?.trendConfigurations?.find(t => t.name === trendName);
+                
+                elements.contentHeader.style.display = 'block';
+                elements.contentTitle.textContent = sanitizeInput(trendName);
+                elements.contentMeta.innerHTML = `
+                    <span>Type: ${sanitizeInput(trend?.type || 'Unknown')}</span>
+                    <span>Sample Rate: ${sanitizeInput(trend?.samplerate || 'Unknown')}</span>
+                `;
+
+                elements.rungContainer.innerHTML = `
+                    <div class="welcome">
+                        <div class="welcome-icon">📈</div>
+                        <h2>Trend Configuration Information</h2>
+                        <p>Name: ${sanitizeInput(trendName)}</p>
+                        <p>Type: ${sanitizeInput(trend?.type || 'Unknown')}</p>
+                        <p>Sample Rate: ${sanitizeInput(trend?.samplerate || 'Unknown')}</p>
+                        ${trend?.description ? `<p>Description: ${sanitizeInput(trend.description)}</p>` : ''}
+                    </div>
+                `;
+
+            } catch (error) {
+                handleError(error, 'Trend content display');
+            }
+        }
+
+        function showDiagnosticLogContent(logName) {
+            try {
+                if (!elements.contentHeader || !elements.contentTitle || !elements.contentMeta || !elements.rungContainer) {
+                    throw new Error('Content elements not available');
+                }
+
+                const log = projectData?.trendsAndDiagnostics?.diagnosticLogs?.find(l => l.name === logName);
+                
+                elements.contentHeader.style.display = 'block';
+                elements.contentTitle.textContent = sanitizeInput(logName);
+                elements.contentMeta.innerHTML = `
+                    <span>Type: ${sanitizeInput(log?.type || 'Unknown')}</span>
+                    <span>Level: ${sanitizeInput(log?.level || 'Unknown')}</span>
+                `;
+
+                elements.rungContainer.innerHTML = `
+                    <div class="welcome">
+                        <div class="welcome-icon">🔍</div>
+                        <h2>Diagnostic Log Information</h2>
+                        <p>Name: ${sanitizeInput(logName)}</p>
+                        <p>Type: ${sanitizeInput(log?.type || 'Unknown')}</p>
+                        <p>Level: ${sanitizeInput(log?.level || 'Unknown')}</p>
+                        ${log?.description ? `<p>Description: ${sanitizeInput(log.description)}</p>` : ''}
+                    </div>
+                `;
+
+            } catch (error) {
+                handleError(error, 'Diagnostic Log content display');
+            }
+        }
+
+        function showEventTaskContent(taskName) {
+            try {
+                if (!elements.contentHeader || !elements.contentTitle || !elements.contentMeta || !elements.rungContainer) {
+                    throw new Error('Content elements not available');
+                }
+
+                const task = projectData?.tasks?.find(t => t.name === taskName);
+                
+                elements.contentHeader.style.display = 'block';
+                elements.contentTitle.textContent = sanitizeInput(taskName);
+                elements.contentMeta.innerHTML = `
+                    <span>Type: ${sanitizeInput(task?.type || 'Unknown')}</span>
+                    <span>Priority: ${sanitizeInput(task?.priority || 'Unknown')}</span>
+                    <span>Programs: ${task?.programs?.length || 0}</span>
+                `;
+
+                elements.rungContainer.innerHTML = `
+                    <div class="welcome">
+                        <div class="welcome-icon">⚡</div>
+                        <h2>Event Task Information</h2>
+                        <p>Name: ${sanitizeInput(taskName)}</p>
+                        <p>Type: ${sanitizeInput(task?.type || 'Unknown')}</p>
+                        <p>Priority: ${sanitizeInput(task?.priority || 'Unknown')}</p>
+                        <p>Scheduled Programs: ${task?.programs?.length || 0}</p>
+                        ${task?.properties?.description ? `<p>Description: ${sanitizeInput(task.properties.description)}</p>` : ''}
+                    </div>
+                `;
+
+            } catch (error) {
+                handleError(error, 'Event Task content display');
+            }
+        }
+
+        function showDefaultContent(name, type) {
+            try {
+                if (!elements.contentHeader || !elements.contentTitle || !elements.contentMeta || !elements.rungContainer) {
+                    throw new Error('Content elements not available');
+                }
+
+                elements.contentHeader.style.display = 'block';
+                elements.contentTitle.textContent = sanitizeInput(name);
+                elements.contentMeta.innerHTML = `<span>Type: ${sanitizeInput(type)}</span>`;
+
+                elements.rungContainer.innerHTML = `
+                    <div class="welcome">
+                        <div class="welcome-icon">📄</div>
+                        <h2>${sanitizeInput(name)}</h2>
+                        <p>Type: ${sanitizeInput(type)}</p>
+                        <p>Select a routine to view ladder logic content.</p>
+                    </div>
+                `;
+
+            } catch (error) {
+                handleError(error, 'Default content display');
+            }
+        }
+
+        function showProjectInfo() {
+            try {
+                if (!elements.contentHeader || !elements.contentTitle || !elements.contentMeta || !elements.rungContainer) {
+                    throw new Error('Content elements not available');
+                }
+
+                // Calculate comprehensive statistics
+                const stats = {
+                    tasks: projectData.tasks?.length || 0,
+                    programs: projectData.programs?.length || 0,
+                    controllerTags: projectData.controllerTags?.length || 0,
+                    dataTypes: projectData.dataTypes?.length || 0,
+                    addOnInstructions: projectData.addOnInstructions?.length || 0,
+                    motionGroups: projectData.motionGroups?.length || 0,
+                    localModules: projectData.ioConfiguration?.local?.length || 0,
+                    ethernetModules: projectData.ioConfiguration?.ethernet?.length || 0,
+                    devicenetModules: projectData.ioConfiguration?.devicenet?.length || 0,
+                    controlnetModules: projectData.ioConfiguration?.controlnet?.length || 0,
+                    safetyModules: projectData.safetyConfiguration?.safetyIO?.length || 0,
+                    trends: projectData.trendsAndDiagnostics?.trendConfigurations?.length || 0,
+                    diagnosticLogs: projectData.trendsAndDiagnostics?.diagnosticLogs?.length || 0
+                };
+
+                elements.contentHeader.style.display = 'block';
+                elements.contentTitle.textContent = sanitizeInput(projectData.controller.name);
+                elements.contentMeta.innerHTML = `
+                    <span>Processor: ${sanitizeInput(projectData.controller.processortype || 'Unknown')}</span>
+                    <span>Version: ${sanitizeInput(projectData.controller.majorrev || '0')}.${sanitizeInput(projectData.controller.minorrev || '0')}</span>
+                    <span>Tasks: ${stats.tasks}</span>
+                    <span>Programs: ${stats.programs}</span>
+                    <span>Tags: ${stats.controllerTags}</span>
+                `;
+
+                elements.rungContainer.innerHTML = `
+                    <div class="welcome">
+                        <div class="welcome-icon">🏭</div>
+                        <h2>${sanitizeInput(projectData.controller.name)}</h2>
+                        <p>Controller loaded successfully with complete Studio 5000-style structure!</p>
+                        <p>Navigate through the project tree to explore:</p>
+                        <ul style="text-align: left; margin: 1rem 0; padding-left: 2rem;">
+                            <li><strong>Controller Tags</strong> - ${stats.controllerTags} tags organized by type</li>
+                            <li><strong>Tasks</strong> - ${stats.tasks} tasks with programs and routines</li>
+                            <li><strong>Motion Groups</strong> - ${stats.motionGroups} motion control groups</li>
+                            <li><strong>Data Types</strong> - ${stats.dataTypes} user-defined types</li>
+                            <li><strong>Add-On Instructions</strong> - ${stats.addOnInstructions} custom instructions</li>
+                            <li><strong>I/O Configuration</strong> - ${stats.localModules + stats.ethernetModules + stats.devicenetModules + stats.controlnetModules} modules</li>
+                            <li><strong>Safety</strong> - ${stats.safetyModules} safety modules</li>
+                            <li><strong>Trends & Diagnostics</strong> - ${stats.trends} trends, ${stats.diagnosticLogs} logs</li>
+                        </ul>
+                        <p style="margin-top: 1rem; font-size: 0.9rem; color: var(--muted-text);">
+                            This viewer now provides the complete Studio 5000 Logix Designer experience with all major sections and subsections.
+                        </p>
+                    </div>
+                `;
+
+            } catch (error) {
+                handleError(error, 'Project info display');
+            }
+        }
+
+        // Search functionality with validation
+        function handleSearch() {
+            try {
+                const query = elements.searchInput.value;
+                
+                // Validate search query
+                if (query.length > VALIDATION.MAX_SEARCH_LENGTH) {
+                    elements.searchInput.value = query.substring(0, VALIDATION.MAX_SEARCH_LENGTH);
+                    return;
+                }
+                
+                searchQuery = sanitizeInput(query);
+                filterTree(searchQuery);
+                
+            } catch (error) {
+                handleError(error, 'Search operation');
+            }
+        }
+
+        function handleSearchKeyboard(event) {
+            if (event.key === 'Escape') {
+                elements.searchInput.value = '';
+                searchQuery = '';
+                filterTree('');
+                elements.searchInput.blur();
+            }
+        }
+
+        function filterTree(query) {
+            try {
+                const items = document.querySelectorAll('.tree-item');
+                const queryLower = query.toLowerCase();
+                
+                items.forEach(item => {
+                    const text = item.textContent.toLowerCase();
+                    const node = item.closest('li');
+                    const matches = text.includes(queryLower);
+                    
+                    if (node) {
+                        node.style.display = matches || query === '' ? '' : 'none';
+                        
+                        if (matches && query !== '') {
+                            // Expand parents to show matching items
+                            expandParents(node);
+                        }
+                    }
+                });
+                
+            } catch (error) {
+                handleError(error, 'Tree filtering');
+            }
+        }
+
+        function expandParents(node) {
+            try {
+                let parent = node.parentElement;
+                while (parent && parent.classList.contains('tree-children')) {
+                    parent.classList.remove('collapsed');
+                    const parentItem = parent.previousElementSibling;
+                    if (parentItem) {
+                        const toggle = parentItem.querySelector('.tree-toggle');
+                        if (toggle) {
+                            toggle.textContent = '▼';
+                            toggle.classList.add('expanded');
+                        }
+                        parentItem.setAttribute('aria-expanded', 'true');
+                    }
+                    parent = parent.parentElement?.parentElement;
+                }
+            } catch (error) {
+                handleError(error, 'Parent expansion');
+            }
+        }
+
+        // Tree management functions
+        function expandAll() {
+            try {
+                document.querySelectorAll('.tree-children.collapsed').forEach(children => {
+                    children.classList.remove('collapsed');
+                    const toggle = children.previousElementSibling?.querySelector('.tree-toggle');
+                    if (toggle) {
+                        toggle.textContent = '▼';
+                        toggle.classList.add('expanded');
+                    }
+                });
+            } catch (error) {
+                handleError(error, 'Expand all operation');
+            }
+        }
+
+        function collapseAll() {
+            try {
+                document.querySelectorAll('.tree-children:not(.collapsed)').forEach(children => {
+                    children.classList.add('collapsed');
+                    const toggle = children.previousElementSibling?.querySelector('.tree-toggle');
+                    if (toggle) {
+                        toggle.textContent = '▶';
+                        toggle.classList.remove('expanded');
+                    }
+                });
+            } catch (error) {
+                handleError(error, 'Collapse all operation');
+            }
+        }
+
+        // Initialize application
+        function initialize() {
+            try {
+                initializeElements();
+                setupEventListeners();
+                updateStatus('Ready to load L5X project file');
+                
+                // Announce to screen readers
+                announceToScreenReader('Studio 5000 Logix Designer Style PLC Viewer ready. Load an L5X file to begin.');
+                
+            } catch (error) {
+                showFatalError('Application initialization failed');
+            }
+        }
+
+        // Utility functions
+        function updateStatus(message, type = 'info') {
+            try {
+                if (elements.statusText) {
+                    elements.statusText.textContent = sanitizeInput(message);
+                }
+            } catch (error) {
+                console.error('Status update failed:', error);
+            }
+        }
+
+        function showLoading() {
+            try {
+                if (elements.rungContainer) {
+                    elements.rungContainer.innerHTML = `
+                        <div class="loading">
+                            <div class="welcome-icon">⚙️</div>
+                            <p>Loading project...</p>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                handleError(error, 'Loading state display');
+            }
+        }
+
+        function showError(message) {
+            try {
+                if (elements.rungContainer) {
+                    elements.rungContainer.innerHTML = `
+                        <div class="error">
+                            <div class="error-icon">❌</div>
+                            <h2>Error</h2>
+                            <p>${sanitizeInput(message)}</p>
+                            <button class="btn" onclick="openFile()" style="margin-top: 1rem;">Try Another File</button>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('Error display failed:', error);
+            }
+        }
+
+        function announceToScreenReader(message) {
+            try {
+                const announcement = document.createElement('div');
+                announcement.setAttribute('aria-live', 'polite');
+                announcement.setAttribute('aria-atomic', 'true');
+                announcement.className = 'sr-only';
+                announcement.textContent = sanitizeInput(message);
+                document.body.appendChild(announcement);
+                
+                setTimeout(() => {
+                    if (document.body.contains(announcement)) {
+                        document.body.removeChild(announcement);
+                    }
+                }, 1000);
+            } catch (error) {
+                console.error('Screen reader announcement failed:', error);
+            }
+        }
+
+        // Start the application
+        initialize();
     </script>
 </body>
-</html>
+</html> 
