@@ -121,6 +121,12 @@ class LadderRenderer {
         const { width } = this.container.getBoundingClientRect();
         this.canvas.width = width;
 
+        // FIXED: Ensure canvas has proper dimensions before calculating rail positions
+        if (this.canvas.width <= 0) {
+            console.warn('Canvas width is zero, using default width');
+            this.canvas.width = 800;
+        }
+
         // Calculate Layout & Required Height
         const { leftRailX, rightRailX } = this.getRailPositions();
         const tempRungDef = JSON.parse(JSON.stringify(this.rungDefinition));
@@ -381,8 +387,21 @@ class LadderRenderer {
     }
 
     getRailPositions() {
+        // FIXED: Add debugging and ensure proper canvas width
+        if (!this.canvas || this.canvas.width <= 0) {
+            console.warn('Canvas not properly initialized in getRailPositions');
+            return { leftRailX: 50, rightRailX: 750 };
+        }
+        
         const leftRailX = RENDER_CONFIG.CANVAS_PADDING + RENDER_CONFIG.POWER_RAIL_WIDTH / 2;
         const rightRailX = this.canvas.width - RENDER_CONFIG.CANVAS_PADDING - RENDER_CONFIG.POWER_RAIL_WIDTH / 2;
+        
+        // FIXED: Ensure rail positions are valid
+        if (rightRailX <= leftRailX) {
+            console.warn('Invalid rail positions, using defaults');
+            return { leftRailX: 50, rightRailX: 750 };
+        }
+        
         return { leftRailX, rightRailX };
     }
 
@@ -408,7 +427,18 @@ class LadderRenderer {
 
     // PASS 1: Wire drawing with Z-style wrapping and proper color coding
     drawWires(lines, leftRailX, rightRailX) {
-        if (lines.length === 0 || lines[0].elements.length === 0) return;
+        // FIXED: Add debugging to wire drawing
+        console.log('🔌 drawWires called with:', { 
+            linesCount: lines.length, 
+            firstLineElements: lines[0]?.elements?.length || 0,
+            leftRailX, 
+            rightRailX 
+        });
+        
+        if (lines.length === 0 || lines[0].elements.length === 0) {
+            console.warn('No lines or elements to draw wires for');
+            return;
+        }
 
         this.ctx.lineWidth = RENDER_CONFIG.WIRE_WIDTH;
         this.ctx.lineCap = 'butt';
@@ -482,7 +512,7 @@ class LadderRenderer {
             this.ctx.lineWidth = RENDER_CONFIG.WIRE_WIDTH;
             
             this.ctx.beginPath();
-            // Start from the end of current line
+            // FIXED: Start from the end of current line with proper symbol edge connection
             this.ctx.moveTo(endOfCurrentLine.x + endOfCurrentLine.symbolWidth / 2, endOfCurrentLine.y);
             // Go right to the wrap area
             this.ctx.lineTo(rightRailX - RENDER_CONFIG.WRAP_PADDING, endOfCurrentLine.y);
@@ -492,7 +522,7 @@ class LadderRenderer {
             this.ctx.lineTo(leftRailX + RENDER_CONFIG.WRAP_PADDING, effectiveTransferY);
             // Go down to next line level
             this.ctx.lineTo(leftRailX + RENDER_CONFIG.WRAP_PADDING, startOfNextLine.y);
-            // Go right to the start of next line
+            // FIXED: Go right to the start of next line with proper symbol edge connection
             this.ctx.lineTo(startOfNextLine.x - startOfNextLine.symbolWidth / 2, startOfNextLine.y);
             this.ctx.stroke();
         }
@@ -695,10 +725,18 @@ class LadderRenderer {
             // Draw wire from last element to end bar - FIXED: Ensure connection to power rail
             if (path.elements.length > 0) {
                 const lastElement = path.elements[path.elements.length - 1];
+                // FIXED: Always connect to power rail when branch is last in rung
                 const finalEndX = context.isLastInRung ? rightRailX : internalBranchEndX;
                 
                 this.ctx.beginPath();
                 this.ctx.moveTo(lastElement.x + lastElement.symbolWidth / 2, pathY);
+                this.ctx.lineTo(finalEndX, pathY);
+                this.ctx.stroke();
+            } else {
+                // FIXED: Handle empty branch paths - connect start to end
+                const finalEndX = context.isLastInRung ? rightRailX : internalBranchEndX;
+                this.ctx.beginPath();
+                this.ctx.moveTo(branchStartX, pathY);
                 this.ctx.lineTo(finalEndX, pathY);
                 this.ctx.stroke();
             }

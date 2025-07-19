@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug Fixes Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }
+        .container { max-width: 800px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; }
+        .test-area { width: 100%; height: 300px; border: 2px solid #007bff; margin: 20px 0; background: #f8f9fa; }
+        .debug-info { background: #f8f9fa; border: 1px solid #dee2e6; padding: 15px; border-radius: 6px; margin: 15px 0; font-family: monospace; font-size: 12px; max-height: 300px; overflow-y: auto; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 Debug Fixes Test</h1>
+        <div id="debug" class="debug-info"></div>
+        <div id="test" class="test-area"></div>
+    </div>
+
+    <script type="module">
+        import { renderRung } from './js/rungRenderer.js';
+
+        const debugDiv = document.getElementById('debug');
+        
+        function log(message) {
+            console.log(message);
+            debugDiv.innerHTML += message + '<br>';
+            debugDiv.scrollTop = debugDiv.scrollHeight;
+        }
+
+        // Test the fixes
+        const testCase = {
+            id: 'test',
+            text: 'XIC(Start) TON(Timer1, 1000) OTE(Output)'
+        };
+
+        log('🔧 Testing debug fixes...');
+        log(`📝 Test case: ${testCase.text}`);
+        
+        try {
+            log('🔄 Attempting to render...');
+            const startTime = performance.now();
+            const renderer = renderRung(testCase, 'test', 800, 300);
+            const endTime = performance.now();
+            
+            const renderTime = (endTime - startTime).toFixed(2);
+            log(`✅ Render completed in ${renderTime}ms`);
+            
+            // Check canvas after a delay
+            setTimeout(() => {
+                const canvas = document.querySelector('#test canvas');
+                if (canvas) {
+                    log(`✅ Canvas created: ${canvas.width}x${canvas.height}`);
+                    
+                    const ctx = canvas.getContext('2d');
+                    if (ctx) {
+                        log('✅ Canvas context available');
+                        
+                        // Check for content
+                        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                        const hasContent = imageData.data.some(pixel => pixel !== 0);
+                        
+                        if (hasContent) {
+                            log('✅ Canvas has content - fixes working!');
+                        } else {
+                            log('⚠️ Canvas still appears empty');
+                        }
+                    }
+                } else {
+                    log('❌ No canvas found');
+                }
+            }, 1000);
+            
+        } catch (error) {
+            log(`❌ Error: ${error.message}`);
+        }
+    </script>
+</body>
+</html> 

@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Debug Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }
+        .container { max-width: 800px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; }
+        .test-area { width: 100%; height: 300px; border: 1px solid #ccc; margin: 20px 0; }
+        .debug-info { background: #f8f9fa; border: 1px solid #dee2e6; padding: 15px; border-radius: 6px; margin: 15px 0; font-family: monospace; font-size: 12px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 Simple Debug Test</h1>
+        <div id="debug" class="debug-info"></div>
+        <div id="test" class="test-area"></div>
+    </div>
+
+    <script type="module">
+        import { renderRung } from './js/rungRenderer.js';
+
+        const debugDiv = document.getElementById('debug');
+        
+        function log(message) {
+            console.log(message);
+            debugDiv.innerHTML += message + '<br>';
+        }
+
+        // Simple test case
+        const testCase = {
+            id: 'test',
+            text: 'XIC(Start) TON(Timer1, 1000) OTE(Output)'
+        };
+
+        log('🔍 Starting simple debug test...');
+        log(`📝 Test case: ${testCase.text}`);
+        
+        try {
+            log('🔄 Attempting to render...');
+            const startTime = performance.now();
+            const renderer = renderRung(testCase, 'test', 800, 300);
+            const endTime = performance.now();
+            
+            const renderTime = (endTime - startTime).toFixed(2);
+            log(`✅ Render completed in ${renderTime}ms`);
+            
+            // Check if canvas was created
+            const canvas = document.querySelector('#test canvas');
+            if (canvas) {
+                log(`✅ Canvas created: ${canvas.width}x${canvas.height}`);
+                
+                // Check canvas context
+                const ctx = canvas.getContext('2d');
+                if (ctx) {
+                    log('✅ Canvas context available');
+                    
+                    // Check if anything was drawn
+                    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                    const hasContent = imageData.data.some(pixel => pixel !== 0);
+                    log(`🎨 Canvas has content: ${hasContent}`);
+                    
+                    if (!hasContent) {
+                        log('⚠️ WARNING: Canvas appears to be empty!');
+                    }
+                } else {
+                    log('❌ ERROR: Cannot get canvas context');
+                }
+            } else {
+                log('❌ ERROR: No canvas found in test area');
+            }
+            
+        } catch (error) {
+            log(`❌ ERROR: ${error.message}`);
+            log(`📋 Stack trace: ${error.stack}`);
+        }
+
+        // Additional debugging
+        setTimeout(() => {
+            log('');
+            log('🔍 ADDITIONAL DEBUGGING:');
+            log('📁 Checking if rungRenderer.js is loaded...');
+            
+            // Check if the module is loaded
+            if (typeof renderRung === 'function') {
+                log('✅ renderRung function is available');
+            } else {
+                log('❌ renderRung function is NOT available');
+            }
+            
+            // Check test area
+            const testArea = document.getElementById('test');
+            log(`📦 Test area children: ${testArea.children.length}`);
+            
+            if (testArea.children.length > 0) {
+                Array.from(testArea.children).forEach((child, index) => {
+                    log(`   Child ${index}: ${child.tagName} ${child.className}`);
+                });
+            }
+        }, 1000);
+    </script>
+</body>
+</html> 
