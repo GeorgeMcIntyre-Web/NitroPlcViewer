@@ -1,13 +1,13 @@
 // ============================================================================
-// ENHANCED RUNG RENDERER MODULE - Canvas-based Ladder Logic Graphics
+// HIGH-FIDELITY PLC LADDER LOGIC RENDERER - Canvas-based Graphics
 // ============================================================================
 
 import { sanitizeInput } from './utils.js';
 
-// Enhanced configuration constants
+// Enhanced configuration constants with proper spacing rules
 const RENDER_CONFIG = {
     // Layout and spacing
-    RUNG_V_SPACING: 40,      // Vertical PADDING between wrapped lines
+    RUNG_V_SPACING: 80,      // Vertical PADDING between wrapped lines (increased for better text visibility)
     RUNG_TOP_PADDING: 50,
     POWER_RAIL_WIDTH: 8,
     WIRE_WIDTH: 3,
@@ -20,6 +20,11 @@ const RENDER_CONFIG = {
     ELEMENT_SPACING: 40,      // Horizontal spacing between elements
     BRANCH_V_SPACING: 60,     // Vertical spacing for paths within a branch
     RAIL_PADDING: 40,         // Horizontal padding from power rails
+    BRANCH_H_PADDING: 20,     // Horizontal padding inside a branch
+    WRAP_PADDING: 30,         // Inset distance for Z-style wrap connectors
+    WRAP_VERTICAL_PADDING: 40, // Vertical padding for Z-wrap transfer points (increased for better text visibility)
+    SYMBOL_PADDING: 4,        // Small padding around symbols for wire connections
+    TEXT_PADDING: 10,         // Vertical padding for text above symbols
     CANVAS_PADDING: 20,
     ELEMENT_HEIGHT: 40,
     BRANCH_SPACING: 80,
@@ -35,7 +40,8 @@ const RENDER_CONFIG = {
     // Colors
     COLORS: {
         RAIL: '#10b981',      // Green for power rails
-        WIRE: '#374151',      // Dark gray for wires
+        WIRE: '#374151',      // Dark gray for regular wires
+        Z_WRAP_WIRE: '#dc2626', // Red for Z-wrap wires (distinct color)
         CONTACT_NO: '#1f2937',
         CONTACT_NC: '#1f2937',
         COIL: '#ea580c',      // Orange for coils
@@ -51,7 +57,18 @@ const RENDER_CONFIG = {
     LINE_WIDTH: 2
 };
 
-// Enhanced LadderRenderer class
+// Context object for element drawing
+class DrawingContext {
+    constructor(prevEl = null, nextEl = null, isFirstInLine = false, isLastInRung = false, isLastInLine = false) {
+        this.prevEl = prevEl;
+        this.nextEl = nextEl;
+        this.isFirstInLine = isFirstInLine;
+        this.isLastInRung = isLastInRung;
+        this.isLastInLine = isLastInLine;
+    }
+}
+
+// High-Fidelity LadderRenderer class
 class LadderRenderer {
     constructor(containerId) {
         this.container = document.getElementById(containerId);
@@ -61,6 +78,7 @@ class LadderRenderer {
         this.rungDefinition = null;
         this.resizeObserver = null;
         this.animationFrameId = null;
+        this.needsRedraw = false;
     }
 
     // Initializes canvas and sets up responsive resizing
@@ -74,18 +92,26 @@ class LadderRenderer {
         if (this.resizeObserver) {
             this.resizeObserver.disconnect();
         }
-        this.resizeObserver = new ResizeObserver(() => this.redraw());
+        
+        // ResizeObserver only sets flag, actual redraw happens in animation frame
+        this.resizeObserver = new ResizeObserver(() => {
+            this.needsRedraw = true;
+        });
         this.resizeObserver.observe(this.container);
 
-        this.redraw();
+        this.startRenderLoop();
     }
     
-    // Robust redraw scheduler
-    redraw() {
-        if (this.animationFrameId) {
-            cancelAnimationFrame(this.animationFrameId);
-        }
-        this.animationFrameId = requestAnimationFrame(() => this.updateCanvas());
+    // Stable resize handling with animation frame loop
+    startRenderLoop() {
+        const renderLoop = () => {
+            if (this.needsRedraw) {
+                this.updateCanvas();
+                this.needsRedraw = false;
+            }
+            this.animationFrameId = requestAnimationFrame(renderLoop);
+        };
+        renderLoop();
     }
 
     // Canvas update and drawing logic
@@ -105,7 +131,7 @@ class LadderRenderer {
 
         this.canvas.height = Math.round(finalHeight);
         
-        // Perform Drawing
+        // Perform Drawing with strict layering
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
         this.ctx.imageSmoothingEnabled = true;
         this.ctx.imageSmoothingQuality = 'high';
@@ -113,34 +139,63 @@ class LadderRenderer {
         const yOffset = -rungTop + RENDER_CONFIG.RUNG_TOP_PADDING;
         this.shiftLayout(positionedLayout, yOffset);
         
+        // PASS 1: Draw all wireframes (power rails, wires, branch frames)
         this.drawPowerRails(this.canvas.height);
         this.drawWires(positionedLayout, leftRailX, rightRailX);
         
-        positionedLayout.forEach(line => {
-            const isLastLine = line === positionedLayout[positionedLayout.length - 1];
+        // PASS 2: Draw all elements (symbols and text labels)
+        positionedLayout.forEach((line, lineIndex) => {
+            const isLastLine = lineIndex === positionedLayout.length - 1;
             line.elements.forEach((el, elIndex) => {
-                const isLastElementInRung = isLastLine && (elIndex === line.elements.length - 1);
-                this.drawElement(el, isLastElementInRung, rightRailX);
+                const isLastElementInLine = elIndex === line.elements.length - 1;
+                const isLastElementInRung = isLastLine && isLastElementInLine;
+                const prevEl = elIndex > 0 ? line.elements[elIndex - 1] : null;
+                const nextEl = elIndex < line.elements.length - 1 ? line.elements[elIndex + 1] : null;
+                
+                const context = new DrawingContext(
+                    prevEl, 
+                    nextEl, 
+                    elIndex === 0, 
+                    isLastElementInRung, 
+                    isLastElementInLine
+                );
+                
+                this.drawElement(el, context, rightRailX);
             });
         });
-        
-        this.animationFrameId = null;
     }
     
-    drawElement(el, isLastElementInRung = false, rightRailX = 0) {
+    // Context-aware element drawing
+    drawElement(el, context, rightRailX = 0) {
         switch (el.type) {
-            case 'NO_CONTACT': this.drawContact(el.x, el.y, el.label, 'NO', el); break;
-            case 'NC_CONTACT': this.drawContact(el.x, el.y, el.label, 'NC', el); break;
-            case 'OUTPUT_COIL': this.drawCoil(el.x, el.y, el.label, el); break;
-            case 'BRANCH': this.drawBranch(el, isLastElementInRung, rightRailX); break;
-            case 'INSTRUCTION_BOX': this.drawInstructionBox(el.x, el.y, el.label, el.instruction, el.params, el); break;
-            case 'COMPARISON': this.drawComparison(el.x, el.y, el.label, el.instruction, el); break;
-            case 'TIMER': this.drawTimer(el.x, el.y, el.label, el.instruction, el.preset, el); break;
-            case 'COUNTER': this.drawCounter(el.x, el.y, el.label, el.instruction, el.preset, el); break;
+            case 'NO_CONTACT': 
+                this.drawContact(el.x, el.y, el.label, 'NO', el, context); 
+                break;
+            case 'NC_CONTACT': 
+                this.drawContact(el.x, el.y, el.label, 'NC', el, context); 
+                break;
+            case 'OUTPUT_COIL': 
+                this.drawCoil(el.x, el.y, el.label, el, context); 
+                break;
+            case 'BRANCH': 
+                this.drawBranch(el, context, rightRailX); 
+                break;
+            case 'INSTRUCTION_BOX': 
+                this.drawInstructionBox(el.x, el.y, el.label, el.instruction, el.params, el, context); 
+                break;
+            case 'COMPARISON': 
+                this.drawComparison(el.x, el.y, el.label, el.instruction, el, context); 
+                break;
+            case 'TIMER': 
+                this.drawTimer(el.x, el.y, el.label, el.instruction, el.preset, el, context); 
+                break;
+            case 'COUNTER': 
+                this.drawCounter(el.x, el.y, el.label, el.instruction, el.preset, el, context); 
+                break;
         }
     }
     
-    // Layout engine with dynamic vertical spacing
+    // Layout engine with dynamic vertical spacing and consistent padding
     layoutElements(rungDefinition, leftRailX, rightRailX, ctx) {
         const lines = [];
         let currentLineElements = [];
@@ -158,6 +213,7 @@ class LadderRenderer {
             }
             
             currentLineElements.push(el);
+            // Use consistent spacing that accounts for symbol width padding
             xCursor += el.elWidth + RENDER_CONFIG.ELEMENT_SPACING;
         });
         
@@ -165,12 +221,15 @@ class LadderRenderer {
             lines.push({ elements: currentLineElements });
         }
 
-        // Dynamic Y-position calculation
+        // Dynamic Y-position calculation with enhanced spacing for text visibility
         let currentY = 0;
         lines.forEach((line, index) => {
             let maxLineHeight = 0;
             line.elements.forEach(el => {
-                if (el.elHeight > maxLineHeight) maxLineHeight = el.elHeight;
+                // Account for text height above symbols when calculating line height
+                const textHeight = el.label ? 24 : 0; // 14px text + 10px padding
+                const totalElementHeight = el.elHeight + textHeight;
+                if (totalElementHeight > maxLineHeight) maxLineHeight = totalElementHeight;
             });
             line.maxHeight = maxLineHeight;
 
@@ -208,7 +267,7 @@ class LadderRenderer {
         return lines;
     }
 
-    // Enhanced dimension calculation with text measurement
+    // Enhanced dimension calculation with symbol width separation
     calculateElementDimensions(el, ctx) {
         el.elHeight = RENDER_CONFIG.CONTACT_HEIGHT;
         let symbolWidth = 0;
@@ -219,30 +278,36 @@ class LadderRenderer {
 
         switch(el.type) {
             case 'NO_CONTACT': case 'NC_CONTACT': 
-                symbolWidth = RENDER_CONFIG.CONTACT_WIDTH; 
+                symbolWidth = RENDER_CONFIG.CONTACT_WIDTH + (RENDER_CONFIG.SYMBOL_PADDING * 2); 
+                el.symbolWidth = symbolWidth;
                 el.elWidth = Math.max(symbolWidth, labelWidth);
                 break;
             case 'COMPARISON': 
-                symbolWidth = RENDER_CONFIG.COMPARISON_WIDTH; 
+                symbolWidth = RENDER_CONFIG.COMPARISON_WIDTH + (RENDER_CONFIG.SYMBOL_PADDING * 2); 
+                el.symbolWidth = symbolWidth;
                 el.elWidth = Math.max(symbolWidth, labelWidth);
                 break;
             case 'OUTPUT_COIL': 
-                symbolWidth = RENDER_CONFIG.COIL_RADIUS * 2; 
+                symbolWidth = (RENDER_CONFIG.COIL_RADIUS * 2) + (RENDER_CONFIG.SYMBOL_PADDING * 2); 
+                el.symbolWidth = symbolWidth;
                 el.elHeight = RENDER_CONFIG.COIL_RADIUS * 2;
                 el.elWidth = Math.max(symbolWidth, labelWidth);
                 break;
             case 'INSTRUCTION_BOX': 
-                symbolWidth = RENDER_CONFIG.INSTRUCTION_BOX_WIDTH; 
+                symbolWidth = RENDER_CONFIG.INSTRUCTION_BOX_WIDTH + (RENDER_CONFIG.SYMBOL_PADDING * 2); 
+                el.symbolWidth = symbolWidth;
                 el.elHeight = RENDER_CONFIG.INSTRUCTION_BOX_HEIGHT;
                 el.elWidth = Math.max(symbolWidth, labelWidth);
                 break;
             case 'TIMER':
-                symbolWidth = RENDER_CONFIG.TIMER_WIDTH;
+                symbolWidth = RENDER_CONFIG.TIMER_WIDTH + (RENDER_CONFIG.SYMBOL_PADDING * 2);
+                el.symbolWidth = symbolWidth;
                 el.elHeight = RENDER_CONFIG.ELEMENT_HEIGHT;
                 el.elWidth = Math.max(symbolWidth, labelWidth);
                 break;
             case 'COUNTER':
-                symbolWidth = RENDER_CONFIG.COUNTER_WIDTH;
+                symbolWidth = RENDER_CONFIG.COUNTER_WIDTH + (RENDER_CONFIG.SYMBOL_PADDING * 2);
+                el.symbolWidth = symbolWidth;
                 el.elHeight = RENDER_CONFIG.ELEMENT_HEIGHT;
                 el.elWidth = Math.max(symbolWidth, labelWidth);
                 break;
@@ -251,47 +316,47 @@ class LadderRenderer {
                 let totalHeight = 0;
                 
                 el.paths.forEach(path => {
-                    let pathWidth = 0;
-                    let pathMaxHeight = 0;
-                    path.elements.forEach(subEl => {
-                        this.calculateElementDimensions(subEl, ctx);
-                        pathWidth += subEl.elWidth;
-                        if(subEl.elHeight > pathMaxHeight) pathMaxHeight = subEl.elHeight;
-                    });
-                    pathWidth += (path.elements.length > 1 ? (path.elements.length - 1) * RENDER_CONFIG.ELEMENT_SPACING : 0);
+                    let pathWidth = RENDER_CONFIG.BRANCH_H_PADDING * 2;
+                    let pathHeight = 0;
                     
-                    const lastInPath = path.elements[path.elements.length - 1];
-                    if(lastInPath && lastInPath.type === 'OUTPUT_COIL'){
-                        pathWidth += RENDER_CONFIG.ELEMENT_SPACING * 2;
-                    }
-
+                    path.elements.forEach(element => {
+                        this.calculateElementDimensions(element, ctx);
+                        // Use consistent spacing that accounts for symbol width padding
+                        pathWidth += element.elWidth + RENDER_CONFIG.ELEMENT_SPACING;
+                        if (element.elHeight > pathHeight) pathHeight = element.elHeight;
+                    });
+                    
+                    // Ensure minimum branch width with proper padding
+                    pathWidth = Math.max(pathWidth, 200 + RENDER_CONFIG.BRANCH_H_PADDING * 2);
+                    path.pathWidth = pathWidth;
+                    path.pathHeight = pathHeight;
+                    
                     if (pathWidth > maxWidth) maxWidth = pathWidth;
-                    path.pathHeight = pathMaxHeight;
-                    totalHeight += pathMaxHeight;
+                    totalHeight += pathHeight;
                 });
                 
-                totalHeight += (el.paths.length > 1 ? (el.paths.length - 1) * RENDER_CONFIG.BRANCH_V_SPACING : 0);
-                el.elWidth = maxWidth + RENDER_CONFIG.ELEMENT_SPACING * 2;
+                totalHeight += (el.paths.length - 1) * RENDER_CONFIG.BRANCH_V_SPACING;
+                el.symbolWidth = maxWidth;
+                el.elWidth = maxWidth;
                 el.elHeight = totalHeight;
-                break;
-            default: 
-                el.elWidth = 0; 
                 break;
         }
     }
 
     getVerticalBounds(layout) {
-        let rungTop = Infinity, rungBottom = -Infinity;
-        if (layout.length === 0 || layout[0].elements.length === 0) return { rungTop: 0, rungBottom: 200 };
+        if (layout.length === 0) return { rungTop: 0, rungBottom: 100 };
+        
+        let rungTop = Infinity;
+        let rungBottom = -Infinity;
         
         layout.forEach(line => {
-            line.elements.forEach(el => {
-                const top = el.y - el.elHeight / 2 - 20;
-                const bottom = el.y + el.elHeight / 2 + 20;
-                if (top < rungTop) rungTop = top;
-                if (bottom > rungBottom) rungBottom = bottom;
-            });
+            const lineTop = line.y - line.maxHeight / 2;
+            const lineBottom = line.y + line.maxHeight / 2;
+            
+            if (lineTop < rungTop) rungTop = lineTop;
+            if (lineBottom > rungBottom) rungBottom = lineBottom;
         });
+        
         return { rungTop, rungBottom };
     }
 
@@ -300,93 +365,135 @@ class LadderRenderer {
             line.y += yOffset;
             line.elements.forEach(el => {
                 el.y += yOffset;
-                if(el.type === 'BRANCH') {
-                   this.shiftBranch(el, yOffset);
+                if (el.type === 'BRANCH') {
+                    this.shiftBranch(el, yOffset);
                 }
             });
         });
     }
 
-    shiftBranch(branchEl, yOffset){
+    shiftBranch(branchEl, yOffset) {
         branchEl.paths.forEach(path => {
-            path.elements.forEach(el => {
-                el.y += yOffset;
-                if(el.type === 'BRANCH') this.shiftBranch(el, yOffset);
+            path.elements.forEach(element => {
+                element.y += yOffset;
             });
         });
     }
-    
+
     getRailPositions() {
-        const leftRailX = RENDER_CONFIG.POWER_RAIL_WIDTH / 2 + 20;
-        const rightRailX = this.canvas.width - (RENDER_CONFIG.POWER_RAIL_WIDTH / 2) - 20;
+        const leftRailX = RENDER_CONFIG.CANVAS_PADDING + RENDER_CONFIG.POWER_RAIL_WIDTH / 2;
+        const rightRailX = this.canvas.width - RENDER_CONFIG.CANVAS_PADDING - RENDER_CONFIG.POWER_RAIL_WIDTH / 2;
         return { leftRailX, rightRailX };
     }
 
     drawPowerRails(height) {
         const { leftRailX, rightRailX } = this.getRailPositions();
+        
         this.ctx.strokeStyle = RENDER_CONFIG.COLORS.RAIL;
         this.ctx.lineWidth = RENDER_CONFIG.POWER_RAIL_WIDTH;
         this.ctx.lineCap = 'round';
         
+        // Left power rail
         this.ctx.beginPath();
         this.ctx.moveTo(leftRailX, 0);
         this.ctx.lineTo(leftRailX, height);
         this.ctx.stroke();
         
+        // Right power rail
         this.ctx.beginPath();
         this.ctx.moveTo(rightRailX, 0);
         this.ctx.lineTo(rightRailX, height);
         this.ctx.stroke();
     }
 
+    // PASS 1: Wire drawing with Z-style wrapping and proper color coding
     drawWires(lines, leftRailX, rightRailX) {
         if (lines.length === 0 || lines[0].elements.length === 0) return;
 
-        this.ctx.strokeStyle = RENDER_CONFIG.COLORS.WIRE;
         this.ctx.lineWidth = RENDER_CONFIG.WIRE_WIDTH;
         this.ctx.lineCap = 'butt';
 
+        // Draw connections between elements - ALL REGULAR WIRES ARE THE SAME COLOR
         lines.forEach(line => {
             for (let i = 0; i < line.elements.length - 1; i++) {
                 const currentEl = line.elements[i];
                 const nextEl = line.elements[i + 1];
+                
+                // HARDENED RULE: Always connect to symbol width edges with small padding
+                const currentEndX = currentEl.x + currentEl.symbolWidth / 2;
+                const nextStartX = nextEl.x - nextEl.symbolWidth / 2;
+                
+                // FIXED: All regular connection wires use the same color (dark gray)
+                this.ctx.strokeStyle = RENDER_CONFIG.COLORS.WIRE;
                 this.ctx.beginPath();
-                this.ctx.moveTo(currentEl.x + currentEl.elWidth / 2, currentEl.y);
-                this.ctx.lineTo(nextEl.x - nextEl.elWidth / 2, nextEl.y);
+                this.ctx.moveTo(currentEndX, currentEl.y);
+                this.ctx.lineTo(nextStartX, nextEl.y);
                 this.ctx.stroke();
             }
         });
 
+        // Draw left power rail connection
         const firstEl = lines[0].elements[0];
+        this.ctx.strokeStyle = RENDER_CONFIG.COLORS.WIRE;
         this.ctx.beginPath();
         this.ctx.moveTo(leftRailX, firstEl.y);
-        this.ctx.lineTo(firstEl.x - firstEl.elWidth / 2, firstEl.y);
+        this.ctx.lineTo(firstEl.x - firstEl.symbolWidth / 2, firstEl.y);
         this.ctx.stroke();
         
+        // Draw right power rail connection - ALL REGULAR WIRES ARE THE SAME COLOR
         const lastLine = lines[lines.length - 1];
         const lastEl = lastLine.elements[lastLine.elements.length - 1];
         if (lastEl && lastEl.type !== 'BRANCH') {
+            // HARDENED RULE: Ensure wire extends properly to symbol edge with padding
+            const symbolConnectionX = lastEl.x + lastEl.symbolWidth / 2;
+            
+            // FIXED: All regular connection wires use the same color (dark gray)
+            this.ctx.strokeStyle = RENDER_CONFIG.COLORS.WIRE;
             this.ctx.beginPath();
-            this.ctx.moveTo(lastEl.x + lastEl.elWidth / 2, lastEl.y);
+            this.ctx.moveTo(symbolConnectionX, lastEl.y);
             this.ctx.lineTo(rightRailX, lastEl.y);
             this.ctx.stroke();
         }
 
-        // Z-style wrapping between lines
+        // Z-style wrapping between lines with enhanced padding and routing
         for (let i = 0; i < lines.length - 1; i++) {
             const endOfCurrentLine = lines[i].elements[lines[i].elements.length - 1];
             const startOfNextLine = lines[i + 1].elements[0];
             if (!endOfCurrentLine || !startOfNextLine) continue;
 
-            const transferY = (lines[i].y + lines[i+1].y) / 2;
+            // Calculate transfer point with proper vertical padding for better text visibility
+            const currentLineY = lines[i].y;
+            const nextLineY = lines[i + 1].y;
+            const verticalGap = Math.abs(nextLineY - currentLineY);
+            
+            // Ensure adequate vertical spacing for the Z-wrap with configurable padding
+            const minVerticalSpacing = RENDER_CONFIG.WRAP_VERTICAL_PADDING;
+            const transferY = currentLineY + (nextLineY - currentLineY) / 2;
+            const rightTransferY = transferY;
+            const leftTransferY = transferY;
+            
+            // Apply minimum vertical spacing if gap is too small, ensuring text visibility
+            const effectiveTransferY = verticalGap < minVerticalSpacing * 2 
+                ? currentLineY + (nextLineY > currentLineY ? minVerticalSpacing : -minVerticalSpacing)
+                : transferY;
 
+            // Use distinct color for Z-wrap wires
+            this.ctx.strokeStyle = RENDER_CONFIG.COLORS.Z_WRAP_WIRE;
+            this.ctx.lineWidth = RENDER_CONFIG.WIRE_WIDTH;
+            
             this.ctx.beginPath();
-            this.ctx.moveTo(endOfCurrentLine.x + endOfCurrentLine.elWidth / 2, endOfCurrentLine.y);
-            this.ctx.lineTo(rightRailX, endOfCurrentLine.y);
-            this.ctx.lineTo(rightRailX, transferY);
-            this.ctx.lineTo(leftRailX, transferY);
-            this.ctx.lineTo(leftRailX, startOfNextLine.y);
-            this.ctx.lineTo(startOfNextLine.x - startOfNextLine.elWidth / 2, startOfNextLine.y);
+            // Start from the end of current line
+            this.ctx.moveTo(endOfCurrentLine.x + endOfCurrentLine.symbolWidth / 2, endOfCurrentLine.y);
+            // Go right to the wrap area
+            this.ctx.lineTo(rightRailX - RENDER_CONFIG.WRAP_PADDING, endOfCurrentLine.y);
+            // Go down to transfer level with proper vertical padding
+            this.ctx.lineTo(rightRailX - RENDER_CONFIG.WRAP_PADDING, effectiveTransferY);
+            // Go left across the top
+            this.ctx.lineTo(leftRailX + RENDER_CONFIG.WRAP_PADDING, effectiveTransferY);
+            // Go down to next line level
+            this.ctx.lineTo(leftRailX + RENDER_CONFIG.WRAP_PADDING, startOfNextLine.y);
+            // Go right to the start of next line
+            this.ctx.lineTo(startOfNextLine.x - startOfNextLine.symbolWidth / 2, startOfNextLine.y);
             this.ctx.stroke();
         }
     }
@@ -398,7 +505,8 @@ class LadderRenderer {
         this.ctx.textBaseline = 'bottom';
         const textMetrics = this.ctx.measureText(text);
         const textHeight = 14; 
-        const textY = y - (el.elHeight / 2) - 8; 
+        // Consistent text positioning above symbols with proper padding
+        const textY = y - (el.elHeight / 2) - RENDER_CONFIG.TEXT_PADDING;
         
         this.ctx.fillStyle = RENDER_CONFIG.COLORS.TEXT_BG;
         this.ctx.fillRect(x - textMetrics.width / 2 - 4, textY - textHeight, textMetrics.width + 8, textHeight + 4);
@@ -407,7 +515,8 @@ class LadderRenderer {
         this.ctx.fillText(text, x, textY);
     }
 
-    drawContact(x, y, label, type, el) {
+    // PASS 2: Element drawing functions (symbols and text only)
+    drawContact(x, y, label, type, el, context) {
         this.drawTextAboveSymbol(label, x, y, el);
         this.ctx.strokeStyle = type === 'NC' ? RENDER_CONFIG.COLORS.CONTACT_NC : RENDER_CONFIG.COLORS.CONTACT_NO;
         this.ctx.lineWidth = 2.5;
@@ -418,7 +527,7 @@ class LadderRenderer {
         this.ctx.fillText(type === 'NC' ? '|/|' : '| |', x, y);
     }
 
-    drawComparison(x, y, label, text, el) {
+    drawComparison(x, y, label, text, el, context) {
         this.drawTextAboveSymbol(label, x, y, el);
         this.ctx.strokeStyle = RENDER_CONFIG.COLORS.CONTACT_NO;
         this.ctx.lineWidth = 2.5;
@@ -429,9 +538,10 @@ class LadderRenderer {
         this.ctx.fillText(`[ ${text} ]`, x, y);
     }
 
-    drawInstructionBox(x, y, label, instruction, params = {}, el) {
+    drawInstructionBox(x, y, label, instruction, params = {}, el, context) {
         this.drawTextAboveSymbol(label, x, y, el);
-        const w = el.elWidth;
+        // HARDENED RULE: Always use symbolWidth for consistent wire connections
+        const w = el.symbolWidth;
         const h = el.elHeight;
         
         this.ctx.strokeStyle = RENDER_CONFIG.COLORS.WIRE;
@@ -453,15 +563,19 @@ class LadderRenderer {
         }
     }
 
-    drawCoil(x, y, label, el) {
-        const r = RENDER_CONFIG.COIL_RADIUS;
+    drawCoil(x, y, label, el, context) {
+        // HARDENED RULE: Use symbolWidth to ensure wire connections align with symbol edges
+        const symbolWidth = el.symbolWidth;
+        const symbolRadius = symbolWidth / 2;
+        
         this.drawTextAboveSymbol(label, x, y, el);
         this.ctx.strokeStyle = RENDER_CONFIG.COLORS.COIL;
         this.ctx.lineWidth = 2.5;
         this.ctx.fillStyle = 'white';
         
+        // Draw coil circle with proper symbol width for wire connections
         this.ctx.beginPath();
-        this.ctx.arc(x, y, r, 0, 2 * Math.PI);
+        this.ctx.arc(x, y, symbolRadius, 0, 2 * Math.PI);
         this.ctx.stroke();
         
         this.ctx.font = RENDER_CONFIG.SYMBOL_FONT;
@@ -471,9 +585,10 @@ class LadderRenderer {
         this.ctx.fillText('( )', x, y);
     }
 
-    drawTimer(x, y, label, instruction, preset, el) {
+    drawTimer(x, y, label, instruction, preset, el, context) {
         this.drawTextAboveSymbol(label, x, y, el);
-        const w = el.elWidth;
+        // HARDENED RULE: Always use symbolWidth for consistent wire connections
+        const w = el.symbolWidth;
         const h = el.elHeight;
         
         this.ctx.strokeStyle = RENDER_CONFIG.COLORS.TIMER;
@@ -492,9 +607,10 @@ class LadderRenderer {
         }
     }
 
-    drawCounter(x, y, label, instruction, preset, el) {
+    drawCounter(x, y, label, instruction, preset, el, context) {
         this.drawTextAboveSymbol(label, x, y, el);
-        const w = el.elWidth;
+        // HARDENED RULE: Always use symbolWidth for consistent wire connections
+        const w = el.symbolWidth;
         const h = el.elHeight;
         
         this.ctx.strokeStyle = RENDER_CONFIG.COLORS.COUNTER;
@@ -513,7 +629,8 @@ class LadderRenderer {
         }
     }
 
-    drawBranch(branchEl, isLastElementInRung = false, rightRailX = 0) {
+    // PASS 1: Branch wireframe drawing (strict two-pass rendering)
+    drawBranch(branchEl, context, rightRailX = 0) {
         const { x, y, elWidth, elHeight, paths } = branchEl;
         const branchStartX = x - elWidth / 2;
         const internalBranchEndX = x + elWidth / 2;
@@ -523,62 +640,94 @@ class LadderRenderer {
         const topPathCenterY = startY + paths[0].pathHeight / 2;
         const bottomPathCenterY = startY + elHeight - paths[paths.length-1].pathHeight / 2;
 
-        this.ctx.strokeStyle = RENDER_CONFIG.COLORS.WIRE;
+        // PASS 1: Draw branch wireframe only - FIXED: Use consistent wire color
+        this.ctx.strokeStyle = RENDER_CONFIG.COLORS.WIRE; // Changed from BRANCH to WIRE for consistency
         this.ctx.lineWidth = RENDER_CONFIG.WIRE_WIDTH;
+        
+        // Draw start vertical bar
         this.ctx.beginPath();
         this.ctx.moveTo(branchStartX, topPathCenterY);
         this.ctx.lineTo(branchStartX, bottomPathCenterY);
         this.ctx.stroke();
 
-        if (!isLastElementInRung) {
+        // Draw end vertical bar (conditional termination)
+        if (!context.isLastInRung) {
             this.ctx.beginPath();
             this.ctx.moveTo(internalBranchEndX, topPathCenterY);
             this.ctx.lineTo(internalBranchEndX, bottomPathCenterY);
             this.ctx.stroke();
         }
 
+        // Draw internal path wires - FIXED: Ensure all connections are drawn
         paths.forEach(path => {
             const pathY = startY + path.pathHeight / 2;
-            let currentXInPath = branchStartX;
+            let currentXInPath = branchStartX + RENDER_CONFIG.BRANCH_H_PADDING;
 
-            const lastInPath = path.elements[path.elements.length - 1];
-            const hasCoilAtEnd = lastInPath && lastInPath.type === 'OUTPUT_COIL';
-            const normalElements = hasCoilAtEnd ? path.elements.slice(0, -1) : path.elements;
-            const coilToDraw = hasCoilAtEnd ? lastInPath : null;
-
-            normalElements.forEach(element => {
-                const elementX = currentXInPath + RENDER_CONFIG.ELEMENT_SPACING + element.elWidth / 2;
-                this.ctx.beginPath();
-                this.ctx.moveTo(currentXInPath, pathY);
-                this.ctx.lineTo(elementX - element.elWidth / 2, pathY);
-                this.ctx.stroke();
-                this.drawElement({ ...element, x: elementX, y: pathY });
-                currentXInPath = elementX + element.elWidth / 2;
-            });
-
-            const finalEndX = isLastElementInRung ? rightRailX : internalBranchEndX;
-
-            if (coilToDraw) {
-                const justificationPadding = isLastElementInRung ? RENDER_CONFIG.RAIL_PADDING : RENDER_CONFIG.ELEMENT_SPACING;
-                const coilX = finalEndX - justificationPadding - (coilToDraw.elWidth / 2);
-
-                this.ctx.beginPath();
-                this.ctx.moveTo(currentXInPath, pathY);
-                this.ctx.lineTo(coilX - coilToDraw.elWidth / 2, pathY);
-                this.ctx.stroke();
-                
-                this.drawElement({ ...coilToDraw, x: coilX, y: pathY });
+            // Draw wire from start bar to first element
+            if (path.elements.length > 0) {
+                const firstElement = path.elements[0];
+                const firstElementX = currentXInPath + firstElement.elWidth / 2;
                 
                 this.ctx.beginPath();
-                this.ctx.moveTo(coilX + coilToDraw.elWidth / 2, pathY);
-                this.ctx.lineTo(finalEndX, pathY);
+                this.ctx.moveTo(branchStartX, pathY);
+                // HARDENED RULE: Always connect to symbol width edges with small padding
+                this.ctx.lineTo(firstElementX - firstElement.symbolWidth / 2, pathY);
                 this.ctx.stroke();
-            } else {
+                
+                currentXInPath = firstElementX + firstElement.elWidth / 2;
+            }
+
+            // Draw wires between elements - FIXED: Ensure all connections are drawn
+            for (let i = 0; i < path.elements.length - 1; i++) {
+                const currentEl = path.elements[i];
+                const nextEl = path.elements[i + 1];
+                
+                // HARDENED RULE: Always connect to symbol width edges with small padding
+                const currentEndX = currentEl.x + currentEl.symbolWidth / 2;
+                const nextStartX = nextEl.x - nextEl.symbolWidth / 2;
+                
                 this.ctx.beginPath();
-                this.ctx.moveTo(currentXInPath, pathY);
+                this.ctx.moveTo(currentEndX, pathY);
+                this.ctx.lineTo(nextStartX, pathY);
+                this.ctx.stroke();
+            }
+
+            // Draw wire from last element to end bar - FIXED: Ensure connection to power rail
+            if (path.elements.length > 0) {
+                const lastElement = path.elements[path.elements.length - 1];
+                const finalEndX = context.isLastInRung ? rightRailX : internalBranchEndX;
+                
+                this.ctx.beginPath();
+                this.ctx.moveTo(lastElement.x + lastElement.symbolWidth / 2, pathY);
                 this.ctx.lineTo(finalEndX, pathY);
                 this.ctx.stroke();
             }
+            
+            startY += path.pathHeight + RENDER_CONFIG.BRANCH_V_SPACING;
+        });
+
+        // PASS 2: Recursively draw all internal elements (ensures they're on top)
+        startY = y - elHeight / 2;
+        paths.forEach(path => {
+            const pathY = startY + path.pathHeight / 2;
+            let currentXInPath = branchStartX + RENDER_CONFIG.BRANCH_H_PADDING;
+
+            path.elements.forEach((element, elementIndex) => {
+                const elementX = currentXInPath + element.elWidth / 2;
+                
+                // Create context for internal elements
+                const internalContext = new DrawingContext(
+                    elementIndex > 0 ? path.elements[elementIndex - 1] : null,
+                    elementIndex < path.elements.length - 1 ? path.elements[elementIndex + 1] : null,
+                    elementIndex === 0,
+                    context.isLastInRung && elementIndex === path.elements.length - 1,
+                    elementIndex === path.elements.length - 1
+                );
+                
+                this.drawElement({ ...element, x: elementX, y: pathY }, internalContext, rightRailX);
+                currentXInPath = elementX + element.elWidth / 2;
+            });
+            
             startY += path.pathHeight + RENDER_CONFIG.BRANCH_V_SPACING;
         });
     }
@@ -720,34 +869,21 @@ function parseLadderLogic(text) {
     return elements;
 }
 
-// Legacy renderRung function for backward compatibility
+// Export the main rendering function
 export function renderRung(rung, containerId, width = 800, height = 300) {
-    try {
-        if (!rung || !rung.text || !containerId) {
-            console.log('ERROR: Invalid rung or container parameters');
-            return;
-        }
-
-        const container = document.getElementById(containerId);
-        if (!container) {
-            console.log('ERROR: Container not found');
-            return;
-        }
-
-        // Parse the rung text into the new format
-        const rungDefinition = parseLadderLogic(rung.text);
-        
-        // Create and initialize the enhanced renderer
-        const renderer = new LadderRenderer(containerId);
-        renderer.initialize(rungDefinition);
-
-        // Store the renderer instance for cleanup
-        container._renderer = renderer;
-
-    } catch (error) {
-        console.error('Error in renderRung:', error);
+    const renderer = new LadderRenderer(containerId);
+    
+    // Handle both string and object inputs
+    let rungText;
+    if (typeof rung === 'string') {
+        rungText = rung;
+    } else if (rung && typeof rung === 'object' && rung.text) {
+        rungText = rung.text;
+    } else {
+        throw new Error('Invalid rung parameter: must be a string or object with text property');
     }
-}
-
-// Export the enhanced renderer class for direct use
-export { LadderRenderer, RENDER_CONFIG }; 
+    
+    const elements = parseLadderLogic(rungText);
+    renderer.initialize(elements);
+    return renderer;
+} 

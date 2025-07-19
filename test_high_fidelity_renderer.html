@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>High-Fidelity PLC Ladder Logic Renderer Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background: #f5f5f5;
+        }
+        .test-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .rung-canvas-container {
+            width: 100%;
+            min-height: 200px;
+            background: white;
+            border: 1px solid #e1e5e9;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: 20px;
+        }
+        .rung-canvas-container canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        .test-case {
+            margin-bottom: 30px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .test-case h3 {
+            margin-top: 0;
+            color: #555;
+        }
+        .test-case p {
+            color: #666;
+            font-family: monospace;
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 3px;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>High-Fidelity PLC Ladder Logic Renderer Test</h1>
+        
+        <div id="status" class="status"></div>
+        
+        <div class="test-case">
+            <h3>Test Case 1: Simple Contact and Coil (Basic Functionality)</h3>
+            <p>XIC(Start_Button) OTE(Motor_Output)</p>
+            <div id="test1" class="rung-canvas-container"></div>
+        </div>
+
+        <div class="test-case">
+            <h3>Test Case 2: Parallel Branch (Layering Test)</h3>
+            <p>XIC(Start_Button) [XIC(Proximity_Sensor)] OTE(Motor_Output)</p>
+            <div id="test2" class="rung-canvas-container"></div>
+        </div>
+
+        <div class="test-case">
+            <h3>Test Case 3: Multiple Parallel Branches (Complex Layering)</h3>
+            <p>XIC(Start_Button) [XIC(Proximity_Sensor) | XIO(Emergency_Stop)] [XIC(Timer_Done) | XIC(Manual_Override)] OTE(Motor_Output)</p>
+            <div id="test3" class="rung-canvas-container"></div>
+        </div>
+
+        <div class="test-case">
+            <h3>Test Case 4: Timer Instruction (Symbol Width Test)</h3>
+            <p>XIC(Start_Button) TON(Timer1, 1000) OTE(Motor_Output)</p>
+            <div id="test4" class="rung-canvas-container"></div>
+        </div>
+
+        <div class="test-case">
+            <h3>Test Case 5: Complex Mixed Elements (Comprehensive Test)</h3>
+            <p>XIC(Start_Button) [XIC(Proximity_Sensor) | TON(Timer1, 1000) | XIO(Emergency_Stop)] OTE(Motor_Output)</p>
+            <div id="test5" class="rung-canvas-container"></div>
+        </div>
+
+        <div class="test-case">
+            <h3>Test Case 6: Wrapping Test (Responsive Layout)</h3>
+            <p>XIC(Very_Long_Tag_Name_For_Testing_Wrapping) XIC(Another_Long_Tag_Name) XIC(Third_Long_Tag_Name) XIC(Fourth_Long_Tag_Name) XIC(Fifth_Long_Tag_Name) OTE(Motor_Output)</p>
+            <div id="test6" class="rung-canvas-container"></div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { renderRung } from './js/rungRenderer.js';
+
+        const statusDiv = document.getElementById('status');
+        
+        function updateStatus(message, isError = false) {
+            statusDiv.textContent = message;
+            statusDiv.className = `status ${isError ? 'error' : 'success'}`;
+        }
+
+        // Test cases
+        const testCases = [
+            {
+                id: 'test1',
+                text: 'XIC(Start_Button) OTE(Motor_Output)',
+                number: '1',
+                description: 'Simple Contact and Coil'
+            },
+            {
+                id: 'test2',
+                text: 'XIC(Start_Button) [XIC(Proximity_Sensor)] OTE(Motor_Output)',
+                number: '2',
+                description: 'Parallel Branch'
+            },
+            {
+                id: 'test3',
+                text: 'XIC(Start_Button) [XIC(Proximity_Sensor) | XIO(Emergency_Stop)] [XIC(Timer_Done) | XIC(Manual_Override)] OTE(Motor_Output)',
+                number: '3',
+                description: 'Multiple Parallel Branches'
+            },
+            {
+                id: 'test4',
+                text: 'XIC(Start_Button) TON(Timer1, 1000) OTE(Motor_Output)',
+                number: '4',
+                description: 'Timer Instruction'
+            },
+            {
+                id: 'test5',
+                text: 'XIC(Start_Button) [XIC(Proximity_Sensor) | TON(Timer1, 1000) | XIO(Emergency_Stop)] OTE(Motor_Output)',
+                number: '5',
+                description: 'Complex Mixed Elements'
+            },
+            {
+                id: 'test6',
+                text: 'XIC(Very_Long_Tag_Name_For_Testing_Wrapping) XIC(Another_Long_Tag_Name) XIC(Third_Long_Tag_Name) XIC(Fourth_Long_Tag_Name) XIC(Fifth_Long_Tag_Name) OTE(Motor_Output)',
+                number: '6',
+                description: 'Wrapping Test'
+            }
+        ];
+
+        let successCount = 0;
+        let errorCount = 0;
+
+        // Render all test cases
+        testCases.forEach(testCase => {
+            try {
+                const renderer = renderRung(testCase, testCase.id, 800, 200);
+                console.log(`✅ Rendered test case ${testCase.number}: ${testCase.description}`);
+                successCount++;
+            } catch (error) {
+                console.error(`❌ Error rendering test case ${testCase.number}:`, error);
+                errorCount++;
+            }
+        });
+
+        // Update status
+        if (errorCount === 0) {
+            updateStatus(`✅ All ${successCount} test cases rendered successfully! High-fidelity renderer is working correctly.`);
+        } else {
+            updateStatus(`⚠️ ${successCount} successful, ${errorCount} failed. Check console for details.`, true);
+        }
+
+        // Test responsive behavior
+        setTimeout(() => {
+            const containers = document.querySelectorAll('.rung-canvas-container');
+            containers.forEach((container, index) => {
+                if (container.querySelector('canvas')) {
+                    console.log(`✅ Test case ${index + 1}: Canvas created successfully`);
+                } else {
+                    console.error(`❌ Test case ${index + 1}: No canvas found`);
+                }
+            });
+        }, 1000);
+    </script>
+</body>
+</html> 

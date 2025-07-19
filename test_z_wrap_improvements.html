@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Z-Wrap Improvements Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background: #f5f5f5;
+        }
+        .test-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .rung-canvas-container {
+            width: 100%;
+            min-height: 300px;
+            background: white;
+            border: 1px solid #e1e5e9;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: 20px;
+        }
+        .rung-canvas-container canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        .test-case {
+            margin-bottom: 30px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .test-case h3 {
+            margin-top: 0;
+            color: #555;
+        }
+        .test-case p {
+            color: #666;
+            font-family: monospace;
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 3px;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .verification {
+            background: #e7f3ff;
+            border: 1px solid #b3d9ff;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .verification h4 {
+            margin-top: 0;
+            color: #0066cc;
+        }
+        .verification ul {
+            margin: 5px 0;
+            padding-left: 20px;
+        }
+        .verification li {
+            margin: 3px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>Z-Wrap Improvements Test</h1>
+        
+        <div id="status" class="status"></div>
+        
+        <div class="verification">
+            <h4>🔍 Z-Wrap Verification Checklist:</h4>
+            <ul>
+                <li><strong>Proper vertical spacing</strong> - Adequate padding between wrapped lines</li>
+                <li><strong>Clean Z-pattern</strong> - Smooth wire routing without sharp angles</li>
+                <li><strong>Consistent padding</strong> - 30px horizontal inset from power rails</li>
+                <li><strong>Symbol width alignment</strong> - Wires connect to symbol edges, not text edges</li>
+                <li><strong>No wire collisions</strong> - Z-wrap wires don't interfere with elements</li>
+            </ul>
+        </div>
+        
+        <div class="test-case">
+            <h3>Test Case 1: Simple Z-Wrap (Two Lines)</h3>
+            <p>XIC(Start_Button) XIC(Proximity_Sensor) XIC(Timer_Done) XIC(Manual_Override) XIC(Emergency_Stop) OTE(Motor_Output)</p>
+            <div id="test1" class="rung-canvas-container"></div>
+        </div>
+
+        <div class="test-case">
+            <h3>Test Case 2: Z-Wrap with Parallel Branches</h3>
+            <p>XIC(Start_Button) [XIC(Proximity_Sensor) | XIO(Emergency_Stop)] [XIC(Timer_Done) | XIC(Manual_Override)] XIC(Additional_Contact) XIC(Another_Contact) OTE(Motor_Output)</p>
+            <div id="test2" class="rung-canvas-container"></div>
+        </div>
+
+        <div class="test-case">
+            <h3>Test Case 3: Multiple Z-Wraps (Three Lines)</h3>
+            <p>XIC(First_Contact) XIC(Second_Contact) XIC(Third_Contact) XIC(Fourth_Contact) XIC(Fifth_Contact) XIC(Sixth_Contact) XIC(Seventh_Contact) XIC(Eighth_Contact) OTE(Motor_Output)</p>
+            <div id="test3" class="rung-canvas-container"></div>
+        </div>
+
+        <div class="test-case">
+            <h3>Test Case 4: Z-Wrap with Long Text Labels</h3>
+            <p>XIC(Very_Long_Tag_Name_For_Testing_Wrapping) XIC(Another_Long_Tag_Name) XIC(Third_Long_Tag_Name) XIC(Fourth_Long_Tag_Name) XIC(Fifth_Long_Tag_Name) OTE(Very_Long_Output_Tag_Name_For_Testing)</p>
+            <div id="test4" class="rung-canvas-container"></div>
+        </div>
+
+        <div class="test-case">
+            <h3>Test Case 5: Complex Z-Wrap with Mixed Elements</h3>
+            <p>XIC(Start) TON(Timer1, 1000) [XIC(Proximity) | XIO(Emergency)] XIC(Additional) XIC(Another) XIC(Third) XIC(Fourth) OTE(Motor_Output)</p>
+            <div id="test5" class="rung-canvas-container"></div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { renderRung } from './js/rungRenderer.js';
+
+        const statusDiv = document.getElementById('status');
+        
+        function updateStatus(message, isError = false) {
+            statusDiv.textContent = message;
+            statusDiv.className = `status ${isError ? 'error' : 'success'}`;
+        }
+
+        // Test cases specifically designed to test Z-wrap improvements
+        const testCases = [
+            {
+                id: 'test1',
+                text: 'XIC(Start_Button) XIC(Proximity_Sensor) XIC(Timer_Done) XIC(Manual_Override) XIC(Emergency_Stop) OTE(Motor_Output)',
+                number: '1',
+                description: 'Simple Z-Wrap (Two Lines)'
+            },
+            {
+                id: 'test2',
+                text: 'XIC(Start_Button) [XIC(Proximity_Sensor) | XIO(Emergency_Stop)] [XIC(Timer_Done) | XIC(Manual_Override)] XIC(Additional_Contact) XIC(Another_Contact) OTE(Motor_Output)',
+                number: '2',
+                description: 'Z-Wrap with Parallel Branches'
+            },
+            {
+                id: 'test3',
+                text: 'XIC(First_Contact) XIC(Second_Contact) XIC(Third_Contact) XIC(Fourth_Contact) XIC(Fifth_Contact) XIC(Sixth_Contact) XIC(Seventh_Contact) XIC(Eighth_Contact) OTE(Motor_Output)',
+                number: '3',
+                description: 'Multiple Z-Wraps (Three Lines)'
+            },
+            {
+                id: 'test4',
+                text: 'XIC(Very_Long_Tag_Name_For_Testing_Wrapping) XIC(Another_Long_Tag_Name) XIC(Third_Long_Tag_Name) XIC(Fourth_Long_Tag_Name) XIC(Fifth_Long_Tag_Name) OTE(Very_Long_Output_Tag_Name_For_Testing)',
+                number: '4',
+                description: 'Z-Wrap with Long Text Labels'
+            },
+            {
+                id: 'test5',
+                text: 'XIC(Start) TON(Timer1, 1000) [XIC(Proximity) | XIO(Emergency)] XIC(Additional) XIC(Another) XIC(Third) XIC(Fourth) OTE(Motor_Output)',
+                number: '5',
+                description: 'Complex Z-Wrap with Mixed Elements'
+            }
+        ];
+
+        let successCount = 0;
+        let errorCount = 0;
+
+        // Render all test cases
+        testCases.forEach(testCase => {
+            try {
+                const renderer = renderRung(testCase, testCase.id, 800, 300);
+                console.log(`✅ Rendered test case ${testCase.number}: ${testCase.description}`);
+                successCount++;
+            } catch (error) {
+                console.error(`❌ Error rendering test case ${testCase.number}:`, error);
+                errorCount++;
+            }
+        });
+
+        // Update status
+        if (errorCount === 0) {
+            updateStatus(`✅ All ${successCount} Z-wrap improvement tests rendered successfully! Z-wrap connections should now have proper vertical padding and clean routing.`);
+        } else {
+            updateStatus(`⚠️ ${successCount} successful, ${errorCount} failed. Check console for details.`, true);
+        }
+
+        // Detailed verification instructions
+        setTimeout(() => {
+            console.log('🔍 Z-WRAP IMPROVEMENT VERIFICATION:');
+            console.log('1. Z-wrap wires should have adequate vertical spacing');
+            console.log('2. Transfer points should be centered between lines');
+            console.log('3. Horizontal padding should be 30px from power rails');
+            console.log('4. Wire connections should align with symbol edges');
+            console.log('5. No wire collisions with elements or text labels');
+            console.log('');
+            console.log('📏 EXPECTED Z-WRAP MEASUREMENTS:');
+            console.log('- Horizontal inset: 30px from power rails');
+            console.log('- Transfer point: Centered between wrapped lines');
+            console.log('- Wire connections: At symbol edges (not text edges)');
+            console.log('- Vertical spacing: Adequate for clean routing');
+        }, 1000);
+    </script>
+</body>
+</html> 
