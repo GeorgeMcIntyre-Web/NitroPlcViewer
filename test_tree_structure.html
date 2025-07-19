@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tree Structure Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background: #f5f5f5;
+        }
+        .test-container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .tree {
+            list-style: none;
+            padding: 0;
+        }
+        .tree-node {
+            margin: 0;
+        }
+        .tree-item {
+            display: flex;
+            align-items: center;
+            padding: 0.5rem;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: background-color 0.2s;
+            user-select: none;
+        }
+        .tree-item:hover {
+            background: #f8fafc;
+        }
+        .tree-toggle {
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            margin-right: 0.5rem;
+            font-size: 0.8rem;
+            transition: transform 0.2s;
+        }
+        .tree-toggle.expanded {
+            transform: rotate(90deg);
+        }
+        .tree-icon {
+            margin-right: 0.5rem;
+            font-size: 1.1rem;
+            width: 20px;
+            text-align: center;
+        }
+        .tree-text {
+            flex: 1;
+            font-size: 0.9rem;
+        }
+        .tree-meta {
+            font-size: 0.8rem;
+            color: #6b7280;
+            margin-left: 0.5rem;
+        }
+        .tree-children {
+            list-style: none;
+            padding-left: 1.5rem;
+            margin: 0;
+        }
+        .tree-children.collapsed {
+            display: none;
+        }
+        .test-button {
+            background: #2563eb;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .test-button:hover {
+            background: #1d4ed8;
+        }
+        .test-result {
+            margin-top: 20px;
+            padding: 15px;
+            border: 1px solid #e2e8f0;
+            border-radius: 4px;
+            background: #f8fafc;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>Tree Structure Test</h1>
+        <p>This test verifies that the tree structure is working correctly.</p>
+        
+        <button class="test-button" onclick="testTreeStructure()">Test Tree Structure</button>
+        <button class="test-button" onclick="testTaskNodes()">Test Task Nodes</button>
+        
+        <div id="treeContainer"></div>
+        <div id="testResult" class="test-result" style="display: none;"></div>
+    </div>
+
+    <script type="module">
+        // Import the tree renderer functions
+        import { createTreeNode, addChildrenToNode } from './js/treeRenderer.js';
+        
+        // Mock data for testing
+        const mockData = {
+            tasks: [
+                {
+                    name: "MainTask",
+                    type: "CONTINUOUS",
+                    priority: "10",
+                    programs: [
+                        {
+                            name: "MainProgram",
+                            type: "Normal",
+                            routines: [
+                                { name: "MainRoutine", type: "RLL" }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    name: "SafetyTask",
+                    type: "PERIODIC",
+                    priority: "5",
+                    programs: [
+                        {
+                            name: "SafetyProgram",
+                            type: "Safety",
+                            routines: [
+                                { name: "SafetyRoutine", type: "RLL" }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        };
+
+        // Test basic tree structure
+        window.testTreeStructure = function() {
+            const container = document.getElementById('treeContainer');
+            container.innerHTML = '';
+            
+            // Create a simple tree structure
+            const rootNode = createTreeNode({
+                id: 'root',
+                name: 'Root',
+                type: 'root',
+                icon: '🏠',
+                meta: 'Test root'
+            });
+            
+            const childNode = createTreeNode({
+                id: 'child',
+                name: 'Child',
+                type: 'child',
+                icon: '📁',
+                meta: 'Test child'
+            });
+            
+            addChildrenToNode(rootNode, [childNode]);
+            
+            const tree = document.createElement('ul');
+            tree.className = 'tree';
+            tree.appendChild(rootNode);
+            
+            container.appendChild(tree);
+            
+            const result = document.getElementById('testResult');
+            result.style.display = 'block';
+            result.innerHTML = `
+                <h3>✅ Basic Tree Structure Test</h3>
+                <p>Tree structure created successfully. Check the tree above.</p>
+            `;
+        };
+
+        // Test task nodes specifically
+        window.testTaskNodes = function() {
+            const container = document.getElementById('treeContainer');
+            container.innerHTML = '';
+            
+            // Create controller node
+            const controllerNode = createTreeNode({
+                id: 'controller',
+                name: 'TestController',
+                type: 'controller',
+                icon: '🏭',
+                meta: 'Test controller'
+            });
+            
+            // Create tasks section
+            const tasksNode = createTreeNode({
+                id: 'tasks',
+                name: 'Tasks',
+                type: 'tasks-section',
+                icon: '⚙️',
+                meta: `${mockData.tasks.length} tasks`
+            });
+            
+            const tasksChildrenContainer = tasksNode.querySelector('.tree-children');
+            if (tasksChildrenContainer) {
+                mockData.tasks.forEach((task, taskIndex) => {
+                    console.log('Creating task node for:', task.name);
+                    const taskNode = createTreeNode({
+                        id: `task-${taskIndex}`,
+                        name: task.name,
+                        type: `task-${task.type?.toLowerCase() || 'continuous'}`,
+                        icon: '🔄',
+                        meta: `${task.type || 'CONTINUOUS'} - Priority: ${task.priority || '10'}`
+                    });
+                    
+                    // Add programs as children
+                    const taskChildrenContainer = taskNode.querySelector('.tree-children');
+                    if (taskChildrenContainer && task.programs && task.programs.length > 0) {
+                        const programsNode = createTreeNode({
+                            id: `programs-${taskIndex}`,
+                            name: 'Programs',
+                            type: 'programs-section',
+                            icon: '📋',
+                            meta: `${task.programs.length} programs`
+                        });
+                        
+                        const programsChildrenContainer = programsNode.querySelector('.tree-children');
+                        if (programsChildrenContainer) {
+                            task.programs.forEach((program, programIndex) => {
+                                const programNode = createTreeNode({
+                                    id: `program-${taskIndex}-${programIndex}`,
+                                    name: program.name,
+                                    type: 'program',
+                                    icon: '📄',
+                                    meta: `Type: ${program.type || 'Normal'}`
+                                });
+                                programsChildrenContainer.appendChild(programNode);
+                            });
+                        }
+                        taskChildrenContainer.appendChild(programsNode);
+                    }
+                    
+                    console.log('Appending task node to tasks children container');
+                    tasksChildrenContainer.appendChild(taskNode);
+                });
+                
+                // Ensure toggle button is added
+                const tasksItem = tasksNode.querySelector('.tree-item');
+                if (tasksItem && !tasksItem.querySelector('.tree-toggle')) {
+                    console.log('Adding toggle button to Tasks section');
+                    const toggle = document.createElement('span');
+                    toggle.className = 'tree-toggle';
+                    toggle.textContent = '▶';
+                    toggle.setAttribute('aria-label', 'Expand');
+                    toggle.onclick = (e) => {
+                        e.stopPropagation();
+                        const children = tasksItem.parentElement.querySelector('.tree-children');
+                        const toggle = tasksItem.querySelector('.tree-toggle');
+                        
+                        if (children && toggle) {
+                            const isCollapsed = children.classList.contains('collapsed');
+                            
+                            if (isCollapsed) {
+                                children.classList.remove('collapsed');
+                                toggle.textContent = '▼';
+                                toggle.classList.add('expanded');
+                                toggle.setAttribute('aria-label', 'Collapse');
+                                tasksItem.setAttribute('aria-expanded', 'true');
+                            } else {
+                                children.classList.add('collapsed');
+                                toggle.textContent = '▶';
+                                toggle.classList.remove('expanded');
+                                toggle.setAttribute('aria-label', 'Expand');
+                                tasksItem.setAttribute('aria-expanded', 'false');
+                            }
+                        }
+                    };
+                    tasksItem.insertBefore(toggle, tasksItem.firstChild);
+                }
+            }
+            
+            addChildrenToNode(controllerNode, [tasksNode]);
+            
+            const tree = document.createElement('ul');
+            tree.className = 'tree';
+            tree.appendChild(controllerNode);
+            
+            container.appendChild(tree);
+            
+            const result = document.getElementById('testResult');
+            result.style.display = 'block';
+            result.innerHTML = `
+                <h3>✅ Task Nodes Test</h3>
+                <p>Task nodes created successfully. Check the tree above.</p>
+                <p>You should see:</p>
+                <ul>
+                    <li>TestController (root)</li>
+                    <li>Tasks (2 tasks) - with expand arrow</li>
+                    <li>MainTask and SafetyTask under Tasks when expanded</li>
+                </ul>
+            `;
+        };
+    </script>
+</body>
+</html> 

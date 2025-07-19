@@ -34,6 +34,19 @@ export function parseL5X(xmlDoc) {
         // Parse tasks with their nested programs
         const tasks = parseTasks(xmlDoc, getAttrs, getTextContent);
 
+        // Extract all programs from tasks into a separate array
+        const programs = [];
+        tasks.forEach(task => {
+            if (task.programs && task.programs.length > 0) {
+                task.programs.forEach(program => {
+                    programs.push({
+                        ...program,
+                        parentTask: task.name // Keep reference to parent task
+                    });
+                });
+            }
+        });
+
         // Parse controller tags with enhanced information
         const controllerTags = parseControllerTags(xmlDoc, getAttrs, getTextContent);
 
@@ -58,6 +71,7 @@ export function parseL5X(xmlDoc) {
         return {
             controller: controllerInfo,
             tasks: tasks,
+            programs: programs,
             controllerTags: controllerTags,
             dataTypes: dataTypes,
             addOnInstructions: addOnInstructions,

@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enhanced Rung Graphics Test - NitroPlcViewer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+        }
+        .btn {
+            @apply font-semibold py-3 px-5 rounded-lg shadow-md hover:shadow-lg transition-all duration-200 ease-in-out transform hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-offset-2;
+        }
+        .btn-primary {
+            @apply bg-blue-600 hover:bg-blue-700 text-white focus:ring-blue-500;
+        }
+        .btn-secondary {
+            @apply bg-gray-500 hover:bg-gray-600 text-white focus:ring-gray-400;
+        }
+        .btn-active {
+            @apply bg-blue-700 ring-2 ring-offset-2 ring-blue-500 shadow-inner scale-105 -translate-y-0.5;
+        }
+        #canvas-container {
+            min-height: 300px;
+            transition: height 0.3s ease-in-out;
+        }
+    </style>
+</head>
+<body class="bg-gray-100">
+
+    <div class="container mx-auto p-4 md:p-8 max-w-7xl">
+        <header class="text-center mb-8 p-6 bg-white rounded-xl shadow-lg">
+            <h1 class="text-4xl md:text-5xl font-bold text-gray-800">Enhanced Rung Graphics Test</h1>
+            <p class="text-gray-500 mt-2">Testing the improved ladder logic renderer with responsive canvas and dynamic layout.</p>
+        </header>
+
+        <main class="bg-white rounded-xl shadow-lg">
+            <div class="panel-header bg-gray-800 text-white p-5 rounded-t-xl flex justify-between items-center">
+                <h2 class="text-xl font-semibold">Ladder Logic Canvas</h2>
+            </div>
+            <div class="panel-content p-6">
+                <div id="button-container" class="button-group flex flex-wrap gap-4 mb-6">
+                    <button class="btn btn-primary" data-testid="simple" onclick="app.runTest('simple')">Simple Rung</button>
+                    <button class="btn btn-primary" data-testid="complex" onclick="app.runTest('complex')">Standard Branch</button>
+                    <button class="btn btn-primary" data-testid="longRung" onclick="app.runTest('longRung')">Long Rung Wrap</button>
+                    <button class="btn btn-primary" data-testid="timerCounter" onclick="app.runTest('timerCounter')">Timer & Counter</button>
+                    <button class="btn btn-primary" data-testid="complexWrap" onclick="app.runTest('complexWrap')">Complex Wrap</button>
+                    <button class="btn btn-secondary" onclick="app.clear()">Clear</button>
+                </div>
+                
+                <div id="canvas-container" class="w-full bg-gray-50 border-2 border-gray-200 rounded-lg p-4 overflow-hidden flex items-center justify-center">
+                    <!-- Canvas will be inserted here by JavaScript -->
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script type="module">
+        // Import the enhanced rung renderer
+        import { LadderRenderer } from './js/rungRenderer.js';
+
+        // Test rung definitions
+        const rungDefs = {
+            simple: [
+                { type: 'NO_CONTACT', label: 'Start_Button' },
+                { type: 'NC_CONTACT', label: 'Stop_Button' },
+                { type: 'OUTPUT_COIL', label: 'Motor_Output' }
+            ],
+            complex: [
+                { type: 'NO_CONTACT', label: 'Start_Button' },
+                { type: 'NC_CONTACT', label: 'Stop_Button' },
+                { 
+                    type: 'BRANCH', 
+                    paths: [
+                        { elements: [{ type: 'NO_CONTACT', label: 'Limit_Switch' }, { type: 'NO_CONTACT', label: 'Photo_Eye' }] },
+                        { elements: [{ type: 'NO_CONTACT', label: 'Pressure_Switch' }] }
+                    ]
+                },
+                { type: 'OUTPUT_COIL', label: 'Motor_Output' }
+            ],
+            longRung: [
+                { type: 'NO_CONTACT', label: 'Input_A' }, { type: 'NO_CONTACT', label: 'Input_B' },
+                { type: 'NC_CONTACT', label: 'Input_C' }, { type: 'NO_CONTACT', label: 'Input_D' },
+                { type: 'NO_CONTACT', label: 'Input_E' }, { type: 'NC_CONTACT', label: 'Input_F' },
+                { type: 'NO_CONTACT', label: 'Input_G' }, { type: 'NC_CONTACT', label: 'Input_H' },
+                { type: 'OUTPUT_COIL', label: 'Long_Rung_Coil' }
+            ],
+            timerCounter: [
+                { type: 'NO_CONTACT', label: 'Start_Timer' },
+                { type: 'TIMER', label: 'Delay_Timer', instruction: 'TON', preset: '5000' },
+                { type: 'NO_CONTACT', label: 'Reset_Counter' },
+                { type: 'COUNTER', label: 'Cycle_Counter', instruction: 'CTU', preset: '100' },
+                { type: 'OUTPUT_COIL', label: 'Process_Complete' }
+            ],
+            complexWrap: [
+                { type: 'NO_CONTACT', label: 'System_Enable' },
+                { type: 'NO_CONTACT', label: 'Auto_Mode' },
+                {
+                    type: 'BRANCH',
+                    paths: [
+                        { elements: [
+                            { type: 'NO_CONTACT', label: 'Path_A_Sensor_1' },
+                            { type: 'NC_CONTACT', label: 'Path_A_Sensor_2' },
+                            { type: 'NO_CONTACT', label: 'Path_A_Sensor_3' }
+                        ]},
+                        { elements: [
+                            { type: 'NO_CONTACT', label: 'Path_B_Sensor_1' },
+                            { type: 'NO_CONTACT', label: 'Path_B_Sensor_2' }
+                        ]}
+                    ]
+                },
+                { type: 'NO_CONTACT', label: 'Another_Condition' },
+                { type: 'NC_CONTACT', label: 'Yet_Another_Condition' },
+                { type: 'NO_CONTACT', label: 'Safety_Gate_Closed' },
+                { type: 'NC_CONTACT', label: 'E-Stop_Not_Pressed' },
+                { type: 'NO_CONTACT', label: 'Part_In_Position' },
+                { type: 'NO_CONTACT', label: 'Robot_Ready' },
+                { type: 'NC_CONTACT', label: 'System_Fault' },
+                { type: 'NO_CONTACT', label: 'Final_Input_Before_Coil'},
+                { type: 'OUTPUT_COIL', label: 'Complex_Wrapped_Output' }
+            ]
+        };
+
+        // Application logic
+        const app = {
+            renderer: null,
+            activeTest: null,
+            
+            runTest(testName) {
+                this.activeTest = testName;
+                if (rungDefs[testName]) {
+                    if (!this.renderer) {
+                        this.renderer = new LadderRenderer('canvas-container');
+                    }
+                    this.renderer.initialize(rungDefs[testName]);
+                }
+                this.updateButtonStyles();
+            },
+
+            clear() {
+                this.activeTest = null;
+                if (this.renderer) {
+                    this.renderer.destroy();
+                    this.renderer = null;
+                }
+                this.updateButtonStyles();
+            },
+
+            updateButtonStyles() {
+                const buttons = document.querySelectorAll('#button-container .btn-primary');
+                buttons.forEach(button => {
+                    if (button.dataset.testid === this.activeTest) {
+                        button.classList.add('btn-active');
+                    } else {
+                        button.classList.remove('btn-active');
+                    }
+                });
+            },
+
+            init() {
+                // Set an initial test case to display on load
+                this.runTest('complexWrap'); 
+            }
+        };
+
+        // Initialize when DOM is loaded
+        document.addEventListener('DOMContentLoaded', () => {
+            app.init();
+        });
+
+        // Make app available globally for button clicks
+        window.app = app;
+    </script>
+</body>
+</html> 

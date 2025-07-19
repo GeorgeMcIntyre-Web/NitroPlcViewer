@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NitroPlcViewer - Studio 5000 Logix Designer Style PLC Viewer</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f8fafc;
+            color: #1f2937;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            padding: 2rem;
+            max-width: 600px;
+            text-align: center;
+        }
+        
+        h1 {
+            color: #1e3a8a;
+            margin-bottom: 1rem;
+        }
+        
+        .description {
+            color: #6b7280;
+            margin-bottom: 2rem;
+            line-height: 1.6;
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        
+        .btn {
+            background: #2563eb;
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            text-decoration: none;
+            transition: background-color 0.2s;
+            display: inline-block;
+        }
+        
+        .btn:hover {
+            background: #1d4ed8;
+        }
+        
+        .btn-secondary {
+            background: transparent;
+            border: 1px solid #2563eb;
+            color: #2563eb;
+        }
+        
+        .btn-secondary:hover {
+            background: #eff6ff;
+        }
+        
+        .features {
+            margin-top: 2rem;
+            text-align: left;
+        }
+        
+        .features h3 {
+            color: #1e3a8a;
+            margin-bottom: 0.5rem;
+        }
+        
+        .features ul {
+            color: #6b7280;
+            line-height: 1.6;
+        }
+        
+        .auto-redirect {
+            margin-top: 1rem;
+            font-size: 0.8rem;
+            color: #9ca3af;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>NitroPlcViewer</h1>
+        <p class="description">
+            Professional, web-based PLC ladder logic viewer that mimics the look and feel of 
+            Rockwell Automation's Studio 5000 Logix Designer.
+        </p>
+        
+        <div class="button-group">
+            <a href="RockwellViewer.html" class="btn">🚀 Launch Main Viewer</a>
+            <a href="RockwellViewer_Modular.html" class="btn btn-secondary">🔧 Modular Version</a>
+            <a href="NitroPlcViewer.html" class="btn btn-secondary">📋 Alternative Version</a>
+        </div>
+        
+        <div class="features">
+            <h3>Key Features:</h3>
+            <ul>
+                <li>📁 L5X File Support - Load Studio 5000 exported projects</li>
+                <li>🌳 Hierarchical Project Tree - Navigate tags, tasks, programs, and routines</li>
+                <li>⚡ Ladder Logic Rendering - Professional ladder diagrams with proper symbols</li>
+                <li>📝 Structured Text Support - View ST routines</li>
+                <li>🔍 Cross-Reference Analysis - Find tag and routine usage</li>
+                <li>🎨 Studio 5000 Styling - Authentic look and feel</li>
+            </ul>
+        </div>
+        
+        <p class="auto-redirect">
+            Auto-redirecting to main viewer in <span id="countdown">5</span> seconds...
+        </p>
+    </div>
+
+    <script>
+        // Auto-redirect to main viewer after 5 seconds
+        let countdown = 5;
+        const countdownElement = document.getElementById('countdown');
+        
+        const timer = setInterval(() => {
+            countdown--;
+            countdownElement.textContent = countdown;
+            
+            if (countdown <= 0) {
+                clearInterval(timer);
+                window.location.href = 'RockwellViewer.html';
+            }
+        }, 1000);
+        
+        // Allow users to cancel auto-redirect by clicking anywhere
+        document.addEventListener('click', () => {
+            clearInterval(timer);
+            document.querySelector('.auto-redirect').style.display = 'none';
+        });
+    </script>
+</body>
+</html> 

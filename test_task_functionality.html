@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Task Functionality Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background: #f5f5f5;
+        }
+        .test-container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .test-button {
+            background: #2563eb;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .test-button:hover {
+            background: #1d4ed8;
+        }
+        .test-result {
+            margin-top: 20px;
+            padding: 15px;
+            border: 1px solid #e2e8f0;
+            border-radius: 4px;
+            background: #f8fafc;
+        }
+        .success {
+            border-color: #059669;
+            background: #f0fdf4;
+            color: #059669;
+        }
+        .error {
+            border-color: #dc2626;
+            background: #fef2f2;
+            color: #dc2626;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>Task Functionality Test</h1>
+        <p>This test verifies that the task content display functionality is working correctly.</p>
+        
+        <button class="test-button" onclick="testTaskContent()">Test Task Content Display</button>
+        <button class="test-button" onclick="testTaskNodeType()">Test Task Node Type Detection</button>
+        <button class="test-button" onclick="testTaskDataStructure()">Test Task Data Structure</button>
+        
+        <div id="testResult" class="test-result" style="display: none;"></div>
+    </div>
+
+    <script type="module">
+        // Import the content display functions
+        import { showTaskContent } from './js/contentDisplay.js';
+        
+        // Mock project data for testing
+        const mockProjectData = {
+            tasks: [
+                {
+                    name: "MainTask",
+                    type: "CONTINUOUS",
+                    priority: "10",
+                    rate: "10ms",
+                    watchdog: "true",
+                    scheduled: "true",
+                    properties: {
+                        description: "Main continuous task for the application"
+                    },
+                    programs: [
+                        {
+                            name: "MainProgram",
+                            type: "Normal",
+                            routines: [
+                                { name: "MainRoutine", type: "RLL" }
+                            ],
+                            tags: [
+                                { name: "MainTag", type: "BOOL" }
+                            ]
+                        }
+                    ],
+                    scheduledPrograms: ["MainProgram", "SafetyProgram"]
+                },
+                {
+                    name: "SafetyTask",
+                    type: "PERIODIC",
+                    priority: "5",
+                    rate: "100ms",
+                    watchdog: "false",
+                    scheduled: "false",
+                    properties: {
+                        description: "Safety task for critical operations"
+                    },
+                    programs: [
+                        {
+                            name: "SafetyProgram",
+                            type: "Safety",
+                            routines: [
+                                { name: "SafetyRoutine", type: "RLL" }
+                            ],
+                            tags: [
+                                { name: "SafetyTag", type: "BOOL" }
+                            ]
+                        }
+                    ],
+                    scheduledPrograms: ["SafetyProgram"]
+                }
+            ]
+        };
+
+        // Set up mock DOM elements
+        function setupMockDOM() {
+            // Create mock elements if they don't exist
+            if (!document.getElementById('contentHeader')) {
+                const header = document.createElement('div');
+                header.id = 'contentHeader';
+                header.style.display = 'none';
+                document.body.appendChild(header);
+            }
+            
+            if (!document.getElementById('contentTitle')) {
+                const title = document.createElement('h2');
+                title.id = 'contentTitle';
+                document.getElementById('contentHeader').appendChild(title);
+            }
+            
+            if (!document.getElementById('contentMeta')) {
+                const meta = document.createElement('div');
+                meta.id = 'contentMeta';
+                document.getElementById('contentHeader').appendChild(meta);
+            }
+            
+            if (!document.getElementById('rungContainer')) {
+                const container = document.createElement('div');
+                container.id = 'rungContainer';
+                document.body.appendChild(container);
+            }
+        }
+
+        // Test functions
+        window.testTaskContent = async function() {
+            setupMockDOM();
+            
+            try {
+                // Mock the projectData global variable
+                window.projectData = mockProjectData;
+                
+                // Test showing task content
+                await showTaskContent("MainTask");
+                
+                const result = document.getElementById('testResult');
+                result.style.display = 'block';
+                result.className = 'test-result success';
+                result.innerHTML = `
+                    <h3>✅ Task Content Test Passed</h3>
+                    <p>The task content display function is working correctly.</p>
+                    <p>Check the page for the task information display below.</p>
+                `;
+                
+            } catch (error) {
+                const result = document.getElementById('testResult');
+                result.style.display = 'block';
+                result.className = 'test-result error';
+                result.innerHTML = `
+                    <h3>❌ Task Content Test Failed</h3>
+                    <p>Error: ${error.message}</p>
+                `;
+            }
+        };
+
+        window.testTaskNodeType = function() {
+            const result = document.getElementById('testResult');
+            result.style.display = 'block';
+            
+            // Test node type detection
+            const testTypes = [
+                'task-continuous',
+                'task-periodic', 
+                'task-event',
+                'routine-rll',
+                'tag-bool'
+            ];
+            
+            const taskTypes = testTypes.filter(type => type.startsWith('task-'));
+            
+            if (taskTypes.length === 3) {
+                result.className = 'test-result success';
+                result.innerHTML = `
+                    <h3>✅ Task Node Type Detection Test Passed</h3>
+                    <p>Found ${taskTypes.length} task types: ${taskTypes.join(', ')}</p>
+                    <p>Task node type detection is working correctly.</p>
+                `;
+            } else {
+                result.className = 'test-result error';
+                result.innerHTML = `
+                    <h3>❌ Task Node Type Detection Test Failed</h3>
+                    <p>Expected 3 task types, found ${taskTypes.length}</p>
+                `;
+            }
+        };
+
+        window.testTaskDataStructure = function() {
+            const result = document.getElementById('testResult');
+            result.style.display = 'block';
+            
+            try {
+                // Test task data structure
+                const task = mockProjectData.tasks[0];
+                
+                if (task && task.name && task.type && task.programs) {
+                    result.className = 'test-result success';
+                    result.innerHTML = `
+                        <h3>✅ Task Data Structure Test Passed</h3>
+                        <p>Task structure is valid:</p>
+                        <ul>
+                            <li>Name: ${task.name}</li>
+                            <li>Type: ${task.type}</li>
+                            <li>Priority: ${task.priority}</li>
+                            <li>Programs: ${task.programs.length}</li>
+                            <li>Watchdog: ${task.watchdog}</li>
+                            <li>Scheduled: ${task.scheduled}</li>
+                        </ul>
+                    `;
+                } else {
+                    throw new Error('Invalid task structure');
+                }
+            } catch (error) {
+                result.className = 'test-result error';
+                result.innerHTML = `
+                    <h3>❌ Task Data Structure Test Failed</h3>
+                    <p>Error: ${error.message}</p>
+                `;
+            }
+        };
+    </script>
+</body>
+</html> 

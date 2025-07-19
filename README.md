@@ -30,10 +30,12 @@ A professional, web-based PLC ladder logic viewer that mimics the look and feel 
 ## 🚀 Getting Started
 
 ### **Quick Start**
-1. Download `RockwellViewer.html`
-2. Open in any modern web browser
-3. Click "📁 Open Project" to load an L5X file
-4. Navigate through the project tree and view ladder logic
+1. Download the project files
+2. Run `python server.py` or open `index.html` directly
+3. Navigate to `http://localhost:8000/` (if using server) or open `index.html`
+4. Click "🚀 Launch Main Viewer" to start the application
+5. Click "📁 Open Project" to load an L5X file
+6. Navigate through the project tree and view ladder logic
 
 ### **Requirements**
 - Modern web browser (Chrome, Firefox, Safari, Edge)
@@ -52,13 +54,17 @@ A professional, web-based PLC ladder logic viewer that mimics the look and feel 
 
 ```
 NitroPlcViewer/
-├── RockwellViewer.html    # Main application file
-├── README.md             # This file
-├── docs/                 # Documentation directory
-│   ├── implementation/   # Implementation guides
-│   ├── fixes/           # Bug fix documentation
-│   └── technical/       # Technical specifications
-└── .gitignore           # Git ignore file
+├── index.html           # Main entry point (NEW)
+├── RockwellViewer.html  # Main application file
+├── RockwellViewer_Modular.html  # Modular version
+├── NitroPlcViewer.html  # Alternative version
+├── server.py            # Local development server
+├── README.md            # This file
+├── docs/                # Documentation directory
+│   ├── implementation/  # Implementation guides
+│   ├── fixes/          # Bug fix documentation
+│   └── technical/      # Technical specifications
+└── .gitignore          # Git ignore file
 ```
 
 ## 📚 Documentation

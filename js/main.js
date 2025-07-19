@@ -26,6 +26,7 @@ import {
     setProjectData, 
     showProjectInfo 
 } from './contentDisplay.js';
+import { renderRung } from './rungRenderer.js';
 
 // Application state
 let projectData = null;
@@ -36,6 +37,9 @@ let securityViolations = 0;
 
 // DOM elements
 let elements = {};
+
+// Make renderRung available globally for RockwellViewer.html
+window.renderRung = renderRung;
 
 // Initialize DOM elements
 function setupElements() {
@@ -430,137 +434,326 @@ function getTagIcon(dataType) {
 
 // Placeholder functions for other sections (to be implemented)
 function renderTasks(controllerNode, data) {
+    // Add Tasks section
     if (data.tasks && data.tasks.length > 0) {
+        console.log('Creating Tasks section with', data.tasks.length, 'tasks');
+        console.log('Tasks data:', data.tasks);
+        
         const tasksNode = createTreeNode({
-            id: 'tasks-section',
+            id: 'tasks',
             name: 'Tasks',
             type: 'tasks-section',
-            icon: '⚡',
+            icon: '⚙️',
             meta: `${data.tasks.length} tasks`
         });
-
-        data.tasks.forEach(task => {
-            const taskNode = createTreeNode({
-                id: `task-${task.name}`,
-                name: task.name,
-                type: `task-${task.type?.toLowerCase() || 'event'}`,
-                icon: getTaskIcon(task.type),
-                meta: getTaskMeta(task)
-            });
-
-            // Add Programs subsection WITHIN this task
-            if (task.programs && task.programs.length > 0) {
-                const programsNode = createTreeNode({
-                    id: `task-${task.name}-programs`,
-                    name: 'Programs',
-                    type: 'programs-section',
-                    icon: '📁',
-                    meta: `${task.programs.length} programs`
+        const tasksChildrenContainer = tasksNode.querySelector('.tree-children');
+        console.log('Tasks children container:', tasksChildrenContainer);
+        
+        if (tasksChildrenContainer) {
+            data.tasks.forEach((task, taskIndex) => {
+                console.log('Creating task node for:', task.name, 'index:', taskIndex);
+                const taskNode = createTreeNode({
+                    id: `task-${taskIndex}`,
+                    name: task.name,
+                    type: `task-${task.type?.toLowerCase() || 'continuous'}`,
+                    icon: getTaskIcon(task.type),
+                    meta: `${task.type || 'CONTINUOUS'} - Priority: ${task.priority || '10'}`
                 });
-
-                task.programs.forEach(program => {
-                    const programNode = createTreeNode({
-                        id: `program-${task.name}-${program.name}`,
-                        name: program.name,
-                        type: 'program',
+                
+                // Add programs as children of this task
+                const taskChildrenContainer = taskNode.querySelector('.tree-children');
+                if (taskChildrenContainer && task.programs && task.programs.length > 0) {
+                    console.log('Adding', task.programs.length, 'programs to task:', task.name);
+                    const programsNode = createTreeNode({
+                        id: `programs-${taskIndex}`,
+                        name: 'Programs',
+                        type: 'programs-section',
                         icon: '📋',
-                        meta: `Main Routine: ${program.mainroutinename || 'MainRoutine'}`
+                        meta: `${task.programs.length} programs`
                     });
-
-                    // Add Program Tags subsection
-                    if (program.tags && program.tags.length > 0) {
-                        const programTagsNode = createTreeNode({
-                            id: `program-${task.name}-${program.name}-tags`,
-                            name: 'Program Tags',
-                            type: 'program-tags',
-                            icon: '🏷️',
-                            meta: `${program.tags.length} tags`
-                        });
-
-                        const tagNodes = [];
-                        program.tags.forEach(tag => {
-                            const tagNode = createTreeNode({
-                                id: `program-tag-${task.name}-${program.name}-${tag.name}`,
-                                name: tag.name,
-                                type: `tag-${tag.datatype?.toLowerCase() || 'unknown'}`,
-                                icon: getTagIcon(tag.datatype),
-                                meta: `${tag.datatype || 'Unknown'}${tag.usage ? ` - ${tag.usage}` : ''}`
+                    
+                    const programsChildrenContainer = programsNode.querySelector('.tree-children');
+                    if (programsChildrenContainer) {
+                        task.programs.forEach((program, programIndex) => {
+                            const programNode = createTreeNode({
+                                id: `program-${taskIndex}-${programIndex}`,
+                                name: program.name,
+                                type: 'program',
+                                icon: '📄',
+                                meta: `Type: ${program.type || 'Normal'}`
                             });
-                            tagNodes.push(tagNode);
+                            
+                            // Add routines to program
+                            const programChildrenContainer = programNode.querySelector('.tree-children');
+                            if (programChildrenContainer && program.routines && program.routines.length > 0) {
+                                const routinesNode = createTreeNode({
+                                    id: `routines-${taskIndex}-${programIndex}`,
+                                    name: 'Routines',
+                                    type: 'routines-section',
+                                    icon: '📝',
+                                    meta: `${program.routines.length} routines`
+                                });
+                                
+                                const routinesChildrenContainer = routinesNode.querySelector('.tree-children');
+                                if (routinesChildrenContainer) {
+                                    program.routines.forEach((routine, routineIndex) => {
+                                        const routineNode = createTreeNode({
+                                            id: `routine-${taskIndex}-${programIndex}-${routineIndex}`,
+                                            name: routine.name,
+                                            type: `routine-${routine.type?.toLowerCase() || 'rll'}`,
+                                            icon: getRoutineIcon(routine.type),
+                                            meta: routine.type || 'RLL'
+                                        });
+                                        routinesChildrenContainer.appendChild(routineNode);
+                                    });
+                                }
+                                programChildrenContainer.appendChild(routinesNode);
+                            }
+                            
+                            // Add program tags if they exist
+                            if (programChildrenContainer && program.tags && program.tags.length > 0) {
+                                const programTagsNode = createTreeNode({
+                                    id: `program-tags-${taskIndex}-${programIndex}`,
+                                    name: 'Tags',
+                                    type: 'program-tags-section',
+                                    icon: '🏷️',
+                                    meta: `${program.tags.length} tags`
+                                });
+                                
+                                const programTagsChildrenContainer = programTagsNode.querySelector('.tree-children');
+                                if (programTagsChildrenContainer) {
+                                    program.tags.forEach((tag, tagIndex) => {
+                                        const tagNode = createTreeNode({
+                                            id: `program-tag-${taskIndex}-${programIndex}-${tagIndex}`,
+                                            name: tag.name,
+                                            type: `tag-${tag.type.toLowerCase()}`,
+                                            icon: getTagIcon(tag.type),
+                                            meta: tag.type
+                                        });
+                                        programTagsChildrenContainer.appendChild(tagNode);
+                                    });
+                                }
+                                programChildrenContainer.appendChild(programTagsNode);
+                            }
+                            
+                            programsChildrenContainer.appendChild(programNode);
                         });
-                        addChildrenToNode(programTagsNode, tagNodes);
-                        addChildrenToNode(programNode, [programTagsNode]);
                     }
-
-                    // Add Routines subsection
-                    if (program.routines && program.routines.length > 0) {
-                        const routinesNode = createTreeNode({
-                            id: `program-${task.name}-${program.name}-routines`,
-                            name: 'Routines',
-                            type: 'routines-section',
-                            icon: '🪜',
-                            meta: `${program.routines.length} routines`
-                        });
-
-                        const routineNodes = [];
-                        program.routines.forEach(routine => {
+                    taskChildrenContainer.appendChild(programsNode);
+                }
+                
+                console.log('Appending task node to tasks children container');
+                tasksChildrenContainer.appendChild(taskNode);
+            });
+            
+            // Ensure the Tasks section has a toggle button since it now has children
+            const tasksItem = tasksNode.querySelector('.tree-item');
+            if (tasksItem && !tasksItem.querySelector('.tree-toggle')) {
+                console.log('Adding toggle button to Tasks section');
+                const toggle = document.createElement('span');
+                toggle.className = 'tree-toggle';
+                toggle.textContent = '▶';
+                toggle.setAttribute('aria-label', 'Expand');
+                toggle.onclick = (e) => {
+                    e.stopPropagation();
+                    // Use the toggleNode function directly since it's already imported
+                    const children = tasksItem.parentElement.querySelector('.tree-children');
+                    const toggle = tasksItem.querySelector('.tree-toggle');
+                    
+                    if (children && toggle) {
+                        const isCollapsed = children.classList.contains('collapsed');
+                        
+                        if (isCollapsed) {
+                            children.classList.remove('collapsed');
+                            toggle.textContent = '▼';
+                            toggle.classList.add('expanded');
+                            toggle.setAttribute('aria-label', 'Collapse');
+                            tasksItem.setAttribute('aria-expanded', 'true');
+                        } else {
+                            children.classList.add('collapsed');
+                            toggle.textContent = '▶';
+                            toggle.classList.remove('expanded');
+                            toggle.setAttribute('aria-label', 'Expand');
+                            tasksItem.setAttribute('aria-expanded', 'false');
+                        }
+                    }
+                };
+                tasksItem.insertBefore(toggle, tasksItem.firstChild);
+            }
+        }
+        console.log('Adding tasks node to controller');
+        addChildrenToNode(controllerNode, [tasksNode]);
+    }
+    
+    // Add Programs section (separate from tasks) - keep this for backward compatibility
+    // First check for separate programs array
+    if (data.programs && data.programs.length > 0) {
+        const programsNode = createTreeNode({
+            id: 'programs',
+            name: 'Programs',
+            type: 'programs-section',
+            icon: '📋',
+            meta: `${data.programs.length} programs`
+        });
+        const programsChildrenContainer = programsNode.querySelector('.tree-children');
+        if (programsChildrenContainer) {
+            data.programs.forEach((program, programIndex) => {
+                const programNode = createTreeNode({
+                    id: `program-${programIndex}`,
+                    name: program.name,
+                    type: 'program',
+                    icon: '📄',
+                    meta: `Type: ${program.type || 'Normal'}${program.parentTask ? ` - Task: ${program.parentTask}` : ''}`
+                });
+                
+                // Add routines to program
+                const programChildrenContainer = programNode.querySelector('.tree-children');
+                if (programChildrenContainer && program.routines && program.routines.length > 0) {
+                    const routinesNode = createTreeNode({
+                        id: `routines-${programIndex}`,
+                        name: 'Routines',
+                        type: 'routines-section',
+                        icon: '📝',
+                        meta: `${program.routines.length} routines`
+                    });
+                    
+                    const routinesChildrenContainer = routinesNode.querySelector('.tree-children');
+                    if (routinesChildrenContainer) {
+                        program.routines.forEach((routine, routineIndex) => {
                             const routineNode = createTreeNode({
-                                id: `routine-${task.name}-${program.name}-${routine.name}`,
+                                id: `routine-${programIndex}-${routineIndex}`,
                                 name: routine.name,
                                 type: `routine-${routine.type?.toLowerCase() || 'rll'}`,
                                 icon: getRoutineIcon(routine.type),
-                                meta: `${routine.type || 'RLL'}${routine.description ? ` - ${routine.description}` : ''}`
+                                meta: routine.type || 'RLL'
                             });
-                            routineNodes.push(routineNode);
+                            routinesChildrenContainer.appendChild(routineNode);
                         });
-                        addChildrenToNode(routinesNode, routineNodes);
-                        addChildrenToNode(programNode, [routinesNode]);
                     }
-
-                    // Add Parameters & Local Tags subsection
-                    if (program.parameters && program.parameters.length > 0) {
-                        const parametersNode = createTreeNode({
-                            id: `program-${task.name}-${program.name}-parameters`,
-                            name: 'Parameters & Local Tags',
-                            type: 'parameters-section',
-                            icon: '⚙️',
-                            meta: `${program.parameters.length} parameters`
-                        });
-
-                        const parameterNodes = [];
-                        program.parameters.forEach(param => {
-                            const paramNode = createTreeNode({
-                                id: `parameter-${task.name}-${program.name}-${param.name}`,
-                                name: param.name,
-                                type: 'parameter',
-                                icon: '⚙️',
-                                meta: `${param.datatype || 'Unknown'}${param.required === 'true' ? ' (Required)' : ''}`
+                    programChildrenContainer.appendChild(routinesNode);
+                }
+                
+                // Add program tags if they exist
+                if (programChildrenContainer && program.tags && program.tags.length > 0) {
+                    const programTagsNode = createTreeNode({
+                        id: `program-tags-${programIndex}`,
+                        name: 'Tags',
+                        type: 'program-tags-section',
+                        icon: '🏷️',
+                        meta: `${program.tags.length} tags`
+                    });
+                    
+                    const programTagsChildrenContainer = programTagsNode.querySelector('.tree-children');
+                    if (programTagsChildrenContainer) {
+                        program.tags.forEach((tag, tagIndex) => {
+                            const tagNode = createTreeNode({
+                                id: `program-tag-${programIndex}-${tagIndex}`,
+                                name: tag.name,
+                                type: `tag-${tag.type.toLowerCase()}`,
+                                icon: getTagIcon(tag.type),
+                                meta: tag.type
                             });
-                            parameterNodes.push(paramNode);
+                            programTagsChildrenContainer.appendChild(tagNode);
                         });
-                        addChildrenToNode(parametersNode, parameterNodes);
-                        addChildrenToNode(programNode, [parametersNode]);
                     }
-
-                    addChildrenToNode(programsNode, [programNode]);
-                });
-                addChildrenToNode(taskNode, [programsNode]);
-            }
-
-            // Add Task Properties subsection
-            const taskPropertiesNode = createTreeNode({
-                id: `task-${task.name}-properties`,
-                name: 'Task Properties',
-                type: 'task-properties',
-                icon: '⚙️',
-                meta: 'Task configuration'
+                    programChildrenContainer.appendChild(programTagsNode);
+                }
+                
+                programsChildrenContainer.appendChild(programNode);
             });
-            addChildrenToNode(taskNode, [taskPropertiesNode]);
-
-            addChildrenToNode(tasksNode, [taskNode]);
+        }
+        addChildrenToNode(controllerNode, [programsNode]);
+    } else {
+        // Fallback: Check for programs nested within tasks
+        const allPrograms = [];
+        data.tasks?.forEach(task => {
+            if (task.programs && task.programs.length > 0) {
+                task.programs.forEach(program => {
+                    allPrograms.push({
+                        ...program,
+                        parentTask: task.name
+                    });
+                });
+            }
         });
-
-        addChildrenToNode(controllerNode, [tasksNode]);
+        
+        if (allPrograms.length > 0) {
+            const programsNode = createTreeNode({
+                id: 'programs',
+                name: 'Programs',
+                type: 'programs-section',
+                icon: '📋',
+                meta: `${allPrograms.length} programs`
+            });
+            const programsChildrenContainer = programsNode.querySelector('.tree-children');
+            if (programsChildrenContainer) {
+                allPrograms.forEach((program, programIndex) => {
+                    const programNode = createTreeNode({
+                        id: `program-${programIndex}`,
+                        name: program.name,
+                        type: 'program',
+                        icon: '📄',
+                        meta: `Type: ${program.type || 'Normal'}${program.parentTask ? ` - Task: ${program.parentTask}` : ''}`
+                    });
+                    
+                    // Add routines to program
+                    const programChildrenContainer = programNode.querySelector('.tree-children');
+                    if (programChildrenContainer && program.routines && program.routines.length > 0) {
+                        const routinesNode = createTreeNode({
+                            id: `routines-${programIndex}`,
+                            name: 'Routines',
+                            type: 'routines-section',
+                            icon: '📝',
+                            meta: `${program.routines.length} routines`
+                        });
+                        
+                        const routinesChildrenContainer = routinesNode.querySelector('.tree-children');
+                        if (routinesChildrenContainer) {
+                            program.routines.forEach((routine, routineIndex) => {
+                                const routineNode = createTreeNode({
+                                    id: `routine-${programIndex}-${routineIndex}`,
+                                    name: routine.name,
+                                    type: `routine-${routine.type?.toLowerCase() || 'rll'}`,
+                                    icon: getRoutineIcon(routine.type),
+                                    meta: routine.type || 'RLL'
+                                });
+                                routinesChildrenContainer.appendChild(routineNode);
+                            });
+                        }
+                        programChildrenContainer.appendChild(routinesNode);
+                    }
+                    
+                    // Add program tags if they exist
+                    if (programChildrenContainer && program.tags && program.tags.length > 0) {
+                        const programTagsNode = createTreeNode({
+                            id: `program-tags-${programIndex}`,
+                            name: 'Tags',
+                            type: 'program-tags-section',
+                            icon: '🏷️',
+                            meta: `${program.tags.length} tags`
+                        });
+                        
+                        const programTagsChildrenContainer = programTagsNode.querySelector('.tree-children');
+                        if (programTagsChildrenContainer) {
+                            program.tags.forEach((tag, tagIndex) => {
+                                const tagNode = createTreeNode({
+                                    id: `program-tag-${programIndex}-${tagIndex}`,
+                                    name: tag.name,
+                                    type: `tag-${tag.type.toLowerCase()}`,
+                                    icon: getTagIcon(tag.type),
+                                    meta: tag.type
+                                });
+                                programTagsChildrenContainer.appendChild(tagNode);
+                            });
+                        }
+                        programChildrenContainer.appendChild(programTagsNode);
+                    }
+                    
+                    programsChildrenContainer.appendChild(programNode);
+                });
+            }
+            addChildrenToNode(controllerNode, [programsNode]);
+        }
     }
 }
 

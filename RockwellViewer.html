@@ -381,14 +381,23 @@
 
         .rung-content {
             padding: 1rem;
-            font-family: 'Courier New', monospace;
-            font-size: 0.875rem;
             background: #1f2937;
-            color: #e5e7eb;
             border-radius: 0 0 6px 6px;
-            white-space: pre-wrap;
-            word-break: break-word;
-            line-height: 1.5;
+        }
+
+        .rung-canvas-container {
+            width: 100%;
+            min-height: 200px;
+            background: white;
+            border: 1px solid #374151;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .rung-canvas-container canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
         }
 
         .welcome {
@@ -2432,21 +2441,30 @@
                     <span>Rungs: ${rungs.length}</span>
                 `;
 
-                // Display rungs
+                // Display rungs with canvas graphics
                 let rungsHTML = '';
                 rungs.forEach((rung, index) => {
+                    const rungId = `rung-canvas-${index}`;
                     rungsHTML += `
                         <div class="rung" data-rung="${index}">
                             <div class="rung-header">
                                 <span class="rung-number">Rung ${sanitizeInput(rung.number)}</span>
                                 ${rung.comment ? `<span class="rung-comment">${sanitizeInput(rung.comment)}</span>` : ''}
                             </div>
-                            <div class="rung-content">${sanitizeInput(rung.text)}</div>
+                            <div class="rung-content">
+                                <div id="${rungId}" class="rung-canvas-container"></div>
+                            </div>
                         </div>
                     `;
                 });
 
                 elements.rungContainer.innerHTML = rungsHTML;
+
+                // Render each rung with canvas graphics
+                rungs.forEach((rung, index) => {
+                    const rungId = `rung-canvas-${index}`;
+                    renderRung(rung, rungId, 800, 200);
+                });
 
             } catch (error) {
                 handleError(error, 'Rungs display');

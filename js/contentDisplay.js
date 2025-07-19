@@ -24,6 +24,8 @@ export function showNodeContent(nodeType, nodeName, nodeId) {
             } else {
                 showTagContent(nodeName);
             }
+        } else if (nodeType?.startsWith('task-')) {
+            showTaskContent(nodeName);
         } else if (nodeType === 'program') {
             showProgramContent(nodeName);
         } else if (nodeType === 'datatype') {
@@ -85,6 +87,9 @@ export function showRoutineContent(routineName) {
     }
 }
 
+// Import rung renderer
+import { renderRung } from './rungRenderer.js';
+
 // Display rungs
 function displayRungs(rungs, routineName) {
     try {
@@ -105,21 +110,30 @@ function displayRungs(rungs, routineName) {
             <span>Rungs: ${rungs.length}</span>
         `;
 
-        // Display rungs
+        // Display rungs with canvas graphics
         let rungsHTML = '';
         rungs.forEach((rung, index) => {
+            const rungId = `rung-canvas-${index}`;
             rungsHTML += `
                 <div class="rung" data-rung="${index}">
                     <div class="rung-header">
                         <span class="rung-number">Rung ${sanitizeInput(rung.number)}</span>
                         ${rung.comment ? `<span class="rung-comment">${sanitizeInput(rung.comment)}</span>` : ''}
                     </div>
-                    <div class="rung-content">${sanitizeInput(rung.text)}</div>
+                    <div class="rung-content">
+                        <div id="${rungId}" class="rung-canvas-container"></div>
+                    </div>
                 </div>
             `;
         });
 
         rungContainer.innerHTML = rungsHTML;
+
+        // Render each rung with canvas graphics
+        rungs.forEach((rung, index) => {
+            const rungId = `rung-canvas-${index}`;
+            renderRung(rung, rungId, 800, 200);
+        });
 
     } catch (error) {
         console.error('Rungs display failed:', error);
@@ -179,9 +193,17 @@ export function showProgramContent(programName, taskName = null) {
             throw new Error('Content elements not available');
         }
 
-        // Find program in the new nested structure
+        // Find program in the new structure (first check separate programs array, then fallback to nested)
         let program = null;
-        if (projectData?.tasks) {
+        if (projectData?.programs) {
+            program = projectData.programs.find(p => p.name === programName);
+            if (program && program.parentTask) {
+                taskName = program.parentTask;
+            }
+        }
+        
+        // Fallback: Check nested structure if not found in separate array
+        if (!program && projectData?.tasks) {
             for (const task of projectData.tasks) {
                 if (task.programs) {
                     program = task.programs.find(p => p.name === programName);
@@ -588,6 +610,92 @@ export function showEventTaskContent(taskName) {
     }
 }
 
+// Show task content
+export function showTaskContent(taskName) {
+    try {
+        const contentHeader = document.getElementById('contentHeader');
+        const contentTitle = document.getElementById('contentTitle');
+        const contentMeta = document.getElementById('contentMeta');
+        const rungContainer = document.getElementById('rungContainer');
+
+        if (!contentHeader || !contentTitle || !contentMeta || !rungContainer) {
+            throw new Error('Content elements not available');
+        }
+
+        const task = projectData?.tasks?.find(t => t.name === taskName);
+        
+        if (!task) {
+            showError(`Task "${taskName}" not found`);
+            return;
+        }
+
+        contentHeader.style.display = 'block';
+        contentTitle.textContent = sanitizeInput(taskName);
+        contentMeta.innerHTML = `
+            <span>Type: ${sanitizeInput(task.type || 'Unknown')}</span>
+            <span>Priority: ${sanitizeInput(task.priority || 'Unknown')}</span>
+            <span>Programs: ${task.programs?.length || 0}</span>
+            ${task.watchdog === 'true' ? '<span>Watchdog: Enabled</span>' : ''}
+        `;
+
+        // Build programs list
+        let programsList = '';
+        if (task.programs && task.programs.length > 0) {
+            programsList = `
+                <h3>Programs (${task.programs.length})</h3>
+                <ul style="text-align: left; margin: 1rem 0; padding-left: 2rem;">
+                    ${task.programs.map(program => `
+                        <li>
+                            <strong>${sanitizeInput(program.name)}</strong>
+                            <br><small>Type: ${sanitizeInput(program.type || 'Normal')}</small>
+                            ${program.routines ? `<br><small>Routines: ${program.routines.length}</small>` : ''}
+                            ${program.tags ? `<br><small>Tags: ${program.tags.length}</small>` : ''}
+                        </li>
+                    `).join('')}
+                </ul>
+            `;
+        }
+
+        // Build scheduled programs list
+        let scheduledProgramsList = '';
+        if (task.scheduledPrograms && task.scheduledPrograms.length > 0) {
+            scheduledProgramsList = `
+                <h3>Scheduled Programs (${task.scheduledPrograms.length})</h3>
+                <ul style="text-align: left; margin: 1rem 0; padding-left: 2rem;">
+                    ${task.scheduledPrograms.map(programName => `
+                        <li>${sanitizeInput(programName)}</li>
+                    `).join('')}
+                </ul>
+            `;
+        }
+
+        rungContainer.innerHTML = `
+            <div class="welcome">
+                <div class="welcome-icon">⚙️</div>
+                <h2>Task Information</h2>
+                <p><strong>Name:</strong> ${sanitizeInput(taskName)}</p>
+                <p><strong>Type:</strong> ${sanitizeInput(task.type || 'Unknown')}</p>
+                <p><strong>Priority:</strong> ${sanitizeInput(task.priority || 'Unknown')}</p>
+                ${task.rate ? `<p><strong>Rate:</strong> ${sanitizeInput(task.rate)}</p>` : ''}
+                ${task.watchdog === 'true' ? '<p><strong>Watchdog:</strong> Enabled</p>' : ''}
+                ${task.scheduled === 'true' ? '<p><strong>Scheduled:</strong> Yes</p>' : ''}
+                ${task.properties?.description ? `<p><strong>Description:</strong> ${sanitizeInput(task.properties.description)}</p>` : ''}
+                
+                ${programsList}
+                ${scheduledProgramsList}
+                
+                <p style="margin-top: 1rem; font-size: 0.9rem; color: var(--muted-text);">
+                    Expand the task in the tree to view individual programs and their routines.
+                </p>
+            </div>
+        `;
+
+    } catch (error) {
+        console.error('Task content display failed:', error);
+        showError('Failed to display task content');
+    }
+}
+
 // Show produced/consumed tag content
 export function showProducedConsumedTagContent(tagName) {
     try {
@@ -674,7 +782,7 @@ export function showProjectInfo() {
         }
 
         // Calculate comprehensive statistics
-        const totalPrograms = projectData.tasks?.reduce((total, task) => total + (task.programs?.length || 0), 0) || 0;
+        const totalPrograms = projectData.programs?.length || projectData.tasks?.reduce((total, task) => total + (task.programs?.length || 0), 0) || 0;
         const stats = {
             tasks: projectData.tasks?.length || 0,
             programs: totalPrograms,

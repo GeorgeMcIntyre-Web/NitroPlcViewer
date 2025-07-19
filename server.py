@@ -26,9 +26,10 @@ def main():
             print(f"🚀 Server started at http://localhost:{PORT}")
             print(f"📁 Serving files from: {script_dir}")
             print(f"📄 Available files:")
-            print(f"   - http://localhost:{PORT}/RockwellViewer_SingleFile.html (works directly)")
-            print(f"   - http://localhost:{PORT}/RockwellViewer_Modular.html (requires server)")
-            print(f"   - http://localhost:{PORT}/RockwellViewer.html")
+            print(f"   - http://localhost:{PORT}/ (main entry point)")
+            print(f"   - http://localhost:{PORT}/RockwellViewer.html (main viewer)")
+            print(f"   - http://localhost:{PORT}/RockwellViewer_Modular.html (modular version)")
+            print(f"   - http://localhost:{PORT}/NitroPlcViewer.html (alternative version)")
             print(f"\n🛑 Press Ctrl+C to stop the server")
             httpd.serve_forever()
     except KeyboardInterrupt:
