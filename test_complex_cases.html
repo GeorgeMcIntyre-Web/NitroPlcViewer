@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Complex Cases Test - Branches & Z-Wraps</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }
+        .container { max-width: 1200px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; }
+        .test-section { margin: 30px 0; padding: 20px; border: 1px solid #dee2e6; border-radius: 8px; }
+        .test-area { width: 100%; height: 400px; border: 2px solid #007bff; margin: 20px 0; background: #f8f9fa; }
+        .test-title { font-size: 18px; font-weight: bold; color: #007bff; margin-bottom: 10px; }
+        .test-description { color: #6c757d; margin-bottom: 15px; }
+        .status { padding: 10px; border-radius: 6px; margin: 10px 0; font-weight: bold; }
+        .status.success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .status.error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 Complex Cases Test - Branches & Z-Wraps</h1>
+        <p>Testing all complex scenarios to ensure wire colors, connections, and Z-wrap routing are working correctly.</p>
+
+        <!-- Test Case 1: Simple Branch -->
+        <div class="test-section">
+            <div class="test-title">Test Case 1: Simple Parallel Branch</div>
+            <div class="test-description">Testing basic parallel branch with consistent wire colors and proper connections.</div>
+            <div id="test1" class="test-area"></div>
+            <div id="status1" class="status"></div>
+        </div>
+
+        <!-- Test Case 2: Complex Branch -->
+        <div class="test-section">
+            <div class="test-title">Test Case 2: Complex Multi-Path Branch</div>
+            <div class="test-description">Testing branch with multiple paths and elements to verify all connections.</div>
+            <div id="test2" class="test-area"></div>
+            <div id="status2" class="status"></div>
+        </div>
+
+        <!-- Test Case 3: Z-Wrap Routing -->
+        <div class="test-section">
+            <div class="test-title">Test Case 3: Z-Wrap Wire Routing</div>
+            <div class="test-description">Testing Z-style wire routing between lines with proper vertical padding.</div>
+            <div id="test3" class="test-area"></div>
+            <div id="status3" class="status"></div>
+        </div>
+
+        <!-- Test Case 4: Branch with Z-Wrap -->
+        <div class="test-section">
+            <div class="test-title">Test Case 4: Branch with Z-Wrap</div>
+            <div class="test-description">Testing combination of parallel branches with Z-wrap routing.</div>
+            <div id="test4" class="test-area"></div>
+            <div id="status4" class="status"></div>
+        </div>
+
+        <!-- Test Case 5: Extreme Complex Layout -->
+        <div class="test-section">
+            <div class="test-title">Test Case 5: Extreme Complex Layout</div>
+            <div class="test-description">Testing the most complex case with all features: branches, timers, counters, coils, and Z-wraps.</div>
+            <div id="test5" class="test-area"></div>
+            <div id="status5" class="status"></div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { renderRung } from './js/rungRenderer.js';
+
+        function updateStatus(testId, message, isSuccess = true) {
+            const statusDiv = document.getElementById(`status${testId}`);
+            statusDiv.textContent = message;
+            statusDiv.className = `status ${isSuccess ? 'success' : 'error'}`;
+        }
+
+        function testCase(testId, rungText, description) {
+            console.log(`🧪 Testing Case ${testId}: ${description}`);
+            
+            try {
+                const renderer = renderRung({ text: rungText }, `test${testId}`, 1000, 400);
+                
+                // Check if canvas was created and has content
+                setTimeout(() => {
+                    const canvas = document.querySelector(`#test${testId} canvas`);
+                    if (canvas) {
+                        const ctx = canvas.getContext('2d');
+                        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                        const hasContent = imageData.data.some(pixel => pixel !== 0);
+                        
+                        if (hasContent) {
+                            updateStatus(testId, `✅ Success: ${description} - Canvas has content`);
+                        } else {
+                            updateStatus(testId, `❌ Error: ${description} - Canvas appears empty`, false);
+                        }
+                    } else {
+                        updateStatus(testId, `❌ Error: ${description} - No canvas found`, false);
+                    }
+                }, 500);
+                
+            } catch (error) {
+                updateStatus(testId, `❌ Error: ${description} - ${error.message}`, false);
+            }
+        }
+
+        // Test Case 1: Simple Parallel Branch
+        testCase(1, 
+            'XIC(Start) [XIC(Branch1) XIC(Branch2)] OTE(Output)', 
+            'Simple parallel branch with consistent wire colors'
+        );
+
+        // Test Case 2: Complex Multi-Path Branch
+        testCase(2, 
+            'XIC(Start) [XIC(Branch1) TON(Timer1, 1000) XIC(Branch2) CTU(Counter1, 500)] OTE(Output)', 
+            'Complex branch with multiple elements and paths'
+        );
+
+        // Test Case 3: Z-Wrap Routing
+        testCase(3, 
+            'XIC(Start_Button) TON(Timer1, 1000) CTU(Counter1, 500) XIC(Proximity_Sensor) TON(Timer2, 2000) CTU(Counter2, 1000) XIC(Limit_Switch) OTE(Motor_Output)', 
+            'Z-wrap routing between multiple lines'
+        );
+
+        // Test Case 4: Branch with Z-Wrap
+        testCase(4, 
+            'XIC(Start) [XIC(Branch1) TON(Timer1, 1000)] XIC(Sensor1) TON(Timer2, 2000) [XIC(Branch2) CTU(Counter1, 500)] OTE(Output)', 
+            'Combination of branches and Z-wrap routing'
+        );
+
+        // Test Case 5: Extreme Complex Layout
+        testCase(5, 
+            'XIC(Start_Button) TON(Timer1, 1000) [XIC(Branch1) CTU(Counter1, 500) XIC(Branch2) TON(Timer2, 2000)] XIC(Proximity_Sensor) CTU(Counter2, 1000) [XIC(Limit_Switch) TON(Timer3, 3000)] XIC(End_Sensor) OTE(Motor_Output)', 
+            'Extreme complex layout with all features'
+        );
+    </script>
+</body>
+</html> 

@@ -121,9 +121,8 @@ class LadderRenderer {
         const { width } = this.container.getBoundingClientRect();
         this.canvas.width = width;
 
-        // FIXED: Ensure canvas has proper dimensions before calculating rail positions
+        // Ensure canvas has proper dimensions before calculating rail positions
         if (this.canvas.width <= 0) {
-            console.warn('Canvas width is zero, using default width');
             this.canvas.width = 800;
         }
 
@@ -387,18 +386,16 @@ class LadderRenderer {
     }
 
     getRailPositions() {
-        // FIXED: Add debugging and ensure proper canvas width
+        // Ensure proper canvas width
         if (!this.canvas || this.canvas.width <= 0) {
-            console.warn('Canvas not properly initialized in getRailPositions');
             return { leftRailX: 50, rightRailX: 750 };
         }
         
         const leftRailX = RENDER_CONFIG.CANVAS_PADDING + RENDER_CONFIG.POWER_RAIL_WIDTH / 2;
         const rightRailX = this.canvas.width - RENDER_CONFIG.CANVAS_PADDING - RENDER_CONFIG.POWER_RAIL_WIDTH / 2;
         
-        // FIXED: Ensure rail positions are valid
+        // Ensure rail positions are valid
         if (rightRailX <= leftRailX) {
-            console.warn('Invalid rail positions, using defaults');
             return { leftRailX: 50, rightRailX: 750 };
         }
         
@@ -427,18 +424,7 @@ class LadderRenderer {
 
     // PASS 1: Wire drawing with Z-style wrapping and proper color coding
     drawWires(lines, leftRailX, rightRailX) {
-        // FIXED: Add debugging to wire drawing
-        console.log('🔌 drawWires called with:', { 
-            linesCount: lines.length, 
-            firstLineElements: lines[0]?.elements?.length || 0,
-            leftRailX, 
-            rightRailX 
-        });
-        
-        if (lines.length === 0 || lines[0].elements.length === 0) {
-            console.warn('No lines or elements to draw wires for');
-            return;
-        }
+        if (lines.length === 0 || lines[0].elements.length === 0) return;
 
         this.ctx.lineWidth = RENDER_CONFIG.WIRE_WIDTH;
         this.ctx.lineCap = 'butt';
