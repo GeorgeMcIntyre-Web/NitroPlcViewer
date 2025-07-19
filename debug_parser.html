@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Parser Debug Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .success {
+            background: #d4edda;
+            border-color: #c3e6cb;
+            color: #155724;
+        }
+        .error {
+            background: #f8d7da;
+            border-color: #f5c6cb;
+            color: #721c24;
+        }
+        .info {
+            background: #d1ecf1;
+            border-color: #bee5eb;
+            color: #0c5460;
+        }
+        .debug {
+            background: #f8f9fa;
+            border-color: #dee2e6;
+            color: #495057;
+        }
+        pre {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        .console-output {
+            background: #000;
+            color: #0f0;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: monospace;
+            max-height: 300px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 Parser Debug Test</h1>
+        <p>This page provides detailed debugging information for the L5X parser.</p>
+        
+        <div class="test-section info">
+            <h3>Debug Instructions</h3>
+            <p>1. Click "Run Debug Test" to test the parser</p>
+            <p>2. Check the browser console (F12) for detailed logs</p>
+            <p>3. View the console output below</p>
+            <p>4. Check the detailed results section</p>
+        </div>
+        
+        <button onclick="runDebugTest()">🔍 Run Debug Test</button>
+        <button onclick="clearDebug()">🗑️ Clear Debug</button>
+        <button onclick="openConsole()">📋 Open Console</button>
+        
+        <div class="test-section debug">
+            <h3>Console Output</h3>
+            <div id="consoleOutput" class="console-output">Ready to run debug test...</div>
+        </div>
+        
+        <div id="debugResults"></div>
+    </div>
+
+    <script type="module">
+        import { parseL5X } from './js/parser.js';
+        import { parseXMLSafely } from './js/utils.js';
+        
+        // Capture console output
+        const originalLog = console.log;
+        const originalWarn = console.warn;
+        const originalError = console.error;
+        
+        let consoleOutput = '';
+        
+        function captureConsole(type, ...args) {
+            const timestamp = new Date().toLocaleTimeString();
+            const message = args.map(arg => 
+                typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg)
+            ).join(' ');
+            consoleOutput += `[${timestamp}] ${type.toUpperCase()}: ${message}\n`;
+            
+            // Update the display
+            document.getElementById('consoleOutput').textContent = consoleOutput;
+            
+            // Also call original console methods
+            if (type === 'log') originalLog.apply(console, args);
+            if (type === 'warn') originalWarn.apply(console, args);
+            if (type === 'error') originalError.apply(console, args);
+        }
+        
+        console.log = (...args) => captureConsole('log', ...args);
+        console.warn = (...args) => captureConsole('warn', ...args);
+        console.error = (...args) => captureConsole('error', ...args);
+        
+        window.runDebugTest = async function() {
+            const resultsDiv = document.getElementById('debugResults');
+            const consoleDiv = document.getElementById('consoleOutput');
+            
+            // Clear previous results
+            resultsDiv.innerHTML = '';
+            consoleOutput = '';
+            consoleDiv.textContent = 'Starting debug test...\n';
+            
+            try {
+                console.log('=== DEBUG TEST STARTED ===');
+                
+                // Load the test file
+                console.log('Loading test file: test_real_structure.l5x');
+                const response = await fetch('test_real_structure.l5x');
+                if (!response.ok) {
+                    throw new Error(`Failed to load test file: ${response.status}`);
+                }
+                
+                const xmlText = await response.text();
+                console.log('Test file loaded successfully, size:', xmlText.length, 'characters');
+                
+                // Parse the XML
+                console.log('Parsing XML...');
+                const xmlDoc = parseXMLSafely(xmlText);
+                if (!xmlDoc) {
+                    throw new Error('Failed to parse XML');
+                }
+                console.log('XML parsed successfully');
+                
+                // Check XML structure
+                console.log('Checking XML structure...');
+                const controller = xmlDoc.querySelector('Controller');
+                console.log('Controller found:', !!controller);
+                
+                if (controller) {
+                    const tasks = controller.querySelectorAll('Tasks > Task');
+                    console.log('Tasks found in controller:', tasks.length);
+                    
+                    const programs = controller.querySelectorAll('Programs > Program');
+                    console.log('Programs found in controller:', programs.length);
+                    
+                    // Log all program names
+                    Array.from(programs).forEach((prog, index) => {
+                        const name = prog.getAttribute('Name');
+                        console.log(`Program ${index + 1}: ${name}`);
+                    });
+                }
+                
+                // Parse the L5X data
+                console.log('Parsing L5X data...');
+                const data = parseL5X(xmlDoc);
+                console.log('L5X data parsed successfully');
+                
+                // Display results
+                let linkedPrograms = 0;
+                let totalScheduledPrograms = 0;
+                
+                if (data.tasks && data.tasks.length > 0) {
+                    data.tasks.forEach(task => {
+                        if (task.programs) linkedPrograms += task.programs.length;
+                        if (task.scheduledPrograms) totalScheduledPrograms += task.scheduledPrograms.length;
+                    });
+                }
+                
+                resultsDiv.innerHTML = `
+                    <div class="test-section success">
+                        <h3>✅ Parse Results</h3>
+                        <p><strong>Tasks found:</strong> ${data.tasks ? data.tasks.length : 0}</p>
+                        <p><strong>Total Programs in XML:</strong> ${data.programs ? data.programs.length : 0}</p>
+                        <p><strong>Total Scheduled Programs:</strong> ${totalScheduledPrograms}</p>
+                        <p><strong>Successfully Linked Programs:</strong> ${linkedPrograms}</p>
+                        <p><strong>Unlinked Programs:</strong> ${totalScheduledPrograms - linkedPrograms} (external programs)</p>
+                    </div>
+                `;
+                
+                // Detailed task analysis
+                if (data.tasks && data.tasks.length > 0) {
+                    let taskDetails = '<div class="test-section info"><h3>📋 Task Details</h3>';
+                    
+                    data.tasks.forEach((task, index) => {
+                        taskDetails += `
+                            <div style="margin: 10px 0; padding: 10px; border: 1px solid #ccc; border-radius: 4px;">
+                                <h4>Task ${index + 1}: ${task.name}</h4>
+                                <p><strong>Type:</strong> ${task.type}</p>
+                                <p><strong>Priority:</strong> ${task.priority}</p>
+                                <p><strong>Programs:</strong> ${task.programs ? task.programs.length : 0}</p>
+                                <p><strong>Scheduled Programs:</strong> ${task.scheduledPrograms ? task.scheduledPrograms.length : 0}</p>
+                                
+                                ${task.programs && task.programs.length > 0 ? `
+                                    <p><strong>Program Details:</strong></p>
+                                    <ul>
+                                        ${task.programs.map(prog => `
+                                            <li>${prog.name} (${prog.type}) - Routines: ${prog.routines ? prog.routines.length : 0}</li>
+                                        `).join('')}
+                                    </ul>
+                                ` : '<p><em>No programs found</em></p>'}
+                                
+                                ${task.scheduledPrograms && task.scheduledPrograms.length > 0 ? `
+                                    <p><strong>Scheduled Program Names:</strong></p>
+                                    <ul>
+                                        ${task.scheduledPrograms.map(name => `<li>${name}</li>`).join('')}
+                                    </ul>
+                                ` : ''}
+                            </div>
+                        `;
+                    });
+                    
+                    taskDetails += '</div>';
+                    resultsDiv.innerHTML += taskDetails;
+                }
+                
+                console.log('=== DEBUG TEST COMPLETED ===');
+                
+            } catch (error) {
+                console.error('Debug test failed:', error);
+                resultsDiv.innerHTML = `
+                    <div class="test-section error">
+                        <h3>❌ Debug Test Failed</h3>
+                        <p><strong>Error:</strong> ${error.message}</p>
+                        <pre>${error.stack}</pre>
+                    </div>
+                `;
+            }
+        };
+        
+        window.clearDebug = function() {
+            document.getElementById('debugResults').innerHTML = '';
+            consoleOutput = '';
+            document.getElementById('consoleOutput').textContent = 'Ready to run debug test...';
+        };
+        
+        window.openConsole = function() {
+            // Try to open browser console
+            console.log('Opening browser console...');
+            alert('Please press F12 to open the browser console for detailed debugging information.');
+        };
+    </script>
+</body>
+</html> 

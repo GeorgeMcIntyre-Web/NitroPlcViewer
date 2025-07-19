@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tasks Debug Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .tree-panel {
+            width: 400px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background: white;
+            max-height: 600px;
+            overflow-y: auto;
+        }
+        .tree-node {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+        }
+        .tree-children {
+            list-style: none;
+            margin: 0;
+            padding-left: 20px;
+        }
+        .tree-children.collapsed {
+            display: none;
+        }
+        .tree-item {
+            padding: 8px 12px;
+            cursor: pointer;
+            border-radius: 4px;
+            margin: 2px 0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .tree-item:hover {
+            background: #f0f0f0;
+        }
+        .tree-item.selected {
+            background: #e3f2fd;
+            border: 1px solid #2196f3;
+        }
+        .tree-toggle {
+            cursor: pointer;
+            user-select: none;
+            font-weight: bold;
+            color: #666;
+        }
+        .tree-icon {
+            font-size: 16px;
+        }
+        .tree-text {
+            flex: 1;
+        }
+        .tree-meta {
+            color: #666;
+            font-size: 0.9em;
+        }
+        .debug-info {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 4px;
+            border-left: 4px solid #007bff;
+        }
+        .debug-info h3 {
+            margin-top: 0;
+            color: #007bff;
+        }
+        .debug-info pre {
+            background: #fff;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Tasks Debug Test</h1>
+        <p>This test verifies that tasks are being properly created and displayed in the tree structure.</p>
+        
+        <div class="tree-panel" id="treeContainer">
+            <!-- Tree will be rendered here -->
+        </div>
+        
+        <div class="debug-info">
+            <h3>Debug Information</h3>
+            <div id="debugOutput">
+                <p>Loading...</p>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { createTreeNode, addChildrenToNode, toggleNode } from './js/treeRenderer.js';
+        
+        // Mock data based on your console logs
+        const mockTasksData = {
+            tasks: [
+                {
+                    name: 'MainTask',
+                    type: 'CONTINUOUS',
+                    priority: '10',
+                    programs: [
+                        { name: 'MainProgram', type: 'Scheduled' },
+                        { name: 'C100_Safety_Diag', type: 'Scheduled' },
+                        { name: 'ShiftRegisters', type: 'Scheduled' },
+                        { name: 'S100FX1', type: 'Scheduled' },
+                        { name: 'S110FX1', type: 'Scheduled' },
+                        { name: 'S120FX1', type: 'Scheduled' },
+                        { name: 'S130FX1', type: 'Scheduled' },
+                        { name: 'S140N1', type: 'Scheduled' },
+                        { name: 'S150MN1', type: 'Scheduled' },
+                        { name: 'S100R03', type: 'Scheduled' },
+                        { name: 'S100R06', type: 'Scheduled' },
+                        { name: 'S110R03', type: 'Scheduled' },
+                        { name: 'S110R04', type: 'Scheduled' },
+                        { name: 'S120R02', type: 'Scheduled' },
+                        { name: 'S120R05', type: 'Scheduled' },
+                        { name: 'S120R08', type: 'Scheduled' },
+                        { name: 'S130R03', type: 'Scheduled' },
+                        { name: 'S130R07', type: 'Scheduled' },
+                        { name: 'S140R05', type: 'Scheduled' },
+                        { name: 'S150R07', type: 'Scheduled' },
+                        { name: 'S100VN1', type: 'Scheduled' },
+                        { name: 'C100_Network_Diag', type: 'Scheduled' },
+                        { name: 'C100_HMI_Comn', type: 'Scheduled' },
+                        { name: 'HMI1_ScreenDriver', type: 'Scheduled' },
+                        { name: 'HMI3_ScreenDriver', type: 'Scheduled' },
+                        { name: 'HMI4_ScreenDriver', type: 'Scheduled' },
+                        { name: 'HMI5_ScreenDriver', type: 'Scheduled' },
+                        { name: 'S100ODP1', type: 'Scheduled' },
+                        { name: 'S110ODP1', type: 'Scheduled' },
+                        { name: 'FIS', type: 'Scheduled' },
+                        { name: 'PC_Board', type: 'Scheduled' }
+                    ]
+                },
+                {
+                    name: 'SafetyTask',
+                    type: 'SAFETY',
+                    priority: '15',
+                    programs: [
+                        { name: 'C100_MappingInputs_Edit', type: 'Scheduled' },
+                        { name: 'C100_InputSafety', type: 'Scheduled' },
+                        { name: 'C100_CommonSafety_Edit', type: 'Scheduled' },
+                        { name: 'C100_OutputSafety_Edit', type: 'Scheduled' },
+                        { name: 'C100_OutputSafety', type: 'Scheduled' },
+                        { name: 'C100_MappingOutputs_Edit', type: 'Scheduled' }
+                    ]
+                }
+            ]
+        };
+
+        function renderTasksTest() {
+            const treeContainer = document.getElementById('treeContainer');
+            const debugOutput = document.getElementById('debugOutput');
+            
+            // Clear container
+            treeContainer.innerHTML = '';
+            
+            // Create controller node
+            const controllerNode = createTreeNode({
+                id: 'controller',
+                name: 'V801_OHAP_9B_C100_Dash',
+                type: 'controller',
+                icon: '🏭',
+                meta: '1756-L84ES v36.11',
+                children: []
+            });
+            
+            // Create tasks section
+            const tasksNode = createTreeNode({
+                id: 'tasks',
+                name: 'Tasks',
+                type: 'tasks-section',
+                icon: '⚙️',
+                meta: `${mockTasksData.tasks.length} tasks`,
+                children: []
+            });
+            
+            const tasksChildrenContainer = tasksNode.querySelector('.tree-children');
+            if (tasksChildrenContainer) {
+                mockTasksData.tasks.forEach((task, taskIndex) => {
+                    console.log('Creating task node for:', task.name, 'index:', taskIndex);
+                    
+                    const taskNode = createTreeNode({
+                        id: `task-${taskIndex}`,
+                        name: task.name,
+                        type: `task-${task.type?.toLowerCase() || 'continuous'}`,
+                        icon: getTaskIcon(task.type),
+                        meta: `${task.type || 'CONTINUOUS'} - Priority: ${task.priority || '10'}`,
+                        children: []
+                    });
+                    
+                    // Add programs as children of this task
+                    const taskChildrenContainer = taskNode.querySelector('.tree-children');
+                    if (taskChildrenContainer && task.programs && task.programs.length > 0) {
+                        console.log('Adding', task.programs.length, 'programs to task:', task.name);
+                        
+                        const programsNode = createTreeNode({
+                            id: `programs-${taskIndex}`,
+                            name: 'Programs',
+                            type: 'programs-section',
+                            icon: '📋',
+                            meta: `${task.programs.length} programs`,
+                            children: []
+                        });
+                        
+                        const programsChildrenContainer = programsNode.querySelector('.tree-children');
+                        if (programsChildrenContainer) {
+                            task.programs.forEach((program, programIndex) => {
+                                const programNode = createTreeNode({
+                                    id: `program-${taskIndex}-${programIndex}`,
+                                    name: program.name,
+                                    type: 'program',
+                                    icon: '📄',
+                                    meta: `Type: ${program.type || 'Normal'}`,
+                                    children: []
+                                });
+                                programsChildrenContainer.appendChild(programNode);
+                            });
+                        }
+                        taskChildrenContainer.appendChild(programsNode);
+                    }
+                    
+                    tasksChildrenContainer.appendChild(taskNode);
+                });
+            }
+            
+            // Add tasks to controller
+            addChildrenToNode(controllerNode, [tasksNode]);
+            
+            // Add controller to tree
+            treeContainer.appendChild(controllerNode);
+            
+            // Update debug output
+            debugOutput.innerHTML = `
+                <h4>Tasks Data:</h4>
+                <pre>${JSON.stringify(mockTasksData, null, 2)}</pre>
+                
+                <h4>Tree Structure:</h4>
+                <pre>${treeContainer.innerHTML}</pre>
+                
+                <h4>Tasks Node HTML:</h4>
+                <pre>${tasksNode.outerHTML}</pre>
+            `;
+            
+            // Auto-expand the tasks section for testing
+            setTimeout(() => {
+                const tasksItem = tasksNode.querySelector('.tree-item');
+                if (tasksItem) {
+                    const toggle = tasksItem.querySelector('.tree-toggle');
+                    if (toggle) {
+                        toggle.click();
+                    }
+                }
+            }, 100);
+        }
+        
+        function getTaskIcon(taskType) {
+            const type = taskType?.toLowerCase() || '';
+            if (type.includes('continuous')) return '🔄';
+            if (type.includes('periodic')) return '⏰';
+            if (type.includes('event')) return '⚡';
+            if (type.includes('safety')) return '🛡️';
+            return '⚙️';
+        }
+        
+        // Initialize the test
+        document.addEventListener('DOMContentLoaded', () => {
+            renderTasksTest();
+        });
+    </script>
+</body>
+</html> 

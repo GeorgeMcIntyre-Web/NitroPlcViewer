@@ -33,6 +33,8 @@ export function parseL5X(xmlDoc) {
 
         // Parse tasks with their nested programs
         const tasks = parseTasks(xmlDoc, getAttrs, getTextContent);
+        console.log('parseL5X: Parsed tasks:', tasks);
+        console.log('parseL5X: Tasks length:', tasks.length);
 
         // Extract all programs from tasks into a separate array
         const programs = [];
@@ -60,7 +62,7 @@ export function parseL5X(xmlDoc) {
         const ioConfiguration = parseIOConfiguration(xmlDoc, getAttrs, getTextContent);
 
         // Parse Safety Configuration
-        const safetyConfiguration = parseSafetyConfiguration(xmlDoc, getAttrs, getTextContent);
+        const safety = parseSafetyConfiguration(xmlDoc, getAttrs, getTextContent);
 
         // Parse Motion Groups
         const motionGroups = parseMotionGroups(xmlDoc, getAttrs, getTextContent);
@@ -68,7 +70,7 @@ export function parseL5X(xmlDoc) {
         // Parse Trends & Diagnostics
         const trendsAndDiagnostics = parseTrendsAndDiagnostics(xmlDoc, getAttrs, getTextContent);
 
-        return {
+        const result = {
             controller: controllerInfo,
             tasks: tasks,
             programs: programs,
@@ -76,10 +78,15 @@ export function parseL5X(xmlDoc) {
             dataTypes: dataTypes,
             addOnInstructions: addOnInstructions,
             ioConfiguration: ioConfiguration,
-            safetyConfiguration: safetyConfiguration,
+            safety: safety,
             motionGroups: motionGroups,
             trendsAndDiagnostics: trendsAndDiagnostics
         };
+        
+        console.log('parseL5X: Returning result with tasks:', result.tasks);
+        console.log('parseL5X: Result structure:', Object.keys(result));
+        
+        return result;
         
     } catch (error) {
         throw new Error(`L5X parsing error: ${error.message}`);
@@ -88,22 +95,143 @@ export function parseL5X(xmlDoc) {
 
 // Parse tasks with their nested programs
 function parseTasks(xmlDoc, getAttrs, getTextContent) {
-    return Array.from(xmlDoc.querySelectorAll('Tasks > Task')).map((task, index) => {
-        const taskInfo = getAttrs(task, ['Name', 'Type', 'Priority', 'Watchdog', 'Rate', 'Scheduled']);
-        if (!taskInfo.name) {
-            throw new Error(`Task ${index + 1} missing name`);
+    // First, find the Controller element to ensure proper context
+    const controller = xmlDoc.querySelector('Controller');
+    if (!controller) {
+        console.warn('No Controller element found, trying document-wide search');
+        // Fallback to document-wide search if no controller found
+        const taskElements = xmlDoc.querySelectorAll('Task');
+        console.log('Found', taskElements.length, 'task elements using document-wide search');
+        return Array.from(taskElements).map((task, index) => parseTaskElement(task, index, getAttrs, getTextContent, xmlDoc));
+    }
+    
+    // Find tasks within the controller context
+    const taskElements = controller.querySelectorAll('Tasks > Task');
+    console.log('Found', taskElements.length, 'task elements within Controller > Tasks');
+    
+    return Array.from(taskElements).map((task, index) => parseTaskElement(task, index, getAttrs, getTextContent, xmlDoc));
+}
+
+// Helper function to parse individual task elements
+function parseTaskElement(task, index, getAttrs, getTextContent, xmlDoc) {
+    
+    const taskInfo = getAttrs(task, ['Name', 'Type', 'Priority', 'Watchdog', 'Rate', 'Scheduled']);
+    if (!taskInfo.name) {
+        throw new Error(`Task ${index + 1} missing name`);
+    }
+    
+    // Parse scheduled programs first (this is the primary structure in most L5X files)
+    const scheduledProgramElements = task.querySelectorAll('ScheduledPrograms > ScheduledProgram');
+    console.log(`Found ${scheduledProgramElements.length} scheduled programs in task ${taskInfo.name}`);
+    
+    // Log the scheduled program names for debugging
+    Array.from(scheduledProgramElements).forEach((sp, index) => {
+        const name = sp.getAttribute('Name');
+        console.log(`  ScheduledProgram ${index + 1}: ${name}`);
+    });
+    
+    // Also check for direct programs (for backward compatibility)
+    const directProgramElements = task.querySelectorAll('Programs > Program');
+    console.log(`Found ${directProgramElements.length} direct programs in task ${taskInfo.name}`);
+    
+    // Combine both types of program references
+    const allProgramRefs = [];
+    
+    // Add scheduled programs
+    Array.from(scheduledProgramElements).forEach(sp => {
+        const programName = sanitizeInput(sp.getAttribute('Name') || '');
+        if (programName) {
+            allProgramRefs.push({
+                name: programName,
+                type: 'scheduled',
+                source: 'ScheduledPrograms'
+            });
+        }
+    });
+    
+    // Add direct programs
+    Array.from(directProgramElements).forEach(program => {
+        const programInfo = getAttrs(program, ['Name', 'Type', 'TestEdits', 'MainRoutineName', 'UseAsFolder']);
+        if (programInfo.name) {
+            allProgramRefs.push({
+                name: programInfo.name,
+                type: 'direct',
+                source: 'Programs',
+                info: programInfo
+            });
+        }
+    });
+    
+    // Now try to find the actual program definitions in the document
+    taskInfo.programs = [];
+    
+    // Log all available programs in the document for debugging
+    const allAvailablePrograms = xmlDoc.querySelectorAll('Program');
+    console.log(`Total programs available in document: ${allAvailablePrograms.length}`);
+    Array.from(allAvailablePrograms).forEach((prog, index) => {
+        const name = prog.getAttribute('Name');
+        console.log(`  Available Program ${index + 1}: ${name}`);
+    });
+    
+    allProgramRefs.forEach((programRef, programIndex) => {
+        // Try to find the actual program definition in the document
+        let programDefinition = null;
+        
+        // Look for program definition in various possible locations
+        const possibleSelectors = [
+            `Programs > Program[Name="${programRef.name}"]`,
+            `Program[Name="${programRef.name}"]`,
+            `*[Name="${programRef.name}"]`
+        ];
+        
+        for (const selector of possibleSelectors) {
+            try {
+                programDefinition = xmlDoc.querySelector(selector);
+                if (programDefinition) {
+                    console.log(`Found program definition for ${programRef.name} using selector: ${selector}`);
+                    break;
+                }
+            } catch (error) {
+                console.warn(`Selector failed for ${programRef.name}: ${selector}`, error);
+            }
         }
         
-        // Parse programs WITHIN this task (not separate)
-        const programElements = task.querySelectorAll('Programs > Program');
-        taskInfo.programs = Array.from(programElements).map((program, programIndex) => {
-            const programInfo = getAttrs(program, ['Name', 'Type', 'TestEdits', 'MainRoutineName', 'UseAsFolder']);
-            if (!programInfo.name) {
-                throw new Error(`Program ${programIndex + 1} in task ${taskInfo.name} missing name`);
+        // If still not found, try a more manual approach
+        if (!programDefinition) {
+            console.log(`Trying manual search for program: ${programRef.name}`);
+            const allPrograms = xmlDoc.querySelectorAll('Program');
+            for (const prog of allPrograms) {
+                const progName = prog.getAttribute('Name');
+                if (progName === programRef.name) {
+                    programDefinition = prog;
+                    console.log(`Found program definition for ${programRef.name} using manual search`);
+                    break;
+                }
             }
+        }
+        
+        // Log the result
+        if (programDefinition) {
+            console.log(`✅ Successfully linked program: ${programRef.name}`);
+        } else {
+            console.log(`⚠️ No definition found for scheduled program: ${programRef.name} (this is normal for external programs)`);
+        }
+        
+        // Create program info
+        const programInfo = {
+            name: programRef.name,
+            type: programRef.type === 'scheduled' ? 'Scheduled' : (programRef.info?.type || 'Normal'),
+            source: programRef.source
+        };
+        
+        // If we found the actual program definition, parse its details
+        if (programDefinition) {
+            // Parse program attributes
+            const attrs = getAttrs(programDefinition, ['Name', 'Type', 'TestEdits', 'MainRoutineName', 'UseAsFolder']);
+            Object.assign(programInfo, attrs);
             
             // Parse program tags
-            programInfo.tags = Array.from(program.querySelectorAll('Tags > Tag')).map(tag => {
+            programInfo.tags = Array.from(programDefinition.querySelectorAll('Tags > Tag')).map(tag => {
                 const tagInfo = getAttrs(tag, ['Name', 'TagType', 'DataType', 'Usage', 'Constant', 'ExternalAccess']);
                 if (!tagInfo.name) {
                     throw new Error('Program tag missing name');
@@ -112,7 +240,7 @@ function parseTasks(xmlDoc, getAttrs, getTextContent) {
             });
             
             // Parse program parameters
-            programInfo.parameters = Array.from(program.querySelectorAll('Parameters > Parameter')).map(param => {
+            programInfo.parameters = Array.from(programDefinition.querySelectorAll('Parameters > Parameter')).map(param => {
                 const paramInfo = getAttrs(param, ['Name', 'DataType', 'Required', 'ExternalAccess']);
                 if (!paramInfo.name) {
                     throw new Error('Program parameter missing name');
@@ -121,27 +249,33 @@ function parseTasks(xmlDoc, getAttrs, getTextContent) {
             });
             
             // Parse program routines with enhanced content
-            programInfo.routines = parseRoutines(program, getAttrs, getTextContent);
-            
-            return programInfo;
-        });
+            programInfo.routines = parseRoutines(programDefinition, getAttrs, getTextContent);
+        } else {
+            // If no definition found, create a minimal program info
+            console.warn(`No program definition found for ${programRef.name}, creating minimal info`);
+            programInfo.tags = [];
+            programInfo.parameters = [];
+            programInfo.routines = [];
+        }
         
-        // Parse scheduled programs (for backward compatibility)
-        taskInfo.scheduledPrograms = Array.from(task.querySelectorAll('ScheduledPrograms > ScheduledProgram')).map(sp => 
-            sanitizeInput(sp.getAttribute('Name') || '')
-        );
-        
-        // Parse task properties
-        taskInfo.properties = {
-            description: getTextContent(task, 'Description'),
-            rate: taskInfo.rate,
-            priority: taskInfo.priority,
-            watchdog: taskInfo.watchdog === 'true',
-            scheduled: taskInfo.scheduled === 'true'
-        };
-        
-        return taskInfo;
+        taskInfo.programs.push(programInfo);
     });
+    
+    // Parse scheduled programs (for backward compatibility)
+    taskInfo.scheduledPrograms = Array.from(task.querySelectorAll('ScheduledPrograms > ScheduledProgram')).map(sp => 
+        sanitizeInput(sp.getAttribute('Name') || '')
+    );
+    
+    // Parse task properties
+    taskInfo.properties = {
+        description: getTextContent(task, 'Description'),
+        rate: taskInfo.rate,
+        priority: taskInfo.priority,
+        watchdog: taskInfo.watchdog === 'true',
+        scheduled: taskInfo.scheduled === 'true'
+    };
+    
+    return taskInfo;
 }
 
 

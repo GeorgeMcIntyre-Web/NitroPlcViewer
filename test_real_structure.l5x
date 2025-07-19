@@ -1,0 +1,143 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<RSLogix5000Content SchemaRevision="1.0" SoftwareRevision="36.00" TargetName="V801_OHAP_9B_C100_Dash" TargetType="Controller" ExportDate="Fri Jul 11 11:37:17 2025">
+  <Controller Use="Target" Name="V801_OHAP_9B_C100_Dash" ProcessorType="1756-L84ES" MajorRev="36" MinorRev="11">
+    <Description>ProjectSN</Description>
+    <RedundancyInfo/>
+    <Security/>
+    <SafetyInfo SafetySignature="123456789" SafetySignatureTimestamp="06/30/2025, 09:57:27.226 AM"/>
+    
+    <!-- Programs section with actual program definitions -->
+    <Programs Use="Context">
+      <Program Name="MainProgram" Type="Normal" TestEdits="false" MainRoutineName="MainRoutine" UseAsFolder="false">
+        <Routines Use="Context">
+          <Routine Name="MainRoutine" Type="RLL" TestEdits="false">
+            <Description>Main routine for the program</Description>
+            <RLLContent Use="Context">
+              <Rung Number="0" Type="N">
+                <Text>XIC(Tag1)OTE(Tag2)</Text>
+                <Comment>Simple rung logic</Comment>
+              </Rung>
+            </RLLContent>
+          </Routine>
+        </Routines>
+        <Tags Use="Context">
+          <Tag Name="Tag1" TagType="Base" DataType="BOOL" Usage="Input" Constant="false" ExternalAccess="Read/Write"/>
+          <Tag Name="Tag2" TagType="Base" DataType="BOOL" Usage="Output" Constant="false" ExternalAccess="Read/Write"/>
+        </Tags>
+      </Program>
+      
+      <Program Name="C100_Safety_Diag" Type="Safety" TestEdits="false" MainRoutineName="SafetyRoutine" UseAsFolder="false">
+        <Routines Use="Context">
+          <Routine Name="SafetyRoutine" Type="RLL" TestEdits="false">
+            <Description>Safety routine</Description>
+            <RLLContent Use="Context">
+              <Rung Number="0" Type="N">
+                <Text>XIC(SafetyInput)OTE(SafetyOutput)</Text>
+                <Comment>Safety logic</Comment>
+              </Rung>
+            </RLLContent>
+          </Routine>
+        </Routines>
+        <Tags Use="Context">
+          <Tag Name="SafetyInput" TagType="Base" DataType="BOOL" Usage="Input" Constant="false" ExternalAccess="Read/Write"/>
+          <Tag Name="SafetyOutput" TagType="Base" DataType="BOOL" Usage="Output" Constant="false" ExternalAccess="Read/Write"/>
+        </Tags>
+      </Program>
+      
+      <Program Name="ShiftRegisters" Type="Normal" TestEdits="false" MainRoutineName="ShiftRoutine" UseAsFolder="false">
+        <Routines Use="Context">
+          <Routine Name="ShiftRoutine" Type="RLL" TestEdits="false">
+            <Description>Shift register routine</Description>
+            <RLLContent Use="Context">
+              <Rung Number="0" Type="N">
+                <Text>XIC(ShiftInput)BSL(ShiftArray,1)</Text>
+                <Comment>Shift register logic</Comment>
+              </Rung>
+            </RLLContent>
+          </Routine>
+        </Routines>
+        <Tags Use="Context">
+          <Tag Name="ShiftInput" TagType="Base" DataType="BOOL" Usage="Input" Constant="false" ExternalAccess="Read/Write"/>
+          <Tag Name="ShiftArray" TagType="Base" DataType="DINT" Usage="Input" Constant="false" ExternalAccess="Read/Write"/>
+        </Tags>
+      </Program>
+      
+      <Program Name="C100_MappingInputs_Edit" Type="Safety" TestEdits="false" MainRoutineName="MappingRoutine" UseAsFolder="false">
+        <Routines Use="Context">
+          <Routine Name="MappingRoutine" Type="RLL" TestEdits="false">
+            <Description>Input mapping routine</Description>
+            <RLLContent Use="Context">
+              <Rung Number="0" Type="N">
+                <Text>XIC(Input1)OTE(MappedInput1)</Text>
+                <Comment>Input mapping logic</Comment>
+              </Rung>
+            </RLLContent>
+          </Routine>
+        </Routines>
+        <Tags Use="Context">
+          <Tag Name="Input1" TagType="Base" DataType="BOOL" Usage="Input" Constant="false" ExternalAccess="Read/Write"/>
+          <Tag Name="MappedInput1" TagType="Base" DataType="BOOL" Usage="Output" Constant="false" ExternalAccess="Read/Write"/>
+        </Tags>
+      </Program>
+    </Programs>
+    
+    <!-- Tasks section with ScheduledPrograms -->
+    <Tasks Use="Context">
+      <Task Name="MainTask" Type="CONTINUOUS" Priority="10" Watchdog="500" DisableUpdateOutputs="false" InhibitTask="false" Class="Standard">
+        <ScheduledPrograms>
+          <ScheduledProgram Name="MainProgram"/>
+          <ScheduledProgram Name="C100_Safety_Diag"/>
+          <ScheduledProgram Name="ShiftRegisters"/>
+          <ScheduledProgram Name="S100FX1"/>
+          <ScheduledProgram Name="S110FX1"/>
+          <ScheduledProgram Name="S120FX1"/>
+          <ScheduledProgram Name="S130FX1"/>
+          <ScheduledProgram Name="S140N1"/>
+          <ScheduledProgram Name="S150MN1"/>
+          <ScheduledProgram Name="S100R03"/>
+          <ScheduledProgram Name="S100R06"/>
+          <ScheduledProgram Name="S110R03"/>
+          <ScheduledProgram Name="S110R04"/>
+          <ScheduledProgram Name="S120R02"/>
+          <ScheduledProgram Name="S120R05"/>
+          <ScheduledProgram Name="S120R0s"/>
+          <ScheduledProgram Name="S130803"/>
+          <ScheduledProgram Name="S130R07"/>
+          <ScheduledProgram Name="S140805"/>
+          <ScheduledProgram Name="S150R07"/>
+          <ScheduledProgram Name="S1ee8VN1"/>
+          <ScheduledProgram Name="C100_Network_Diag"/>
+          <ScheduledProgram Name="C100_HMI_Comn"/>
+          <ScheduledProgram Name="HMI1_ScreenDriver"/>
+          <ScheduledProgram Name="HMI3_ScreenDriver"/>
+          <ScheduledProgram Name="HMI4_ScreenDriver"/>
+          <ScheduledProgram Name="HHIS_ScreenDriver"/>
+          <ScheduledProgram Name="S1000DP1"/>
+          <ScheduledProgram Name="S11000P1"/>
+          <ScheduledProgram Name="FIS"/>
+          <ScheduledProgram Name="PC_Board"/>
+        </ScheduledPrograms>
+      </Task>
+      
+      <Task Name="SafetyTask" Type="PERIODIC" Rate="50" Priority="1" Watchdog="22" DisableUpdateOutputs="false" InhibitTask="false" Class="Safety" SafetySignature="987654321" SafetySignatureTimestamp="06/28/2025, 08:37:18.036 AM">
+        <ScheduledPrograms>
+          <ScheduledProgram Name="C100_MappingInputs_Edit"/>
+          <ScheduledProgram Name="C100_InputSafety"/>
+          <ScheduledProgram Name="C100_CommonSafety_Edit"/>
+          <ScheduledProgram Name="C100_OutputSafety_Edit"/>
+          <ScheduledProgram Name="C100_OutputSafety"/>
+          <ScheduledProgram Name="C100_MappingOutputs_Edit"/>
+        </ScheduledPrograms>
+      </Task>
+    </Tasks>
+    
+    <Tags Use="Context">
+      <Tag Name="ControllerTag1" TagType="Base" DataType="DINT" Usage="Input" Constant="false" ExternalAccess="Read/Write">
+        <Value>0</Value>
+      </Tag>
+      <Tag Name="ControllerTag2" TagType="Base" DataType="REAL" Usage="Output" Constant="false" ExternalAccess="Read/Write">
+        <Value>0.0</Value>
+      </Tag>
+    </Tags>
+  </Controller>
+</RSLogix5000Content> 

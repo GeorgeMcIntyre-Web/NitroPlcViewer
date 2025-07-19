@@ -104,6 +104,8 @@ export function getNodeIcon(nodeType, subType = '') {
 // Create tree node with security validation
 export function createTreeNode({ id, name, type, icon, meta, children = [] }) {
     try {
+        console.log('createTreeNode called with:', { id, name, type, icon, meta, children });
+        
         // Validate inputs
         if (!id || !name || !type) {
             throw new Error('Invalid tree node parameters');
@@ -129,8 +131,10 @@ export function createTreeNode({ id, name, type, icon, meta, children = [] }) {
         item.setAttribute('role', 'treeitem');
         item.setAttribute('aria-label', `${sanitizedName} ${sanitizedMeta}`);
 
-        // Create toggle if has children
-        if (children && children.length > 0) {
+        // Create toggle if children parameter is provided (even empty array means we want expandable)
+        console.log('Checking children for toggle:', children, 'children !== undefined:', children !== undefined);
+        if (children !== undefined) {
+            console.log('Creating toggle for node:', sanitizedName);
             const toggle = document.createElement('span');
             toggle.className = 'tree-toggle';
             toggle.textContent = '▶';
@@ -169,12 +173,15 @@ export function createTreeNode({ id, name, type, icon, meta, children = [] }) {
 
         li.appendChild(item);
 
-        // Add children if any
-        if (children && children.length > 0) {
+        // Add children container if children parameter is provided (even if empty)
+        console.log('Checking children for container:', children, 'children !== undefined:', children !== undefined);
+        if (children !== undefined) {
+            console.log('Creating children container for node:', sanitizedName);
             const childrenContainer = document.createElement('ul');
             childrenContainer.className = 'tree-children collapsed';
             childrenContainer.setAttribute('role', 'group');
             
+            // Add any existing children
             children.forEach(child => {
                 childrenContainer.appendChild(child);
             });

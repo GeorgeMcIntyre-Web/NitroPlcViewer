@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<RSLogix5000Content SchemaRevision="1.0" SoftwareRevision="20.01" TargetName="TestController" TargetType="Program" ContainsContext="true" Owner="Rockwell" ExportDate="Wed Jan 01 00:00:00 2020" ExportOptions="References NoRawData L5KData DecoratedData Context">
+  <Controller Use="Context" Name="TestController" ProcessorType="Logix5580" MajorRev="20" MinorRev="11" TimeSlice="20" ShareUnusedTimeSlice="true">
+    <Tasks Use="Context">
+      <Task Name="MainTask" Type="CONTINUOUS" Priority="10" Watchdog="true" Rate="100">
+        <Programs Use="Context">
+          <Program Name="MainProgram" Type="Normal" TestEdits="false" MainRoutineName="MainRoutine" UseAsFolder="false">
+            <Routines Use="Context">
+              <Routine Name="MainRoutine" Type="RLL" TestEdits="false">
+                <Description>Main routine for the program</Description>
+                <RLLContent Use="Context">
+                  <Rung Number="0" Type="N">
+                    <Text>XIC(Tag1)OTE(Tag2)</Text>
+                    <Comment>Simple rung logic</Comment>
+                  </Rung>
+                </RLLContent>
+              </Routine>
+            </Routines>
+            <Tags Use="Context">
+              <Tag Name="Tag1" TagType="Base" DataType="BOOL" Usage="Input" Constant="false" ExternalAccess="Read/Write"/>
+              <Tag Name="Tag2" TagType="Base" DataType="BOOL" Usage="Output" Constant="false" ExternalAccess="Read/Write"/>
+            </Tags>
+          </Program>
+        </Programs>
+      </Task>
+      <Task Name="SafetyTask" Type="PERIODIC" Priority="5" Watchdog="true" Rate="50">
+        <Programs Use="Context">
+          <Program Name="SafetyProgram" Type="Safety" TestEdits="false" MainRoutineName="SafetyRoutine" UseAsFolder="false">
+            <Routines Use="Context">
+              <Routine Name="SafetyRoutine" Type="RLL" TestEdits="false">
+                <Description>Safety routine</Description>
+                <RLLContent Use="Context">
+                  <Rung Number="0" Type="N">
+                    <Text>XIC(SafetyInput)OTE(SafetyOutput)</Text>
+                    <Comment>Safety logic</Comment>
+                  </Rung>
+                </RLLContent>
+              </Routine>
+            </Routines>
+            <Tags Use="Context">
+              <Tag Name="SafetyInput" TagType="Base" DataType="BOOL" Usage="Input" Constant="false" ExternalAccess="Read/Write"/>
+              <Tag Name="SafetyOutput" TagType="Base" DataType="BOOL" Usage="Output" Constant="false" ExternalAccess="Read/Write"/>
+            </Tags>
+          </Program>
+        </Programs>
+      </Task>
+    </Tasks>
+    <Tags Use="Context">
+      <Tag Name="ControllerTag1" TagType="Base" DataType="DINT" Usage="Input" Constant="false" ExternalAccess="Read/Write">
+        <Value>0</Value>
+      </Tag>
+      <Tag Name="ControllerTag2" TagType="Base" DataType="REAL" Usage="Output" Constant="false" ExternalAccess="Read/Write">
+        <Value>0.0</Value>
+      </Tag>
+    </Tags>
+  </Controller>
+</RSLogix5000Content> 

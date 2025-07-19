@@ -19,7 +19,8 @@ import {
     addChildrenToNode, 
     expandAll, 
     collapseAll, 
-    filterTree 
+    filterTree,
+    toggleNode
 } from './treeRenderer.js';
 import { 
     showNodeContent, 
@@ -254,15 +255,20 @@ function renderProjectTree(data) {
 
         // Add to tree content
         if (elements.treeContent) {
+            console.log('Adding controller node to tree content');
             elements.treeContent.appendChild(controllerNode);
+            console.log('Controller node added, tree content children count:', elements.treeContent.children.length);
             
             // Expand the controller node by default
             setTimeout(() => {
                 const controllerItem = controllerNode.querySelector('.tree-item');
                 if (controllerItem) {
+                    console.log('Expanding controller node');
                     toggleNode(controllerItem);
                 }
             }, 50);
+        } else {
+            console.error('Tree content element not found!');
         }
 
         // Show tree panel and resizer
@@ -434,22 +440,55 @@ function getTagIcon(dataType) {
 
 // Placeholder functions for other sections (to be implemented)
 function renderTasks(controllerNode, data) {
+    console.log('renderTasks called with data:', data);
+    console.log('data.tasks:', data.tasks);
+    console.log('data.tasks length:', data.tasks ? data.tasks.length : 'undefined');
+    
     // Add Tasks section
     if (data.tasks && data.tasks.length > 0) {
         console.log('Creating Tasks section with', data.tasks.length, 'tasks');
         console.log('Tasks data:', data.tasks);
         
+        console.log('Creating tasks node with children: []');
         const tasksNode = createTreeNode({
             id: 'tasks',
             name: 'Tasks',
             type: 'tasks-section',
             icon: '⚙️',
-            meta: `${data.tasks.length} tasks`
+            meta: `${data.tasks.length} tasks`,
+            children: [] // Force creation of children container
         });
-        const tasksChildrenContainer = tasksNode.querySelector('.tree-children');
+        console.log('Tasks node created:', tasksNode);
+        
+        // Force create children container if it doesn't exist
+        let tasksChildrenContainer = tasksNode.querySelector('.tree-children');
+        if (!tasksChildrenContainer) {
+            console.log('Creating children container manually for tasks node');
+            tasksChildrenContainer = document.createElement('ul');
+            tasksChildrenContainer.className = 'tree-children collapsed';
+            tasksChildrenContainer.setAttribute('role', 'group');
+            tasksNode.appendChild(tasksChildrenContainer);
+            
+            // Add toggle button if it doesn't exist
+            const tasksItem = tasksNode.querySelector('.tree-item');
+            if (tasksItem && !tasksItem.querySelector('.tree-toggle')) {
+                const toggle = document.createElement('span');
+                toggle.className = 'tree-toggle';
+                toggle.textContent = '▶';
+                toggle.setAttribute('aria-label', 'Expand');
+                toggle.onclick = (e) => {
+                    e.stopPropagation();
+                    toggleNode(tasksItem);
+                };
+                tasksItem.insertBefore(toggle, tasksItem.firstChild);
+            }
+        }
+        
         console.log('Tasks children container:', tasksChildrenContainer);
+        console.log('Tasks node HTML:', tasksNode.outerHTML);
         
         if (tasksChildrenContainer) {
+            console.log('Tasks children container found, adding', data.tasks.length, 'tasks');
             data.tasks.forEach((task, taskIndex) => {
                 console.log('Creating task node for:', task.name, 'index:', taskIndex);
                 const taskNode = createTreeNode({
@@ -457,11 +496,35 @@ function renderTasks(controllerNode, data) {
                     name: task.name,
                     type: `task-${task.type?.toLowerCase() || 'continuous'}`,
                     icon: getTaskIcon(task.type),
-                    meta: `${task.type || 'CONTINUOUS'} - Priority: ${task.priority || '10'}`
+                    meta: `${task.type || 'CONTINUOUS'} - Priority: ${task.priority || '10'}`,
+                    children: [] // Force creation of children container
                 });
                 
+                // Force create children container if it doesn't exist
+                let taskChildrenContainer = taskNode.querySelector('.tree-children');
+                if (!taskChildrenContainer) {
+                    console.log('Creating children container manually for task node:', task.name);
+                    taskChildrenContainer = document.createElement('ul');
+                    taskChildrenContainer.className = 'tree-children collapsed';
+                    taskChildrenContainer.setAttribute('role', 'group');
+                    taskNode.appendChild(taskChildrenContainer);
+                    
+                    // Add toggle button if it doesn't exist
+                    const taskItem = taskNode.querySelector('.tree-item');
+                    if (taskItem && !taskItem.querySelector('.tree-toggle')) {
+                        const toggle = document.createElement('span');
+                        toggle.className = 'tree-toggle';
+                        toggle.textContent = '▶';
+                        toggle.setAttribute('aria-label', 'Expand');
+                        toggle.onclick = (e) => {
+                            e.stopPropagation();
+                            toggleNode(taskItem);
+                        };
+                        taskItem.insertBefore(toggle, taskItem.firstChild);
+                    }
+                }
+                
                 // Add programs as children of this task
-                const taskChildrenContainer = taskNode.querySelector('.tree-children');
                 if (taskChildrenContainer && task.programs && task.programs.length > 0) {
                     console.log('Adding', task.programs.length, 'programs to task:', task.name);
                     const programsNode = createTreeNode({
@@ -469,10 +532,33 @@ function renderTasks(controllerNode, data) {
                         name: 'Programs',
                         type: 'programs-section',
                         icon: '📋',
-                        meta: `${task.programs.length} programs`
+                        meta: `${task.programs.length} programs`,
+                        children: [] // Force creation of children container
                     });
                     
-                    const programsChildrenContainer = programsNode.querySelector('.tree-children');
+                    // Force create children container if it doesn't exist
+                    let programsChildrenContainer = programsNode.querySelector('.tree-children');
+                    if (!programsChildrenContainer) {
+                        console.log('Creating children container manually for programs node');
+                        programsChildrenContainer = document.createElement('ul');
+                        programsChildrenContainer.className = 'tree-children collapsed';
+                        programsChildrenContainer.setAttribute('role', 'group');
+                        programsNode.appendChild(programsChildrenContainer);
+                        
+                        // Add toggle button if it doesn't exist
+                        const programsItem = programsNode.querySelector('.tree-item');
+                        if (programsItem && !programsItem.querySelector('.tree-toggle')) {
+                            const toggle = document.createElement('span');
+                            toggle.className = 'tree-toggle';
+                            toggle.textContent = '▶';
+                            toggle.setAttribute('aria-label', 'Expand');
+                            toggle.onclick = (e) => {
+                                e.stopPropagation();
+                                toggleNode(programsItem);
+                            };
+                            programsItem.insertBefore(toggle, programsItem.firstChild);
+                        }
+                    }
                     if (programsChildrenContainer) {
                         task.programs.forEach((program, programIndex) => {
                             const programNode = createTreeNode({
@@ -480,21 +566,68 @@ function renderTasks(controllerNode, data) {
                                 name: program.name,
                                 type: 'program',
                                 icon: '📄',
-                                meta: `Type: ${program.type || 'Normal'}`
+                                meta: `Type: ${program.type || 'Normal'}`,
+                                children: [] // Force creation of children container
                             });
                             
+                            // Force create children container if it doesn't exist
+                            let programChildrenContainer = programNode.querySelector('.tree-children');
+                            if (!programChildrenContainer) {
+                                console.log('Creating children container manually for program node:', program.name);
+                                programChildrenContainer = document.createElement('ul');
+                                programChildrenContainer.className = 'tree-children collapsed';
+                                programChildrenContainer.setAttribute('role', 'group');
+                                programNode.appendChild(programChildrenContainer);
+                                
+                                // Add toggle button if it doesn't exist
+                                const programItem = programNode.querySelector('.tree-item');
+                                if (programItem && !programItem.querySelector('.tree-toggle')) {
+                                    const toggle = document.createElement('span');
+                                    toggle.className = 'tree-toggle';
+                                    toggle.textContent = '▶';
+                                    toggle.setAttribute('aria-label', 'Expand');
+                                    toggle.onclick = (e) => {
+                                        e.stopPropagation();
+                                        toggleNode(programItem);
+                                    };
+                                    programItem.insertBefore(toggle, programItem.firstChild);
+                                }
+                            }
+                            
                             // Add routines to program
-                            const programChildrenContainer = programNode.querySelector('.tree-children');
                             if (programChildrenContainer && program.routines && program.routines.length > 0) {
                                 const routinesNode = createTreeNode({
                                     id: `routines-${taskIndex}-${programIndex}`,
                                     name: 'Routines',
                                     type: 'routines-section',
                                     icon: '📝',
-                                    meta: `${program.routines.length} routines`
+                                    meta: `${program.routines.length} routines`,
+                                    children: [] // Force creation of children container
                                 });
                                 
-                                const routinesChildrenContainer = routinesNode.querySelector('.tree-children');
+                                // Force create children container if it doesn't exist
+                                let routinesChildrenContainer = routinesNode.querySelector('.tree-children');
+                                if (!routinesChildrenContainer) {
+                                    console.log('Creating children container manually for routines node');
+                                    routinesChildrenContainer = document.createElement('ul');
+                                    routinesChildrenContainer.className = 'tree-children collapsed';
+                                    routinesChildrenContainer.setAttribute('role', 'group');
+                                    routinesNode.appendChild(routinesChildrenContainer);
+                                    
+                                    // Add toggle button if it doesn't exist
+                                    const routinesItem = routinesNode.querySelector('.tree-item');
+                                    if (routinesItem && !routinesItem.querySelector('.tree-toggle')) {
+                                        const toggle = document.createElement('span');
+                                        toggle.className = 'tree-toggle';
+                                        toggle.textContent = '▶';
+                                        toggle.setAttribute('aria-label', 'Expand');
+                                        toggle.onclick = (e) => {
+                                            e.stopPropagation();
+                                            toggleNode(routinesItem);
+                                        };
+                                        routinesItem.insertBefore(toggle, routinesItem.firstChild);
+                                    }
+                                }
                                 if (routinesChildrenContainer) {
                                     program.routines.forEach((routine, routineIndex) => {
                                         const routineNode = createTreeNode({
@@ -517,10 +650,33 @@ function renderTasks(controllerNode, data) {
                                     name: 'Tags',
                                     type: 'program-tags-section',
                                     icon: '🏷️',
-                                    meta: `${program.tags.length} tags`
+                                    meta: `${program.tags.length} tags`,
+                                    children: [] // Force creation of children container
                                 });
                                 
-                                const programTagsChildrenContainer = programTagsNode.querySelector('.tree-children');
+                                // Force create children container if it doesn't exist
+                                let programTagsChildrenContainer = programTagsNode.querySelector('.tree-children');
+                                if (!programTagsChildrenContainer) {
+                                    console.log('Creating children container manually for program tags node');
+                                    programTagsChildrenContainer = document.createElement('ul');
+                                    programTagsChildrenContainer.className = 'tree-children collapsed';
+                                    programTagsChildrenContainer.setAttribute('role', 'group');
+                                    programTagsNode.appendChild(programTagsChildrenContainer);
+                                    
+                                    // Add toggle button if it doesn't exist
+                                    const programTagsItem = programTagsNode.querySelector('.tree-item');
+                                    if (programTagsItem && !programTagsItem.querySelector('.tree-toggle')) {
+                                        const toggle = document.createElement('span');
+                                        toggle.className = 'tree-toggle';
+                                        toggle.textContent = '▶';
+                                        toggle.setAttribute('aria-label', 'Expand');
+                                        toggle.onclick = (e) => {
+                                            e.stopPropagation();
+                                            toggleNode(programTagsItem);
+                                        };
+                                        programTagsItem.insertBefore(toggle, programTagsItem.firstChild);
+                                    }
+                                }
                                 if (programTagsChildrenContainer) {
                                     program.tags.forEach((tag, tagIndex) => {
                                         const tagNode = createTreeNode({
@@ -544,6 +700,7 @@ function renderTasks(controllerNode, data) {
                 
                 console.log('Appending task node to tasks children container');
                 tasksChildrenContainer.appendChild(taskNode);
+                console.log('Task node appended, children count:', tasksChildrenContainer.children.length);
             });
             
             // Ensure the Tasks section has a toggle button since it now has children
@@ -583,6 +740,18 @@ function renderTasks(controllerNode, data) {
         }
         console.log('Adding tasks node to controller');
         addChildrenToNode(controllerNode, [tasksNode]);
+        
+        // Auto-expand the tasks section to show the tasks
+        setTimeout(() => {
+            const tasksItem = tasksNode.querySelector('.tree-item');
+            if (tasksItem) {
+                const toggle = tasksItem.querySelector('.tree-toggle');
+                if (toggle) {
+                    console.log('Auto-expanding tasks section');
+                    toggle.click();
+                }
+            }
+        }, 100);
     }
     
     // Add Programs section (separate from tasks) - keep this for backward compatibility

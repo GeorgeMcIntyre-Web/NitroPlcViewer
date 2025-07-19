@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Task Parsing Debug</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .debug-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .debug-title {
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 10px;
+        }
+        .debug-content {
+            background: #f9f9f9;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: monospace;
+            white-space: pre-wrap;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .error {
+            color: #d32f2f;
+            background: #ffebee;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .success {
+            color: #388e3c;
+            background: #e8f5e8;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        input[type="file"] {
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Task Parsing Debug Tool</h1>
+        <p>This tool will help debug why tasks are not showing up in the tree structure.</p>
+        
+        <input type="file" id="fileInput" accept=".l5x,.xml">
+        
+        <div id="debugOutput"></div>
+    </div>
+
+    <script>
+        // Import the parser functions
+        import { parseL5X } from './js/parser.js';
+        import { sanitizeInput, parseXMLSafely } from './js/utils.js';
+
+        const debugOutput = document.getElementById('debugOutput');
+        const fileInput = document.getElementById('fileInput');
+
+        function log(message, type = 'info') {
+            const div = document.createElement('div');
+            div.className = `debug-section ${type}`;
+            div.innerHTML = `
+                <div class="debug-title">${type.toUpperCase()}: ${message}</div>
+                <div class="debug-content" id="content-${Date.now()}"></div>
+            `;
+            debugOutput.appendChild(div);
+            return div.querySelector('.debug-content');
+        }
+
+        function logData(title, data) {
+            const content = log(title);
+            content.textContent = JSON.stringify(data, null, 2);
+        }
+
+        fileInput.addEventListener('change', async (event) => {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            try {
+                log('File selected: ' + file.name, 'success');
+                
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const xmlString = e.target.result;
+                        log('XML string length: ' + xmlString.length, 'info');
+                        
+                        // Parse XML safely
+                        const xmlDoc = parseXMLSafely(xmlString);
+                        log('XML parsed successfully', 'success');
+                        
+                        // Check for Controller element
+                        const controller = xmlDoc.querySelector('Controller');
+                        if (!controller) {
+                            log('No Controller element found in XML', 'error');
+                            return;
+                        }
+                        log('Controller element found', 'success');
+                        
+                        // Check for Tasks element
+                        const tasksElement = xmlDoc.querySelector('Tasks');
+                        if (!tasksElement) {
+                            log('No Tasks element found in XML', 'error');
+                            return;
+                        }
+                        log('Tasks element found', 'success');
+                        
+                        // Check for individual Task elements
+                        const taskElements = xmlDoc.querySelectorAll('Tasks > Task');
+                        log('Found ' + taskElements.length + ' Task elements', taskElements.length > 0 ? 'success' : 'error');
+                        
+                        if (taskElements.length > 0) {
+                            taskElements.forEach((task, index) => {
+                                const taskName = task.getAttribute('Name');
+                                const taskType = task.getAttribute('Type');
+                                log(`Task ${index + 1}: ${taskName} (${taskType})`, 'info');
+                                
+                                // Check for programs within this task
+                                const programElements = task.querySelectorAll('Programs > Program');
+                                log(`  - Found ${programElements.length} programs in task ${taskName}`, 'info');
+                                
+                                programElements.forEach((program, progIndex) => {
+                                    const progName = program.getAttribute('Name');
+                                    log(`    - Program ${progIndex + 1}: ${progName}`, 'info');
+                                });
+                            });
+                        }
+                        
+                        // Try to parse with our parser
+                        const projectData = parseL5X(xmlDoc);
+                        log('Project data parsed successfully', 'success');
+                        
+                        logData('Parsed Tasks Data', projectData.tasks);
+                        logData('Full Project Data Structure', {
+                            controller: projectData.controller,
+                            tasksCount: projectData.tasks ? projectData.tasks.length : 0,
+                            programsCount: projectData.programs ? projectData.programs.length : 0
+                        });
+                        
+                    } catch (error) {
+                        log('Error during parsing: ' + error.message, 'error');
+                        console.error('Parsing error:', error);
+                    }
+                };
+                
+                reader.onerror = () => {
+                    log('Failed to read file', 'error');
+                };
+                
+                reader.readAsText(file);
+                
+            } catch (error) {
+                log('Error handling file: ' + error.message, 'error');
+            }
+        });
+    </script>
+</body>
+</html> 
